@@ -1,0 +1,25 @@
+{
+  "name": "restaurant-ops-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Restaurant Operations & Ordering Platform — full-stack Agile/Scrum project (Sprints 1-2 foundation)",
+  "packageManager": "pnpm@10.12.4",
+  "workspaces": [
+    "server",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,web -c blue,green \"npm --prefix server run dev\" \"npm --prefix frontend run dev\"",
+    "dev:server": "npm --prefix server run dev",
+    "dev:web": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "start": "concurrently -n server,web -c blue,green \"npm --prefix server run start\" \"npm --prefix frontend run start\"",
+    "lint": "npm --prefix frontend run lint && npm --prefix server run lint"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

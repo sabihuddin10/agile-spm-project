@@ -1,0 +1,158 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+  * {
+    border-color: theme('colors.stone.200');
+  }
+  body {
+    @apply bg-stone-50 text-stone-900 antialiased;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+  .btn-primary {
+    @apply btn bg-brand-600 text-white hover:bg-brand-700 focus:ring-brand-500;
+  }
+  .btn-secondary {
+    @apply btn border border-stone-300 bg-white text-stone-700 hover:bg-stone-50 focus:ring-stone-400;
+  }
+  .btn-danger {
+    @apply btn bg-red-600 text-white hover:bg-red-700 focus:ring-red-500;
+  }
+  .btn-ghost {
+    @apply btn text-stone-600 hover:bg-stone-100 focus:ring-stone-400;
+  }
+  .input {
+    @apply w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm shadow-sm placeholder:text-stone-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500;
+  }
+  .label {
+    @apply mb-1 block text-sm font-medium text-stone-700;
+  }
+  .card {
+    @apply rounded-xl border border-stone-200 bg-white p-5 shadow-sm;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+  .table-base {
+    @apply w-full text-left text-sm;
+  }
+  .table-base th {
+    @apply border-b border-stone-200 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-stone-500;
+  }
+  .table-base td {
+    @apply border-b border-stone-100 px-4 py-2.5 align-middle;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Storefront (customer) theme — "Plate & Flame": fire & charcoal.     */
+/* Scoped under .storefront so the staff console keeps its own look.   */
+/* ------------------------------------------------------------------ */
+
+@layer components {
+  .storefront {
+    @apply bg-char text-bone;
+  }
+
+  .storefront .card {
+    @apply border-char-hairline bg-char-raised shadow-none;
+  }
+
+  .storefront .btn-primary {
+    @apply bg-ember text-bone hover:bg-ember-soft focus:ring-ember;
+  }
+
+  .storefront .btn-secondary {
+    @apply border-char-hairline bg-transparent text-bone hover:border-ember/40 hover:bg-char-raised focus:ring-ember;
+  }
+
+  .storefront .btn-ghost {
+    @apply text-bone-dim hover:bg-char-raised hover:text-bone focus:ring-ember;
+  }
+
+  .storefront .input {
+    @apply border-char-hairline bg-char-deep text-bone placeholder:text-bone-faint focus:border-ember focus:ring-ember;
+  }
+
+  .storefront .label {
+    @apply text-bone-dim;
+  }
+
+  .storefront .table-base th {
+    @apply border-char-hairline text-bone-faint;
+  }
+
+  .storefront .table-base td {
+    @apply border-char-hairline/60 text-bone-dim;
+  }
+
+  /* Dietary / allergen chips — subtle ember & bone, not loud green/red. */
+  .storefront .chip {
+    @apply inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium;
+  }
+
+  .storefront .chip-diet {
+    @apply border-ember/30 bg-ember/10 text-ember-soft;
+  }
+
+  .storefront .chip-allergen {
+    @apply border-bone-dim/30 bg-bone-dim/10 text-bone;
+  }
+
+  .storefront .chip-muted {
+    @apply border-char-hairline bg-char-deep text-bone-faint;
+  }
+
+  /* Hairline rule used across storefront sections. */
+  .storefront .rule {
+    @apply border-char-hairline;
+  }
+
+  .storefront .drawer-in {
+    animation: drawer-in 0.25s ease-out;
+  }
+
+  .storefront .drawer-in-left {
+    animation: drawer-in-left 0.22s ease-out;
+  }
+
+  .storefront .fade-in {
+    animation: fade-in 0.2s ease-out;
+  }
+}
+
+@keyframes drawer-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes drawer-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
