@@ -12,56 +12,56 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<User>;
   register: (name: string, email: string, password: string) => Promise<User>;
   logout: () => void;
+  /** Re-fetch the signed-in user (e.g. after an admin changes their role). */
+  refreshUser: () => Promise<void>;
   hasRole: (...roles: Role[]) => boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-const PUBLIC_PATHS = ['/login', '/register'];
+
+const AUTH_PATHS = ['/login', '/register'];
+const PROTECTED_PREFIXES = ['/staff', '/dev', '/account'];
+
+export const AUTH_EXPIRED_EVENT = 'auth:expired';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => getStoredUser<User>());
-  const [token, setToken] = useState<string | null>(() => getStoredToken());
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Validate the stored session against the server once on mount.
-  useEffect(() => {
-    let cancelled = false;
-
-    async function hydrate() {
-      const t = getStoredToken();
-      if (!t) {
-        setLoading(false);
-        return;
-      }
-      try {
-        const u = getStoredUser<User>();
-        if (u) {
-          // Light optimization: trust stored user; full re-validation happens on next API 401.
-          if (!cancelled) setUser(u);
-          setLoading(false);
-          return;
-        }
-        const { user: fresh } = await authApi.me();
-        if (!cancelled) {
-          setUser(fresh);
-          setToken(t);
-          storeAuth(t, fresh);
-        }
-      } catch {
-        if (!cancelled) {
-          clearAuth();
-          setUser(null);
-          setToken(null);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+  const refreshUser = useCallback(async () => {
+    const t = getStoredToken();
+    if (!t) return;
+    try {
+      const { user: fresh } = await authApi.me();
+      setUser(fresh);
+      setToken(t);
+      storeAuth(t, fresh);
+    } catch {
+      /* a 401 is handled by the auth:expired listener below */
     }
+  }, []);
 
-    hydrate();
-    return () => {
-      cancelled = true;
-    };
+  // Restore the stored session instantly, then re-validate it with the server so
+  // role changes and suspensions apply on the next page load (US9.2, US9.4).
+  useEffect(() => {
+    const t = getStoredToken();
+    const stored = getStoredUser<User>();
+    if (t && stored) {
+      setUser(stored);
+      setToken(t);
+    }
+    setLoading(false);
+    if (t) refreshUser();
+  }, [refreshUser]);
+
+  useEffect(() => {
+    function onExpired() {
+      setUser(null);
+      setToken(null);
+    }
+    window.addEventListener(AUTH_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, onExpired);
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
@@ -86,43 +86,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null);
   }, []);
 
-  const hasRole = useCallback(
-    (roles: Role[]) => {
-      const rank: Record<Role, number> = { customer: 0, waiter: 1, chef: 2, manager: 3, admin: 4 };
-      if (!user) return false;
-      return rank[user.role] >= Math.max(...roles.map((r) => rank[r]));
-    },
-    [user],
-  );
+  const hasRole = useCallback((...roles: Role[]) => Boolean(user && roles.includes(user.role)), [user]);
 
   const value = useMemo(
-    () => ({ user, token, loading, login, register, logout, hasRole }),
-    [user, token, loading, login, register, logout, hasRole],
+    () => ({ user, token, loading, login, register, logout, refreshUser, hasRole }),
+    [user, token, loading, login, register, logout, refreshUser, hasRole],
   );
 
-  // Guard viewport redirects per zone.
+  // Zone guards: signed-out users leave protected zones; signed-in users skip
+  // the auth screens; customers never see the staff console.
   useEffect(() => {
-    if (loading || typeof window === 'undefined') return;
+    if (loading) return;
     const path = window.location.pathname;
-    const isPublic = PUBLIC_PATHS.some((p) => path.startsWith(p));
-    // Public storefront zone: home + /menu + guest-visible pages.
-    const isPublicZone = path === '/' || path.startsWith('/menu');
+    const onAuthPage = AUTH_PATHS.some((p) => path.startsWith(p));
 
     if (!user) {
-      // Authenticated-only zones redirect to /login.
-      const protectedZone = path.startsWith('/staff') || path.startsWith('/dev') || path.startsWith('/account');
-      if (protectedZone && !isPublic) window.location.assign('/login');
+      if (PROTECTED_PREFIXES.some((p) => path.startsWith(p))) window.location.assign('/login');
       return;
     }
-
-    if (isPublic) {
-      // Logged-in users skip auth screens → their role home.
+    if (onAuthPage) {
       window.location.assign(user.role === 'customer' ? '/' : '/staff');
       return;
     }
-
-    // Customers must not enter the staff zone.
-    if (path.startsWith('/staff') && user.role === 'customer' && !isPublicZone) {
+    if (path.startsWith('/staff') && user.role === 'customer') {
       window.location.assign('/');
     }
   }, [user, loading]);
