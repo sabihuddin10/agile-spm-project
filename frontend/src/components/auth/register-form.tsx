@@ -4,7 +4,11 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/components/ui/toast';
+import { errorMessage } from '@/lib/format';
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Customer self-registration (US1.2): validates name, email and password, and shows server errors. */
 export function RegisterForm() {
   const { register } = useAuth();
   const toast = useToast();
@@ -15,42 +19,47 @@ export function RegisterForm() {
 
   function set<K extends keyof typeof form>(key: K, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
+    setError(null);
+  }
+
+  function validate(): string | null {
+    if (!form.name.trim()) return 'Please enter your name.';
+    if (!EMAIL_RE.test(form.email.trim())) return 'Please enter a valid email address.';
+    if (form.password.length < 6) return 'Password must be at least 6 characters.';
+    if (form.password !== form.confirm) return 'Passwords do not match.';
+    return null;
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const problem = validate();
+    if (problem) {
+      setError(problem);
+      return;
+    }
     setError(null);
-
-    if (form.password.length < 6) {
-      setError('Password must be at least 6 characters.');
-      return;
-    }
-    if (form.password !== form.confirm) {
-      setError('Passwords do not match.');
-      return;
-    }
-
     setSubmitting(true);
     try {
-      const user = await register(form.name, form.email, form.password);
-      toast(`Account created for ${user.name}.`, 'success');
+      const user = await register(form.name.trim(), form.email.trim(), form.password);
+      toast(`Welcome to Plate & Flame, ${user.name.split(' ')[0]}.`, 'success');
       router.push('/');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed.');
-    } finally {
+      setError(errorMessage(err, 'Registration failed.'));
       setSubmitting(false);
     }
   }
 
+  const mismatch = form.confirm.length > 0 && form.password !== form.confirm;
+
   return (
     <div className="w-full max-w-md">
       <div className="card">
-        <h1 className="text-xl font-bold">Create a customer account</h1>
-        <p className="mt-1 text-sm text-stone-500">
-          New registrations are assigned the Customer role by default.
+        <h1 className="font-display text-2xl font-semibold tracking-tight text-bone">Create your account</h1>
+        <p className="mt-1 text-sm text-bone-dim">
+          Order ahead, track your orders, earn Flame Points and keep your allergies on file.
         </p>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        <form onSubmit={handleSubmit} className="mt-6 space-y-4" noValidate>
           <div>
             <label htmlFor="name" className="label">
               Full name
@@ -87,11 +96,16 @@ export function RegisterForm() {
               id="password"
               type="password"
               required
+              minLength={6}
               autoComplete="new-password"
+              aria-describedby="password-hint"
               className="input"
               value={form.password}
               onChange={(e) => set('password', e.target.value)}
             />
+            <p id="password-hint" className="mt-1 text-xs text-bone-faint">
+              At least 6 characters.
+            </p>
           </div>
           <div>
             <label htmlFor="confirm" className="label">
@@ -102,14 +116,18 @@ export function RegisterForm() {
               type="password"
               required
               autoComplete="new-password"
+              aria-invalid={mismatch}
               className="input"
               value={form.confirm}
               onChange={(e) => set('confirm', e.target.value)}
             />
+            {mismatch ? <p className="mt-1 text-xs text-red-300">Passwords do not match yet.</p> : null}
           </div>
 
           {error ? (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+            <p role="alert" className="rounded-xl border border-red-400/40 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-200">
+              {error}
+            </p>
           ) : null}
 
           <button type="submit" className="btn-primary w-full" disabled={submitting}>

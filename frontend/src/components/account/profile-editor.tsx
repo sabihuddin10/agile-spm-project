@@ -1,84 +1,78 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/context/auth-context';
-import { customerApi } from '@/lib/api';
+import { useState } from 'react';
 import type { Customer } from '@/types';
-import { Spinner } from '@/components/ui/spinner';
+import { customerApi } from '@/lib/api';
+import { useAuth } from '@/context/auth-context';
 import { Card } from '@/components/ui/card';
+import { useToast } from '@/components/ui/toast';
+import { errorMessage } from '@/lib/format';
+import { ALLERGY_OPTIONS, DIETARY_OPTIONS, optionsWith, toggleValue } from '@/components/customers/preference-options';
 
-export function ProfileEditor() {
-  const { user } = useAuth();
-  const [customer, setCustomer] = useState<Customer | null>(null);
-  const [loading, setLoading] = useState(true);
+interface Draft {
+  name: string;
+  email: string;
+  phone: string;
+  notes: string;
+  dietary: string[];
+  allergies: string[];
+}
+
+function toDraft(c: Customer): Draft {
+  return {
+    name: c.name,
+    email: c.email,
+    phone: c.phone,
+    notes: c.notes,
+    dietary: c.preferences?.dietary ?? [],
+    allergies: c.preferences?.allergies ?? [],
+  };
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Self-service profile (US1.2): contact details, notes, and dietary preferences
+ * and allergies as toggle chips (US1.5). Server validation errors are shown inline.
+ * Re-mount with key={customer.id} to load a different profile.
+ */
+export function ProfileEditor({ customer, onSaved }: { customer: Customer; onSaved: (customer: Customer) => void }) {
+  const toast = useToast();
+  const { refreshUser } = useAuth();
+  const [saved, setSaved] = useState<Draft>(() => toDraft(customer));
+  const [draft, setDraft] = useState<Draft>(saved);
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!user) return;
-    let cancelled = false;
-    customerApi
-      .me()
-      .then((res) => {
-        if (cancelled) return;
-        setCustomer(res.customer);
-        setLoading(false);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [user]);
+  const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
 
-  if (!user || user.role !== 'customer') return null;
-
-  if (loading) {
-    return (
-      <Card>
-        <Spinner label="Loading your profile…" />
-      </Card>
-    );
+  function set<K extends keyof Draft>(key: K, value: Draft[K]) {
+    setDraft((d) => ({ ...d, [key]: value }));
+    setError(null);
   }
 
-  if (!customer) {
-    return (
-      <Card>
-        <p className="text-sm text-bone-dim">No customer profile is linked to your account yet.</p>
-      </Card>
-    );
-  }
-
-  function update(field: keyof Pick<Customer, 'name' | 'email' | 'phone' | 'notes'>, value: string) {
-    setCustomer((c) => (c ? { ...c, [field]: value } : c));
-  }
-
-  function updatePref(key: 'dietary' | 'allergies', raw: string) {
-    const arr = raw
-      .split(',')
-      .map((s) => s.trim().toLowerCase())
-      .filter(Boolean);
-    setCustomer((c) => (c ? { ...c, preferences: { ...c.preferences, [key]: arr } } : c));
-  }
-
-  async function handleSave() {
-    if (!customer) return;
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    if (!draft.name.trim()) return setError('Name cannot be empty.');
+    if (!EMAIL_RE.test(draft.email.trim())) return setError('Please enter a valid email address.');
     setSaving(true);
-    setMsg(null);
+    setError(null);
     try {
       const { customer: updated } = await customerApi.updateMe({
-        name: customer.name,
-        email: customer.email,
-        phone: customer.phone,
-        notes: customer.notes,
-        preferences: customer.preferences,
+        name: draft.name.trim(),
+        email: draft.email.trim(),
+        phone: draft.phone.trim(),
+        notes: draft.notes,
+        preferences: { dietary: draft.dietary, allergies: draft.allergies },
       });
-      setCustomer(updated);
-      setMsg({ tone: 'ok', text: 'Profile saved.' });
+      const next = toDraft(updated);
+      setSaved(next);
+      setDraft(next);
+      onSaved(updated);
+      toast('Profile saved.', 'success');
+      refreshUser().catch(() => undefined); // keep the header's name/email in step
     } catch (err) {
-      setMsg({ tone: 'err', text: err instanceof Error ? err.message : 'Save failed.' });
+      setError(errorMessage(err, 'Your profile could not be saved.'));
     } finally {
       setSaving(false);
     }
@@ -86,70 +80,172 @@ export function ProfileEditor() {
 
   return (
     <Card>
-      <div className="flex items-center justify-between">
-        <h3 className="font-display text-xl font-semibold tracking-tight text-bone">
-          Your profile
-        </h3>
-      </div>
+      <form onSubmit={save} noValidate>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="font-display text-xl font-semibold tracking-tight text-bone">Your profile</h3>
+          <span className="rounded-full border border-ember/30 bg-ember/10 px-3 py-1 text-xs font-medium text-ember-soft">
+            {customer.loyaltyPoints} Flame Points
+          </span>
+        </div>
 
-      <div className="mt-5 grid gap-4 sm:grid-cols-2">
-        <Field label="Name" value={customer.name} onChange={(v) => update('name', v)} />
-        <Field label="Email" value={customer.email} onChange={(v) => update('email', v)} type="email" />
-        <Field label="Phone" value={customer.phone} onChange={(v) => update('phone', v)} />
-        <Field
-          label="Dietary (comma-separated)"
-          value={customer.preferences.dietary.join(', ')}
-          onChange={(v) => updatePref('dietary', v)}
-        />
-        <div className="sm:col-span-2">
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <Field id="profile-name" label="Name" value={draft.name} onChange={(v) => set('name', v)} autoComplete="name" required />
           <Field
-            label="Allergies (comma-separated)"
-            value={customer.preferences.allergies.join(', ')}
-            onChange={(v) => updatePref('allergies', v)}
+            id="profile-email"
+            label="Email"
+            type="email"
+            value={draft.email}
+            onChange={(v) => set('email', v)}
+            autoComplete="email"
+            required
           />
+          <Field id="profile-phone" label="Phone" type="tel" value={draft.phone} onChange={(v) => set('phone', v)} autoComplete="tel" />
         </div>
-        <div className="sm:col-span-2">
-          <label className="label">Notes</label>
+
+        <PreferenceChips
+          title="Dietary preferences"
+          hint="We'll highlight dishes that suit you."
+          options={optionsWith(DIETARY_OPTIONS, draft.dietary)}
+          selected={draft.dietary}
+          recorded={saved.dietary}
+          onToggle={(v) => set('dietary', toggleValue(draft.dietary, v))}
+        />
+        <PreferenceChips
+          title="Allergies"
+          hint="Dishes containing these are flagged on the menu and shared with the kitchen."
+          options={optionsWith(ALLERGY_OPTIONS, draft.allergies)}
+          selected={draft.allergies}
+          recorded={saved.allergies}
+          onToggle={(v) => set('allergies', toggleValue(draft.allergies, v))}
+          danger
+        />
+
+        <div className="mt-5">
+          <label htmlFor="profile-notes" className="label">
+            Notes for the restaurant
+          </label>
           <textarea
-            className="input min-h-[64px] resize-y"
-            value={customer.notes}
-            onChange={(e) => update('notes', e.target.value)}
+            id="profile-notes"
+            className="input min-h-[72px] resize-y"
+            placeholder="e.g. prefers a quiet table, contactless delivery"
+            value={draft.notes}
+            onChange={(e) => set('notes', e.target.value)}
+            maxLength={500}
           />
         </div>
-      </div>
 
-      {msg ? (
-        <p className={`mt-3 text-sm ${msg.tone === 'ok' ? 'text-ember-soft' : 'text-red-400'}`}>
-          {msg.text}
-        </p>
-      ) : null}
+        {error ? (
+          <p role="alert" className="mt-4 rounded-xl border border-red-400/40 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-200">
+            {error}
+          </p>
+        ) : null}
 
-      <button className="btn-primary mt-5" onClick={handleSave} disabled={saving}>
-        {saving ? 'Saving…' : 'Save changes'}
-      </button>
+        <div className="mt-5 flex flex-wrap items-center gap-3">
+          <button type="submit" className="btn-primary" disabled={saving || !dirty}>
+            {saving ? 'Saving…' : 'Save changes'}
+          </button>
+          {dirty && !saving ? (
+            <button
+              type="button"
+              className="btn-ghost"
+              onClick={() => {
+                setDraft(saved);
+                setError(null);
+              }}
+            >
+              Discard
+            </button>
+          ) : null}
+          {dirty ? <span className="text-xs text-bone-faint">Unsaved changes</span> : null}
+        </div>
+      </form>
     </Card>
   );
 }
 
+function PreferenceChips({
+  title,
+  hint,
+  options,
+  selected,
+  recorded,
+  onToggle,
+  danger = false,
+}: {
+  title: string;
+  hint: string;
+  options: string[];
+  selected: string[];
+  /** What is saved on the profile right now. */
+  recorded: string[];
+  onToggle: (value: string) => void;
+  danger?: boolean;
+}) {
+  return (
+    <fieldset className="mt-5">
+      <legend className="label">{title}</legend>
+      <p className="-mt-0.5 mb-2 text-xs text-bone-faint">{hint}</p>
+      <div className="flex flex-wrap gap-2">
+        {options.map((o) => {
+          const on = selected.includes(o);
+          return (
+            <button
+              key={o}
+              type="button"
+              role="checkbox"
+              aria-checked={on}
+              onClick={() => onToggle(o)}
+              className={`rounded-full border px-3.5 py-1.5 text-sm capitalize transition ${
+                on
+                  ? danger
+                    ? 'border-red-400/50 bg-red-500/15 text-red-200'
+                    : 'border-ember bg-ember/15 text-bone'
+                  : 'border-char-hairline bg-char-deep text-bone-dim hover:border-ember/40 hover:text-bone'
+              }`}
+            >
+              {on ? '✓ ' : ''}
+              {o}
+            </button>
+          );
+        })}
+      </div>
+      <p className="mt-2 text-xs text-bone-faint">
+        On file: {recorded.length > 0 ? <span className="text-bone-dim">{recorded.join(', ')}</span> : 'None recorded'}
+      </p>
+    </fieldset>
+  );
+}
+
 function Field({
+  id,
   label,
   value,
   onChange,
   type = 'text',
+  autoComplete,
+  required = false,
 }: {
+  id: string;
   label: string;
   value: string;
   onChange: (v: string) => void;
   type?: string;
+  autoComplete?: string;
+  required?: boolean;
 }) {
   return (
     <div>
-      <label className="label">{label}</label>
+      <label htmlFor={id} className="label">
+        {label}
+      </label>
       <input
+        id={id}
         type={type}
         className="input"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        autoComplete={autoComplete}
+        required={required}
       />
     </div>
   );

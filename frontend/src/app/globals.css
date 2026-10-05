@@ -156,3 +156,23 @@
     opacity: 1;
   }
 }
+/* Print only the receipt / reorder form when one is on screen. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+  .print-area {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    max-width: none;
+    border: none;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

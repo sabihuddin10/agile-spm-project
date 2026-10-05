@@ -93,26 +93,30 @@ function StoryRow({
         </span>
       </button>
       {expanded ? (
-        <div className="px-4 pb-3 pl-[4.5rem]">
-          {story.acceptanceCriteria.length > 0 ? (
-            <>
-              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-stone-400">
-                Acceptance criteria
-              </p>
-              <ul className="space-y-1">
-                {story.acceptanceCriteria.map((ac, i) => (
-                  <li key={i} className="flex items-start gap-2 text-xs text-stone-600">
-                    <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-stone-300" />
-                    {ac}
-                  </li>
-                ))}
-              </ul>
-            </>
-          ) : (
-            <p className="text-xs text-stone-400">
-              Acceptance criteria to be confirmed during Sprint {story.id.slice(2, 3)} planning (Backlog Refinement).
+        <div className="space-y-3 px-4 pb-3 pl-[4.5rem]">
+          <div>
+            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-stone-400">
+              Acceptance criteria
             </p>
-          )}
+            <ul className="space-y-1">
+              {story.acceptanceCriteria.map((ac, i) => (
+                <li key={i} className="flex items-start gap-2 text-xs text-stone-600">
+                  <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-stone-300" />
+                  {ac}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="grid gap-2 rounded-lg bg-stone-50 px-3 py-2 text-xs sm:grid-cols-2">
+            <p>
+              <span className="font-semibold text-stone-500">Demo: </span>
+              <span className="text-stone-600">{story.evidence.screen}</span>
+            </p>
+            <p>
+              <span className="font-semibold text-stone-500">Verified by: </span>
+              <code className="font-mono text-stone-600">server/test/{story.evidence.test}</code>
+            </p>
+          </div>
         </div>
       ) : null}
     </li>

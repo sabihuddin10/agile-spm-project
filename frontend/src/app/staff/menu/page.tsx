@@ -1,8 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import type { MenuCategory, MenuItem } from '@/types';
-import { menuApi } from '@/lib/api';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { InventoryItem, MenuCategory, MenuItem } from '@/types';
+import { inventoryApi, menuApi } from '@/lib/api';
+import { errorMessage } from '@/lib/format';
+import { can } from '@/lib/permissions';
 import { useAuth } from '@/context/auth-context';
 import { StaffLayout } from '@/components/layout/staff-layout';
 import { PageHeader } from '@/components/ui/page-header';
@@ -10,29 +12,68 @@ import { Card } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toast';
-import { MenuItemList } from '@/components/menu/menu-item-list';
+import { MenuItemList, type MenuItemPermissions } from '@/components/menu/menu-item-list';
 import { MenuItemForm } from '@/components/menu/menu-item-form';
 import { CategoryManager } from '@/components/menu/category-manager';
+import { RecipeEditor } from '@/components/inventory/recipe-editor';
 
+type AvailabilityFilter = 'all' | 'available' | 'out' | 'no-recipe';
+
+const OUT_REASONS = ['Sold out for today', 'Ingredient shortage', 'Supplier delivery delayed', 'Equipment issue'];
+
+/**
+ * Staff menu (Sprint 2): waiters browse read-only, chefs toggle availability
+ * (US2.5), managers/admins manage items, categories, modifiers and recipes
+ * (US2.1–US2.4, US8.2).
+ */
 export default function MenuPage() {
   const { user } = useAuth();
   const toast = useToast();
-  const canManage = user ? ['chef', 'manager', 'admin'].includes(user.role) : false;
+  const role = user?.role;
+  const permissions: MenuItemPermissions = useMemo(
+    () => ({
+      manage: can.manageMenu(role),
+      toggle: can.toggleAvailability(role),
+      recipes: can.editRecipes(role),
+    }),
+    [role],
+  );
 
   const [categories, setCategories] = useState<MenuCategory[]>([]);
+  const [tags, setTags] = useState<string[] | undefined>();
+  const [allergens, setAllergens] = useState<string[] | undefined>();
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState<MenuItem | null>(null);
+
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState<AvailabilityFilter>('all');
+
+  const [form, setForm] = useState<{ editing: MenuItem | null; categoryId?: string } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [markingOut, setMarkingOut] = useState<MenuItem | null>(null);
+  const [recipeItem, setRecipeItem] = useState<MenuItem | null>(null);
+  const [busyItemId, setBusyItemId] = useState<string | null>(null);
+  const [busyCategoryId, setBusyCategoryId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const { menu } = await menuApi.get();
-      setCategories(menu);
+      const res = await menuApi.get(true);
+      setCategories(res.menu);
+      setTags(res.tags);
+      setAllergens(res.allergens);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Failed to load menu.', 'error');
+      toast(errorMessage(err, 'Failed to load menu.'), 'error');
     } finally {
       setLoading(false);
+    }
+  }, [toast]);
+
+  const loadInventory = useCallback(async () => {
+    try {
+      const res = await inventoryApi.list();
+      setInventory(res.inventory);
+    } catch (err) {
+      toast(errorMessage(err, 'Failed to load ingredients.'), 'error');
     }
   }, [toast]);
 
@@ -40,150 +81,350 @@ export default function MenuPage() {
     load();
   }, [load]);
 
-  async function submit(data: Partial<MenuItem>) {
-    if (!canManage) return;
+  useEffect(() => {
+    if (permissions.recipes) loadInventory();
+  }, [permissions.recipes, loadInventory]);
+
+  const allItems = useMemo(() => categories.flatMap((c) => c.items ?? []), [categories]);
+  const outCount = allItems.filter((i) => !i.available).length;
+  const noRecipeCount = allItems.filter((i) => i.recipe && i.recipe.length === 0).length;
+
+  const filtered = search.trim() !== '' || filter !== 'all';
+  const shown = useMemo(() => {
+    if (!filtered) return categories;
+    const q = search.trim().toLowerCase();
+    return categories.map((c) => ({
+      ...c,
+      items: (c.items ?? []).filter((i) => {
+        if (filter === 'available' && !i.available) return false;
+        if (filter === 'out' && i.available) return false;
+        if (filter === 'no-recipe' && !(i.recipe && i.recipe.length === 0)) return false;
+        if (!q) return true;
+        return [i.name, i.description, ...i.dietaryTags, ...i.allergens].some((s) => s.toLowerCase().includes(q));
+      }),
+    }));
+  }, [categories, filter, filtered, search]);
+
+  /* ------------------------------------------------------------ items */
+
+  async function submitItem(data: Partial<MenuItem>) {
+    if (!permissions.manage || !form) return;
     setSaving(true);
     try {
-      if (editing) {
-        await menuApi.updateItem(editing.id, data);
-        toast('Menu item updated.', 'success');
+      if (form.editing) {
+        await menuApi.updateItem(form.editing.id, data);
+        toast(`${data.name ?? 'Menu item'} updated.`, 'success');
       } else {
-        await menuApi.createItem({ ...data, available: data.available ?? true });
-        toast('Menu item added.', 'success');
+        await menuApi.createItem(data);
+        toast(`${data.name ?? 'Menu item'} added to the menu.`, 'success');
       }
-      setFormOpen(false);
+      setForm(null);
       await load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Failed to save menu item.', 'error');
+      toast(errorMessage(err, 'Failed to save menu item.'), 'error');
     } finally {
       setSaving(false);
     }
   }
 
-  async function remove(item: MenuItem) {
-    if (!canManage) return;
-    if (!window.confirm(`Delete ${item.name}?`)) return;
+  async function removeItem(item: MenuItem) {
+    if (!permissions.manage) return;
+    if (!window.confirm(`Delete ${item.name} from the menu? This cannot be undone.`)) return;
+    setBusyItemId(item.id);
     try {
       await menuApi.removeItem(item.id);
-      toast('Menu item deleted.', 'success');
+      toast(`${item.name} deleted.`, 'success');
       await load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Failed to delete menu item.', 'error');
+      toast(errorMessage(err, 'Failed to delete menu item.'), 'error');
+    } finally {
+      setBusyItemId(null);
     }
   }
 
-  async function toggleAvailability(item: MenuItem) {
-    if (!canManage) return;
+  async function setAvailability(item: MenuItem, available: boolean, reason = '') {
+    if (!permissions.toggle) return false;
+    setBusyItemId(item.id);
     try {
-      await menuApi.updateItem(item.id, { available: !item.available });
-      toast(item.available ? `${item.name} marked out of stock.` : `${item.name} is back in stock.`, 'success');
+      await menuApi.updateItem(item.id, available ? { available: true } : { available: false, outOfStockReason: reason });
+      toast(available ? `${item.name} is back in stock.` : `${item.name} marked out of stock.`, 'success');
       await load();
+      return true;
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Failed to update availability.', 'error');
+      toast(errorMessage(err, 'Failed to update availability.'), 'error');
+      return false;
+    } finally {
+      setBusyItemId(null);
     }
   }
+
+  /* ------------------------------------------------------- categories */
 
   async function createCategory(name: string) {
-    if (!canManage) return;
+    setBusyCategoryId('new');
     try {
       await menuApi.createCategory(name);
-      toast(`Category "${name}" added.`, 'success');
+      toast(`Category "${name}" added. It stays hidden from customers until it has items.`, 'success');
       await load();
+      return true;
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Failed to create category.', 'error');
+      toast(errorMessage(err, 'Failed to create category.'), 'error');
+      return false;
+    } finally {
+      setBusyCategoryId(null);
     }
   }
 
-  async function renameCategory(id: string, name: string) {
-    if (!canManage) return;
+  async function renameCategory(category: MenuCategory, name: string) {
+    setBusyCategoryId(category.id);
     try {
-      await menuApi.updateCategory(id, { name });
-      toast('Category renamed.', 'success');
+      await menuApi.updateCategory(category.id, { name });
+      toast(`Renamed "${category.name}" to "${name}".`, 'success');
       await load();
+      return true;
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Failed to rename category.', 'error');
+      toast(errorMessage(err, 'Failed to rename category.'), 'error');
+      return false;
+    } finally {
+      setBusyCategoryId(null);
     }
   }
 
-  async function deleteCategory(id: string) {
-    if (!canManage) return;
+  async function toggleCategory(category: MenuCategory) {
+    setBusyCategoryId(category.id);
     try {
-      await menuApi.removeCategory(id);
-      toast('Category deleted.', 'success');
+      await menuApi.updateCategory(category.id, { active: !category.active });
+      toast(
+        category.active ? `${category.name} is now hidden from customers.` : `${category.name} is visible to customers again.`,
+        'success',
+      );
       await load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Failed to delete category.', 'error');
+      toast(errorMessage(err, 'Failed to update category.'), 'error');
+    } finally {
+      setBusyCategoryId(null);
     }
   }
+
+  async function deleteCategory(category: MenuCategory) {
+    if (!window.confirm(`Delete the "${category.name}" category?`)) return;
+    setBusyCategoryId(category.id);
+    try {
+      await menuApi.removeCategory(category.id);
+      toast(`Category "${category.name}" deleted.`, 'success');
+      await load();
+    } catch (err) {
+      toast(errorMessage(err, 'Failed to delete category.'), 'error');
+    } finally {
+      setBusyCategoryId(null);
+    }
+  }
+
+  /* ------------------------------------------------------------ render */
+
+  const subtitle = permissions.manage
+    ? 'Sprint 2 · Items, categories, modifiers with prices, dietary/allergen tags, availability and recipes. (US2.1–US2.5, US8.2)'
+    : permissions.toggle
+      ? 'Sprint 2 · Mark dishes out of stock or back in stock as the kitchen runs. (US2.5)'
+      : 'Sprint 2 · Browse the current menu (read-only for your role).';
+
+  const filters: { id: AvailabilityFilter; label: string; count: number; show: boolean }[] = [
+    { id: 'all', label: 'All', count: allItems.length, show: true },
+    { id: 'available', label: 'Available', count: allItems.length - outCount, show: true },
+    { id: 'out', label: 'Out of stock', count: outCount, show: true },
+    { id: 'no-recipe', label: 'No recipe', count: noRecipeCount, show: permissions.recipes },
+  ];
 
   return (
-    <StaffLayout>
+    <StaffLayout section="menu">
       <PageHeader
-        title={canManage ? 'Menu management' : 'Menu'}
-        subtitle={
-          canManage
-            ? 'Sprint 2 · Items, categories, modifiers, dietary/allergen tags, availability. (US2.1–US2.5)'
-            : 'Sprint 2 · Browse the current menu (read-only for your role).'
-        }
+        title={permissions.manage ? 'Menu management' : 'Menu'}
+        subtitle={subtitle}
         action={
-          canManage ? (
-            <button
-              onClick={() => {
-                setEditing(null);
-                setFormOpen(true);
-              }}
-              className="btn-primary"
-            >
+          permissions.manage ? (
+            <button onClick={() => setForm({ editing: null })} className="btn-primary" disabled={categories.length === 0}>
               + Add item
             </button>
           ) : undefined
         }
       />
 
-      <div className="grid gap-4 lg:grid-cols-[280px_1fr] lg:items-start">
-        <Card className="lg:sticky lg:top-8">
-          <CategoryManager
-            categories={categories}
-            onCreate={createCategory}
-            onRename={renameCategory}
-            onDelete={deleteCategory}
-          />
-        </Card>
+      <div className={`grid gap-4 ${permissions.manage ? 'lg:grid-cols-[300px_1fr] lg:items-start' : ''}`}>
+        {permissions.manage ? (
+          <Card className="lg:sticky lg:top-8">
+            <CategoryManager
+              categories={categories}
+              busyId={busyCategoryId}
+              onCreate={createCategory}
+              onRename={renameCategory}
+              onToggleActive={toggleCategory}
+              onDelete={deleteCategory}
+            />
+          </Card>
+        ) : null}
 
-        <Card className="p-0">
-          {loading ? (
-            <Spinner label="Loading menu…" />
-          ) : (
-            <div className="p-4">
-              <MenuItemList
-                categories={categories}
-                onEdit={(item) => {
-                  setEditing(item);
-                  setFormOpen(true);
-                }}
-                onDelete={remove}
-                onToggleAvailability={toggleAvailability}
-              />
+        <Card className="min-w-0 p-0">
+          <div className="flex flex-col gap-3 border-b border-stone-100 p-4 sm:flex-row sm:items-center">
+            <input
+              type="search"
+              className="input sm:max-w-xs"
+              placeholder="Search dishes, tags, allergens…"
+              aria-label="Search menu"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter menu items">
+              {filters
+                .filter((f) => f.show)
+                .map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    aria-pressed={filter === f.id}
+                    onClick={() => setFilter(f.id)}
+                    className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                      filter === f.id
+                        ? 'border-brand-300 bg-brand-50 text-brand-700'
+                        : 'border-stone-200 bg-white text-stone-500 hover:bg-stone-50'
+                    }`}
+                  >
+                    {f.label} <span className="text-stone-400">({f.count})</span>
+                  </button>
+                ))}
             </div>
-          )}
+          </div>
+          <div className="p-4">
+            {loading ? (
+              <Spinner label="Loading menu…" />
+            ) : categories.length === 0 ? (
+              <p className="py-10 text-center text-sm text-stone-400">
+                {permissions.manage ? 'Add a category first, then add items to it.' : 'The menu is empty.'}
+              </p>
+            ) : (
+              <MenuItemList
+                categories={shown}
+                permissions={permissions}
+                busyId={busyItemId}
+                filtered={filtered}
+                onEdit={(item) => setForm({ editing: item })}
+                onDelete={removeItem}
+                onMarkOut={setMarkingOut}
+                onMarkIn={(item) => setAvailability(item, true)}
+                onRecipe={(item) => {
+                  setRecipeItem(item);
+                  loadInventory();
+                }}
+                onAdd={(categoryId) => setForm({ editing: null, categoryId })}
+              />
+            )}
+          </div>
         </Card>
       </div>
 
-      {formOpen ? (
-        <Modal
-          title={editing ? `Edit ${editing.name}` : 'Add menu item'}
-          onClose={() => setFormOpen(false)}
-          wide
-        >
+      {form ? (
+        <Modal title={form.editing ? `Edit ${form.editing.name}` : 'Add menu item'} onClose={() => setForm(null)} wide>
           <MenuItemForm
-            initial={editing}
+            initial={form.editing}
             categories={categories}
-            onSubmit={submit}
-            onCancel={() => setFormOpen(false)}
+            tags={tags}
+            allergens={allergens}
+            defaultCategoryId={form.categoryId}
+            onSubmit={submitItem}
+            onCancel={() => setForm(null)}
             submitting={saving}
           />
         </Modal>
       ) : null}
+
+      {markingOut ? (
+        <OutOfStockDialog
+          item={markingOut}
+          busy={busyItemId === markingOut.id}
+          onClose={() => setMarkingOut(null)}
+          onConfirm={async (reason) => {
+            if (await setAvailability(markingOut, false, reason)) setMarkingOut(null);
+          }}
+        />
+      ) : null}
+
+      {recipeItem ? (
+        <RecipeEditor
+          item={recipeItem}
+          inventory={inventory}
+          onClose={() => setRecipeItem(null)}
+          onSaved={() => {
+            setRecipeItem(null);
+            load();
+          }}
+        />
+      ) : null}
     </StaffLayout>
+  );
+}
+
+/** Reason prompt shown before a dish is marked out of stock (US2.5). */
+function OutOfStockDialog({
+  item,
+  busy,
+  onClose,
+  onConfirm,
+}: {
+  item: MenuItem;
+  busy: boolean;
+  onClose: () => void;
+  onConfirm: (reason: string) => void;
+}) {
+  const [reason, setReason] = useState('');
+
+  return (
+    <Modal title={`Mark ${item.name} out of stock`} onClose={onClose}>
+      <form
+        className="space-y-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (reason.trim()) onConfirm(reason.trim());
+        }}
+      >
+        <p className="text-sm text-stone-500">
+          Customers and waiters will see it as unavailable and can&apos;t order it until it&apos;s back in stock.
+        </p>
+        <div>
+          <label className="label" htmlFor="oos-reason">
+            Reason *
+          </label>
+          <input
+            id="oos-reason"
+            className="input"
+            autoFocus
+            required
+            placeholder="e.g. Sold out for today"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+          />
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {OUT_REASONS.map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setReason(r)}
+                className={`rounded-full border px-2.5 py-0.5 text-xs transition ${
+                  reason === r ? 'border-red-300 bg-red-50 text-red-700' : 'border-stone-200 text-stone-500 hover:bg-stone-50'
+                }`}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex justify-end gap-2">
+          <button type="button" className="btn-secondary" onClick={onClose}>
+            Cancel
+          </button>
+          <button type="submit" className="btn-danger" disabled={busy || !reason.trim()}>
+            {busy ? 'Saving…' : 'Mark out of stock'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }

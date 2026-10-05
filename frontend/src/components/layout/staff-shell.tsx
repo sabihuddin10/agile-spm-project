@@ -1,34 +1,50 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth-context';
-import type { Role } from '@/types';
 import { Badge } from '@/components/ui/badge';
+import { NotificationBell } from '@/components/layout/notification-bell';
+import { canAccess, type Section } from '@/lib/permissions';
 
 interface NavItem {
   href: string;
   label: string;
   icon: string;
-  roles: Role[];
-  plannedSprint?: number;
+  section: Section;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { href: '/staff', label: 'Overview', icon: 'grid', roles: ['waiter', 'chef', 'manager', 'admin'] },
-  { href: '/staff/orders', label: 'Orders', icon: 'receipt', roles: ['waiter', 'manager', 'admin'] },
-  { href: '/staff/kitchen', label: 'Kitchen (KDS)', icon: 'fire', roles: ['chef', 'manager', 'admin'] },
-  { href: '/staff/billing', label: 'Billing', icon: 'cash', roles: ['waiter', 'manager', 'admin'] },
-  { href: '/staff/tables', label: 'Tables', icon: 'grid', roles: ['waiter', 'manager', 'admin'] },
-  { href: '/staff/reservations', label: 'Reservations', icon: 'calendar', roles: ['waiter', 'manager', 'admin'] },
-  { href: '/staff/customers', label: 'Customers', icon: 'users', roles: ['waiter', 'manager', 'admin'] },
-  { href: '/staff/users', label: 'Staff & roles', icon: 'shield', roles: ['admin'] },
-  { href: '/staff/inventory', label: 'Inventory', icon: 'box', roles: ['chef', 'manager', 'admin'] },
-  { href: '/staff/menu', label: 'Menu', icon: 'book', roles: ['waiter', 'chef', 'manager', 'admin'] },
-  { href: '/staff/analytics', label: 'Analytics', icon: 'chart', roles: ['manager', 'admin'] },
+const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
+  {
+    title: 'Service',
+    items: [
+      { href: '/staff', label: 'Overview', icon: 'grid', section: 'overview' },
+      { href: '/staff/orders', label: 'Orders', icon: 'receipt', section: 'orders' },
+      { href: '/staff/kitchen', label: 'Kitchen (KDS)', icon: 'fire', section: 'kitchen' },
+      { href: '/staff/tables', label: 'Floor plan', icon: 'table', section: 'tables' },
+      { href: '/staff/reservations', label: 'Reservations', icon: 'calendar', section: 'reservations' },
+      { href: '/staff/billing', label: 'Billing', icon: 'cash', section: 'billing' },
+    ],
+  },
+  {
+    title: 'Back of house',
+    items: [
+      { href: '/staff/customers', label: 'Customers', icon: 'users', section: 'customers' },
+      { href: '/staff/menu', label: 'Menu', icon: 'book', section: 'menu' },
+      { href: '/staff/inventory', label: 'Inventory', icon: 'box', section: 'inventory' },
+      { href: '/staff/users', label: 'Staff management', icon: 'shield', section: 'staff' },
+      { href: '/staff/analytics', label: 'Analytics', icon: 'chart', section: 'analytics' },
+    ],
+  },
+  {
+    title: 'Me',
+    items: [
+      { href: '/staff/schedule', label: 'My schedule', icon: 'clock', section: 'schedule' },
+      { href: '/staff/settings', label: 'Settings', icon: 'cog', section: 'settings' },
+    ],
+  },
 ];
-
-const RANK: Record<Role, number> = { customer: 0, waiter: 1, chef: 2, manager: 3, admin: 4 };
 
 const ICONS: Record<string, string> = {
   grid: 'M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z',
@@ -41,19 +57,34 @@ const ICONS: Record<string, string> = {
   calendar: 'M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5',
   box: 'M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9',
   chart: 'M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z',
+  clock: 'M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z',
+  cog: 'M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.107-1.204l-.527-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894zM15 12a3 3 0 11-6 0 3 3 0 016 0z',
+  table: 'M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-3.75.125V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-1.5A1.125 1.125 0 0118 18.375M20.625 4.5H3.375m17.25 0c.621 0 1.125.504 1.125 1.125M20.625 4.5h-1.5C18.504 4.5 18 5.004 18 5.625m3.75 0v1.5c0 .621-.504 1.125-1.125 1.125M3.375 4.5c-.621 0-1.125.504-1.125 1.125M3.375 4.5h1.5C5.496 4.5 6 5.004 6 5.625m-3.75 0v1.5c0 .621.504 1.125 1.125 1.125m0 0h1.5m-1.5 0c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m1.5-3.75C5.496 8.25 6 7.746 6 7.125v-1.5M4.875 8.25C5.496 8.25 6 8.754 6 9.375v1.5m0-5.25v5.25m0-5.25C6 5.004 6.504 4.5 7.125 4.5h9.75c.621 0 1.125.504 1.125 1.125m1.125 2.625h1.5m-1.5 0A1.125 1.125 0 0118 7.125v-1.5m1.125 2.625c-.621 0-1.125.504-1.125 1.125v1.5m2.625-2.625c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125M18 5.625v5.25M7.125 12h9.75m-9.75 0A1.125 1.125 0 016 10.875M7.125 12C6.504 12 6 12.504 6 13.125m0-2.25C6 11.496 5.496 12 4.875 12M18 10.875c0 .621-.504 1.125-1.125 1.125M18 10.875c0 .621.504 1.125 1.125 1.125m-2.25 0c.621 0 1.125.504 1.125 1.125m-12 5.25v-5.25m0 5.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125m-12 0v-1.5c0-.621-.504-1.125-1.125-1.125M18 18.375v-5.25m0 5.25v-1.5c0-.621.504-1.125 1.125-1.125M18 13.125v1.5c0 .621.504 1.125 1.125 1.125M18 13.125c0-.621.504-1.125 1.125-1.125M6 13.125v1.5c0 .621-.504 1.125-1.125 1.125M6 13.125C6 12.504 5.496 12 4.875 12m-1.5 0h1.5m-1.5 0c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125M19.125 12h1.5m0 0c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125m-17.25 0h1.5m14.25 0h1.5',
 };
+
+function NavIcon({ name, className = 'h-[18px] w-[18px]' }: { name: string; className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d={ICONS[name]} />
+    </svg>
+  );
+}
 
 export function StaffShell({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
 
   if (!user) return null;
 
-  const items = NAV_ITEMS.filter((item) => {
-    const min = Math.max(...item.roles.map((r) => RANK[r]));
-    return RANK[user.role] >= min;
-  });
+  const groups = NAV_GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => canAccess(user.role, i.section)) })).filter(
+    (g) => g.items.length > 0,
+  );
 
   const initials = user.name
     .split(' ')
@@ -62,120 +93,114 @@ export function StaffShell({ children }: { children: React.ReactNode }) {
     .join('')
     .toUpperCase();
 
-  return (
-    <div className="flex min-h-screen">
-      <aside className="fixed inset-y-0 left-0 z-30 flex w-64 flex-col border-r border-stone-200 bg-white">
-        <div className="flex items-center gap-3 border-b border-stone-200 px-5 py-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 text-white font-bold">
-            RO
-          </div>
-          <div>
-            <p className="text-sm font-semibold leading-tight">Staff console</p>
-            <p className="text-xs text-stone-500">Restaurant operations</p>
-          </div>
+  const sidebar = (
+    <>
+      <div className="flex items-center gap-3 border-b border-stone-200 px-5 py-4">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 font-bold text-white">RO</div>
+        <div className="flex-1">
+          <p className="text-sm font-semibold leading-tight">Staff console</p>
+          <p className="text-xs text-stone-500">Plate &amp; Flame</p>
         </div>
+        <div className="hidden lg:block">
+          <NotificationBell align="left" />
+        </div>
+      </div>
 
-        <nav className="flex-1 overflow-y-auto px-3 py-4">
-          <ul className="space-y-0.5">
-            {items.map((item) => {
-              const active = pathname === item.href;
-              return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    className={`group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${
-                      active
-                        ? 'bg-brand-50 font-medium text-brand-700'
-                        : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'
-                    }`}
-                  >
-                    <svg
-                      className="h-[18px] w-[18px] shrink-0 text-stone-400 group-hover:text-stone-600"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={1.5}
-                      aria-hidden="true"
+      <nav className="flex-1 overflow-y-auto px-3 py-3">
+        {groups.map((group) => (
+          <div key={group.title} className="mb-3">
+            <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-stone-400">{group.title}</p>
+            <ul className="space-y-0.5">
+              {group.items.map((item) => {
+                const active = item.href === '/staff' ? pathname === '/staff' : pathname.startsWith(item.href);
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      className={`group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${
+                        active ? 'bg-brand-50 font-medium text-brand-700' : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'
+                      }`}
                     >
-                      <path strokeLinecap="round" strokeLinejoin="round" d={ICONS[item.icon]} />
-                    </svg>
-                    <span className="flex-1">{item.label}</span>
-                    {item.plannedSprint ? (
-                      <span className="rounded bg-stone-100 px-1.5 py-0.5 text-[10px] font-medium uppercase text-stone-400">
-                        S{item.plannedSprint}
-                      </span>
-                    ) : null}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-
-          <div className="mt-6 border-t border-stone-200 pt-4">
-            <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-wider text-stone-400">
-              Other zones
-            </p>
-            <Link
-              href="/dev"
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-stone-600 hover:bg-stone-100 hover:text-stone-900"
-            >
-              <svg className="h-[18px] w-[18px] text-stone-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M9 12h6m-6 4h6M9 8h6M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"
-                />
-              </svg>
-              Dev tracker
-            </Link>
-            <Link
-              href="/"
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-stone-600 hover:bg-stone-100 hover:text-stone-900"
-            >
-              <svg className="h-[18px] w-[18px] text-stone-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M2.25 12l8.954-8.955a1.126 1.126 0 011.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75"
-                />
-              </svg>
-              Public site
-            </Link>
+                      <NavIcon
+                        name={item.icon}
+                        className={`h-[18px] w-[18px] shrink-0 ${active ? 'text-brand-600' : 'text-stone-400 group-hover:text-stone-600'}`}
+                      />
+                      {item.label}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
-        </nav>
+        ))}
 
-        <div className="border-t border-stone-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700">
-              {initials}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">{user.name}</p>
-              <Badge tone={user.role === 'admin' ? 'brand' : user.role === 'manager' ? 'blue' : 'stone'}>
-                {user.role}
-              </Badge>
-            </div>
-            <button
-              onClick={() => {
-                logout();
-                router.push('/login');
-              }}
-              className="btn-ghost !px-2 !py-1 text-xs"
-              title="Sign out"
-            >
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9"
-                />
-              </svg>
-            </button>
-          </div>
+        <div className="mt-2 border-t border-stone-200 pt-3">
+          <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Other zones</p>
+          <Link href="/dev" className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-stone-600 hover:bg-stone-100 hover:text-stone-900">
+            <NavIcon name="book" className="h-[18px] w-[18px] text-stone-400" />
+            Scrum board
+          </Link>
+          <Link href="/" className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-stone-600 hover:bg-stone-100 hover:text-stone-900">
+            <NavIcon name="grid" className="h-[18px] w-[18px] text-stone-400" />
+            Public site
+          </Link>
         </div>
-      </aside>
+      </nav>
 
-      <main className="ml-64 flex-1 px-8 py-8">{children}</main>
+      <div className="border-t border-stone-200 p-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700">
+            {initials}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium">{user.name}</p>
+            <Badge tone={user.role === 'admin' ? 'brand' : user.role === 'manager' ? 'blue' : 'stone'}>{user.role}</Badge>
+          </div>
+          <button
+            onClick={() => {
+              logout();
+              router.push('/login');
+            }}
+            className="btn-ghost !px-2 !py-1 text-xs"
+            title="Sign out"
+            aria-label="Sign out"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </>
+  );
+
+  return (
+    <div className="min-h-screen">
+      {/* Mobile top bar */}
+      <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-stone-200 bg-white px-4 lg:hidden">
+        <button onClick={() => setMobileOpen(true)} className="btn-ghost !px-2" aria-label="Open navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="h-5 w-5">
+            <path strokeLinecap="round" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <p className="flex-1 text-sm font-semibold">Staff console</p>
+        <NotificationBell />
+      </header>
+
+      {mobileOpen ? (
+        <div className="fixed inset-0 z-40 lg:hidden">
+          <div className="absolute inset-0 bg-stone-900/40" onClick={() => setMobileOpen(false)} />
+          <aside className="relative flex h-full w-72 flex-col bg-white shadow-xl">{sidebar}</aside>
+        </div>
+      ) : null}
+
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-stone-200 bg-white lg:flex">{sidebar}</aside>
+
+      <main className="px-4 py-6 sm:px-6 lg:ml-64 lg:px-8 lg:py-8">{children}</main>
     </div>
   );
 }

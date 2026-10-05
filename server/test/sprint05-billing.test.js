@@ -1,0 +1,109 @@
+/** Sprint 5 — Billing (US5.1–US5.5). */
+import { test, before, after } from 'node:test';
+import assert from 'node:assert/strict';
+import { startServer, menuItem } from './helpers.js';
+
+let api;
+let waiter;
+let manager;
+before(async () => {
+  api = await startServer();
+  [waiter, manager] = await Promise.all([api.login('waiter'), api.login('manager')]);
+});
+after(() => api.close());
+
+/** Create a dine-in order and walk it to "served". */
+async function servedOrder(lines) {
+  const items = [];
+  for (const [name, qty, modifiers = []] of lines) items.push({ menuItemId: (await menuItem(api.call, name)).id, qty, modifiers });
+  const { body } = await api.call('POST', '/orders', { token: waiter, body: { type: 'dine-in', items } });
+  const chef = await api.login('chef');
+  await api.call('POST', `/orders/${body.order.id}/status`, { token: chef, body: { status: 'ready' } });
+  await api.call('POST', `/orders/${body.order.id}/status`, { token: waiter, body: { status: 'served' } });
+  return body.order.id;
+}
+
+test('US5.1 an itemized bill lists every line with modifier deltas', async () => {
+  const id = await servedOrder([['Margherita Pizza', 2, [{ group: 'Size', label: 'Large' }]], ['Soda', 1]]);
+  const { body } = await api.call('GET', `/billing/${id}`, { token: waiter });
+  const pizzaLine = body.invoice.lines.find((l) => l.name === 'Margherita Pizza');
+  assert.equal(pizzaLine.unitPrice, 22);
+  assert.equal(pizzaLine.lineTotal, 44);
+  assert.deepEqual(pizzaLine.modifiers.map((m) => [m.label, m.priceDelta]), [['Large', 4]]);
+  assert.equal(body.invoice.subtotal, 46.5);
+});
+
+test('US5.2 tax and service charge are separate lines; a tip is added to the total', async () => {
+  const id = await servedOrder([['Caesar Salad', 2]]);
+  let inv = (await api.call('GET', `/billing/${id}`, { token: waiter })).body.invoice;
+  assert.equal(inv.serviceCharge, 1.25);
+  assert.equal(inv.tax, 2.5);
+  assert.equal(inv.total, 28.75);
+  inv = (await api.call('POST', `/billing/${id}/tip`, { token: waiter, body: { percent: 10 } })).body.invoice;
+  assert.equal(inv.tip, 2.5);
+  assert.equal(inv.total, 31.25);
+});
+
+test('US5.2 restaurant-configured rates apply to new bills', async () => {
+  await api.call('PATCH', '/settings', { token: manager, body: { taxRate: 0.2, serviceChargeRate: 0 } });
+  const id = await servedOrder([['Garlic Bread', 1]]);
+  const inv = (await api.call('GET', `/billing/${id}`, { token: waiter })).body.invoice;
+  assert.equal(inv.tax, 1.2);
+  assert.equal(inv.serviceCharge, 0);
+  await api.call('PATCH', '/settings', { token: manager, body: { taxRate: 0.1, serviceChargeRate: 0.05 } });
+});
+
+test('US5.3 split bills always sum to the original total and settle the bill', async () => {
+  const id = await servedOrder([['Beef Burger', 1], ['Vegan Bowl', 1], ['Lemonade', 3]]);
+  const total = (await api.call('GET', `/billing/${id}`, { token: waiter })).body.invoice.total;
+
+  const even = (await api.call('POST', `/billing/${id}/split`, { token: waiter, body: { mode: 'even', ways: 3 } })).body.invoice;
+  assert.equal(Math.round(even.split.parts.reduce((s, p) => s + p.amount, 0) * 100), Math.round(total * 100));
+
+  const lines = even.lines.map((l) => l.id);
+  const byItems = (await api.call('POST', `/billing/${id}/split`, { token: waiter, body: { mode: 'items', groups: [[lines[0]], [lines[1], lines[2]]] } })).body.invoice;
+  assert.equal(Math.round(byItems.split.parts.reduce((s, p) => s + p.amount, 0) * 100), Math.round(total * 100));
+
+  await api.call('POST', `/billing/${id}/split/0/pay`, { token: waiter, body: { method: 'card' } });
+  let inv = (await api.call('GET', `/billing/${id}`, { token: waiter })).body.invoice;
+  assert.equal(inv.paymentStatus, 'unpaid');
+  // A paid share locks the bill: no tip change or re-split that would erase it.
+  assert.equal((await api.call('POST', `/billing/${id}/tip`, { token: waiter, body: { percent: 15 } })).status, 409);
+  assert.equal((await api.call('POST', `/billing/${id}/split`, { token: waiter, body: { mode: 'even', ways: 2 } })).status, 409);
+  await api.call('POST', `/billing/${id}/split/1/pay`, { token: waiter, body: { method: 'cash' } });
+  inv = (await api.call('GET', `/billing/${id}`, { token: waiter })).body.invoice;
+  assert.equal(inv.paymentStatus, 'paid');
+  assert.equal(inv.status, 'closed');
+});
+
+test('US5.4 paid bills leave the outstanding view and can be marked unpaid', async () => {
+  const id = await servedOrder([['Iced Tea', 2]]);
+  const openIds = async () => (await api.call('GET', '/billing?scope=open', { token: waiter })).body.bills.map((b) => b.id);
+  assert.ok((await openIds()).includes(id));
+  const paid = (await api.call('POST', `/billing/${id}/pay`, { token: waiter, body: { method: 'cash' } })).body.invoice;
+  assert.equal(paid.paymentStatus, 'paid');
+  assert.ok(!(await openIds()).includes(id));
+
+  const unpaid = (await api.call('POST', `/billing/${id}/unpay`, { token: waiter })).body.invoice;
+  assert.equal(unpaid.paymentStatus, 'unpaid');
+  assert.equal(unpaid.status, 'served');
+  assert.ok((await openIds()).includes(id));
+});
+
+test('US5.5 receipts for paid bills; manager refunds update status and revenue', async () => {
+  const id = await servedOrder([['Hummus Plate', 2]]);
+  assert.equal((await api.call('GET', `/billing/${id}/receipt`, { token: waiter })).status, 409);
+  await api.call('POST', `/billing/${id}/pay`, { token: waiter, body: { method: 'card' } });
+  const receipt = (await api.call('GET', `/billing/${id}/receipt`, { token: waiter })).body.receipt;
+  assert.equal(receipt.receiptNumber.startsWith('R-'), true);
+  assert.equal(receipt.lines.length, 1);
+
+  const revenue = async () => (await api.call('GET', '/analytics/summary', { token: manager })).body.summary.revenueToday;
+  const before = await revenue();
+  assert.equal((await api.call('POST', `/billing/${id}/refund`, { token: waiter, body: { reason: 'Cold food' } })).status, 403);
+  assert.equal((await api.call('POST', `/billing/${id}/refund`, { token: manager, body: { reason: '' } })).status, 400);
+  const refunded = (await api.call('POST', `/billing/${id}/refund`, { token: manager, body: { reason: 'Cold food' } })).body.invoice;
+  assert.equal(refunded.paymentStatus, 'refunded');
+  assert.equal(refunded.netTotal, 0);
+  assert.equal(Math.round((before - (await revenue())) * 100), Math.round(receipt.total * 100));
+});

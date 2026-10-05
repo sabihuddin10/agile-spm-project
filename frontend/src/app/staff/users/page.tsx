@@ -1,133 +1,179 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import type { Role, User } from '@/types';
-import { authApi } from '@/lib/api';
+import type { KeyboardEvent } from 'react';
+import type { StaffApplication, User } from '@/types';
+import { staffApi } from '@/lib/api';
+import { can, canAccess } from '@/lib/permissions';
+import { errorMessage } from '@/lib/format';
+import { useAuth } from '@/context/auth-context';
+import { usePolling } from '@/hooks/use-polling';
 import { StaffLayout } from '@/components/layout/staff-layout';
 import { PageHeader } from '@/components/ui/page-header';
-import { Card } from '@/components/ui/card';
-import { Spinner } from '@/components/ui/spinner';
-import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/toast';
+import { TeamPanel } from '@/components/staff/team-panel';
+import { ApplicationsPanel } from '@/components/staff/applications-panel';
+import { ShiftPlanner } from '@/components/staff/shift-planner';
+import { PerformancePanel } from '@/components/staff/performance-panel';
+import { AllAccountsPanel } from '@/components/staff/all-accounts-panel';
 
-const ROLES: Role[] = ['customer', 'waiter', 'chef', 'manager', 'admin'];
-const STAFF_ROLES = ['waiter', 'chef', 'manager', 'admin'];
+type Tab = 'team' | 'applications' | 'shifts' | 'performance' | 'accounts';
 
-export default function UsersPage() {
+const TAB_LABELS: Record<Tab, string> = {
+  team: 'Team',
+  applications: 'Applications',
+  shifts: 'Shifts',
+  performance: 'Performance',
+  accounts: 'All accounts',
+};
+
+/** Staff management console (Sprint 9 · US9.1–US9.5). */
+function StaffManagement() {
+  const { user } = useAuth();
   const toast = useToast();
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
+  const role = user?.role;
 
-  const load = useCallback(async () => {
+  const tabs = (Object.keys(TAB_LABELS) as Tab[]).filter((t) => {
+    if (t === 'applications') return can.approveStaff(role);
+    if (t === 'shifts') return can.scheduleShifts(role);
+    if (t === 'accounts') return can.assignRoles(role);
+    return canAccess(role, 'staff');
+  });
+
+  const [tab, setTab] = useState<Tab>('team');
+  const active: Tab = tabs.includes(tab) ? tab : 'team';
+
+  const [roster, setRoster] = useState<User[]>([]);
+  const [rosterLoading, setRosterLoading] = useState(true);
+  const [applications, setApplications] = useState<StaffApplication[]>([]);
+  const [appsLoading, setAppsLoading] = useState(true);
+  const canReview = can.approveStaff(role);
+
+  const loadRoster = useCallback(async () => {
     try {
-      const { users: list } = await authApi.users();
-      setUsers(list);
+      const { staff } = await staffApi.roster();
+      setRoster(staff);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Failed to load users.', 'error');
+      toast(errorMessage(err), 'error');
     } finally {
-      setLoading(false);
+      setRosterLoading(false);
     }
   }, [toast]);
 
+  const loadApplications = useCallback(
+    async (quiet = false) => {
+      if (!canReview) return;
+      try {
+        const { applications: list } = await staffApi.applications();
+        setApplications(list);
+      } catch (err) {
+        if (!quiet) toast(errorMessage(err), 'error');
+      } finally {
+        setAppsLoading(false);
+      }
+    },
+    [canReview, toast],
+  );
+
   useEffect(() => {
-    load();
-  }, [load]);
+    loadRoster();
+    loadApplications();
+  }, [loadRoster, loadApplications]);
 
-  const staff = users.filter((u) => STAFF_ROLES.includes(u.role));
-  const staffByRole = (role: Role) => staff.filter((u) => u.role === role).length;
+  // Keep the pending-applications badge current while the page is open.
+  usePolling(() => loadApplications(true), 30000, canReview);
 
-  async function setRole(userId: string, role: Role) {
-    try {
-      await authApi.updateUser(userId, { role });
-      toast('Role updated.', 'success');
-      await load();
-    } catch (err) {
-      toast(err instanceof Error ? err.message : 'Failed to update role.', 'error');
-    }
+  // Deep links such as /staff/users#applications open the matching tab.
+  useEffect(() => {
+    const fromHash = window.location.hash.slice(1);
+    if (Object.prototype.hasOwnProperty.call(TAB_LABELS, fromHash)) setTab(fromHash as Tab);
+  }, []);
+
+  function select(next: Tab) {
+    setTab(next);
+    window.history.replaceState(null, '', `#${next}`);
   }
 
-  async function toggleActive(user: User) {
-    try {
-      await authApi.updateUser(user.id, { active: !user.active });
-      toast(user.active ? 'User deactivated.' : 'User reactivated.', 'success');
-      await load();
-    } catch (err) {
-      toast(err instanceof Error ? err.message : 'Failed to update status.', 'error');
-    }
+  function onTabKey(e: KeyboardEvent<HTMLDivElement>) {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    e.preventDefault();
+    const i = tabs.indexOf(active);
+    const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+    select(next);
+    document.getElementById(`tab-${next}`)?.focus();
   }
+
+  const pendingCount = applications.filter((a) => a.status === 'pending').length;
 
   return (
-    <StaffLayout>
+    <>
       <PageHeader
-        title="Staff & roles"
-        subtitle="Sprint 9 · Staff Management + Sprint 1 RBAC (admin): assign roles, suspend access, and view the team roster."
+        title="Staff management"
+        subtitle="Sprint 9 · Team roster and roles, hiring, the weekly rota and staff performance (US9.1–US9.5)."
       />
 
-      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {(['waiter', 'chef', 'manager', 'admin'] as Role[]).map((r) => (
-          <div key={r} className="card p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-400 capitalize">
-              {r}s
-            </p>
-            <p className="mt-1 text-2xl font-bold text-stone-800">{staffByRole(r)}</p>
-          </div>
-        ))}
+      <div
+        role="tablist"
+        aria-label="Staff management sections"
+        onKeyDown={onTabKey}
+        className="-mx-4 mb-5 flex gap-1 overflow-x-auto border-b border-stone-200 px-4 sm:mx-0 sm:px-0"
+      >
+        {tabs.map((t) => {
+          const selected = t === active;
+          return (
+            <button
+              key={t}
+              id={`tab-${t}`}
+              type="button"
+              role="tab"
+              aria-selected={selected}
+              aria-controls={`panel-${t}`}
+              tabIndex={selected ? 0 : -1}
+              onClick={() => select(t)}
+              className={`-mb-px flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                selected
+                  ? 'border-brand-600 text-brand-700'
+                  : 'border-transparent text-stone-500 hover:border-stone-300 hover:text-stone-800'
+              }`}
+            >
+              {TAB_LABELS[t]}
+              {t === 'applications' && pendingCount > 0 ? (
+                <span
+                  className="rounded-full bg-amber-500 px-1.5 py-px text-[10px] font-bold leading-4 text-white"
+                  aria-label={`${pendingCount} pending`}
+                >
+                  {pendingCount}
+                </span>
+              ) : null}
+              {t === 'team' && !rosterLoading ? (
+                <span className="text-xs font-normal text-stone-400">{roster.length}</span>
+              ) : null}
+            </button>
+          );
+        })}
       </div>
 
-      <Card className="p-0">
-        {loading ? (
-          <Spinner label="Loading users…" />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="table-base">
-              <thead>
-                <tr>
-                  <th>User</th>
-                  <th>Role</th>
-                  <th>Status</th>
-                  <th className="text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((u) => (
-                  <tr key={u.id}>
-                    <td>
-                      <p className="font-medium text-stone-800">{u.name}</p>
-                      <p className="text-xs text-stone-400">{u.email}</p>
-                    </td>
-                    <td>
-                      <select
-                        className="input w-32 !py-1.5 text-xs"
-                        value={u.role}
-                        onChange={(e) => setRole(u.id, e.target.value as Role)}
-                      >
-                        {ROLES.map((r) => (
-                          <option key={r} value={r}>
-                            {r}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td>
-                      <Badge tone={u.active ? 'emerald' : 'red'}>{u.active ? 'Active' : 'Suspended'}</Badge>
-                    </td>
-                    <td className="text-right">
-                      <button
-                        onClick={() => toggleActive(u)}
-                        className={`btn !px-3 !py-1.5 text-xs ${
-                          u.active ? 'btn-danger' : 'btn-secondary'
-                        }`}
-                      >
-                        {u.active ? 'Suspend' : 'Reactivate'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
+      <div role="tabpanel" id={`panel-${active}`} aria-labelledby={`tab-${active}`}>
+        {active === 'team' ? <TeamPanel roster={roster} loading={rosterLoading} onChanged={loadRoster} /> : null}
+        {active === 'applications' ? (
+          <ApplicationsPanel
+            applications={applications}
+            loading={appsLoading}
+            onChanged={() => Promise.all([loadApplications(), loadRoster()])}
+          />
+        ) : null}
+        {active === 'shifts' ? <ShiftPlanner roster={roster} /> : null}
+        {active === 'performance' ? <PerformancePanel /> : null}
+        {active === 'accounts' ? <AllAccountsPanel onChanged={loadRoster} /> : null}
+      </div>
+    </>
+  );
+}
+
+export default function StaffUsersPage() {
+  return (
+    <StaffLayout section="staff">
+      <StaffManagement />
     </StaffLayout>
   );
 }
