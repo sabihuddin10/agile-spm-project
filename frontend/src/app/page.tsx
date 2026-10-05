@@ -6,15 +6,15 @@ export default function HomePage() {
   return (
     <StorefrontShell>
       <section className="border-b border-char-hairline bg-char-deep">
-        <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
+        <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20">
           <div className="grid items-center gap-10 lg:grid-cols-[1.4fr_1fr]">
             <div>
               <h1 className="font-display text-5xl font-semibold leading-[1.02] tracking-tight text-bone sm:text-6xl">
                 The fire sets the menu.
               </h1>
               <p className="mt-6 max-w-xl text-lg leading-relaxed text-bone-dim">
-                Wood-fired plates and plant-led sides that change with the season. Order ahead from
-                the pass, or pull up a chair and let the kitchen cook to you.
+                Wood-fired plates and plant-led sides that change with the season. Order ahead for
+                pickup or delivery, or pull up a chair and order straight from your table.
               </p>
               <div className="mt-9 flex flex-wrap gap-3">
                 <Link href="/menu" className="btn-primary">
@@ -64,23 +64,23 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-6">
-        <div className="flex items-center gap-8 divide-x divide-char-hairline py-8 text-sm text-bone-dim">
+      <section className="mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="flex flex-wrap items-center gap-x-8 gap-y-2 py-8 text-sm text-bone-dim sm:divide-x sm:divide-char-hairline">
           <span>Wood-fired grill, in season</span>
-          <span className="pl-8">Short menu that changes</span>
-          <span className="hidden pl-8 sm:block">Cooks around allergies</span>
+          <span className="sm:pl-8">Short menu that changes</span>
+          <span className="sm:pl-8">Cooks around your allergies</span>
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-6 py-10">
+      <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
         <div className="mb-6 flex items-end justify-between">
           <div>
             <h2 className="font-display text-3xl font-semibold tracking-tight text-bone">
               From the pass tonight
             </h2>
             <p className="mt-2 text-sm text-bone-dim">
-              Every dish lists its allergens and dietary notes. Add what you fancy and place an
-              online order.
+              Every dish lists its allergens and dietary notes — sign in and we&apos;ll flag anything
+              on your allergy list.
             </p>
           </div>
         </div>

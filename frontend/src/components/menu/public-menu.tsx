@@ -2,19 +2,28 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { menuApi } from '@/lib/api';
-import type { MenuCategory, MenuItem } from '@/types';
+import { customerApi, menuApi } from '@/lib/api';
+import type { MenuCategory } from '@/types';
 import { MenuItemCard } from '@/components/menu/menu-item-card';
 import { Spinner } from '@/components/ui/spinner';
 import { useCart } from '@/context/cart-context';
+import { useAuth } from '@/context/auth-context';
+import { errorMessage } from '@/lib/format';
 
+/**
+ * The storefront menu: categories of dishes with dietary/allergen tags and a
+ * dietary filter (US2.2), allergy warnings for the signed-in customer (US2.4),
+ * out-of-stock reasons (US2.5) and add-to-order with options (US2.3).
+ */
 export function PublicMenu({ compact = false }: { compact?: boolean }) {
-  const { add } = useCart();
+  const { add, canOrder } = useCart();
+  const { user } = useAuth();
   const [menu, setMenu] = useState<MenuCategory[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [allergies, setAllergies] = useState<string[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -24,17 +33,38 @@ export function PublicMenu({ compact = false }: { compact?: boolean }) {
         if (cancelled) return;
         setMenu(res.menu.filter((c) => c.active));
         setTags(res.tags);
-        setLoading(false);
       })
       .catch((err) => {
-        if (cancelled) return;
-        setError(err instanceof Error ? err.message : 'Failed to load menu.');
-        setLoading(false);
+        if (!cancelled) setError(errorMessage(err, 'Failed to load menu.'));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
     };
   }, []);
+
+  // US2.4: load the customer's recorded allergies once, to flag clashing dishes.
+  const customerId = user?.role === 'customer' ? user.id : null;
+  useEffect(() => {
+    if (!customerId) {
+      setAllergies([]);
+      return;
+    }
+    let cancelled = false;
+    customerApi
+      .me()
+      .then((res) => {
+        if (!cancelled) setAllergies(res.customer.preferences?.allergies ?? []);
+      })
+      .catch(() => {
+        /* warnings are a convenience — the menu still works without them */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [customerId]);
 
   if (loading) {
     return (
@@ -54,10 +84,9 @@ export function PublicMenu({ compact = false }: { compact?: boolean }) {
   }
 
   const categories = activeTag
-    ? menu.map((c) => ({
-        ...c,
-        items: c.items?.filter((i) => i.dietaryTags.includes(activeTag)),
-      })).filter((c) => (c.items?.length ?? 0) > 0)
+    ? menu
+        .map((c) => ({ ...c, items: c.items?.filter((i) => i.dietaryTags.includes(activeTag)) }))
+        .filter((c) => (c.items?.length ?? 0) > 0)
     : menu;
 
   const visible = compact ? categories.slice(0, 3) : categories;
@@ -71,16 +100,28 @@ export function PublicMenu({ compact = false }: { compact?: boolean }) {
 
   return (
     <div>
+      {customerId && allergies.length > 0 ? (
+        <p className="mb-6 rounded-xl border border-char-hairline bg-char-raised px-4 py-3 text-sm text-bone-dim">
+          We&apos;re flagging dishes that contain <span className="font-medium text-bone">{allergies.join(', ')}</span>{' '}
+          from your allergy list.{' '}
+          <Link href="/account" className="text-ember-soft underline-offset-2 hover:underline">
+            Update your allergies
+          </Link>
+        </p>
+      ) : null}
+
       {!compact && tags.length > 0 ? (
-        <div className="mb-8 flex flex-wrap items-center gap-2">
-          <button onClick={() => setActiveTag(null)} className={tagChip(activeTag === null)}>
+        <div className="mb-8 flex flex-wrap items-center gap-2" role="group" aria-label="Filter by dietary tag">
+          <button type="button" onClick={() => setActiveTag(null)} className={tagChip(activeTag === null)} aria-pressed={activeTag === null}>
             All
           </button>
           {tags.map((t) => (
             <button
+              type="button"
               key={t}
               onClick={() => setActiveTag(activeTag === t ? null : t)}
               className={tagChip(activeTag === t)}
+              aria-pressed={activeTag === t}
             >
               {t}
             </button>
@@ -92,16 +133,14 @@ export function PublicMenu({ compact = false }: { compact?: boolean }) {
         {visible.map((cat) => (
           <section key={cat.id}>
             <div className="mb-4 flex items-center gap-3">
-              <h2 className="font-display text-2xl font-semibold tracking-tight text-bone">
-                {cat.name}
-              </h2>
+              <h2 className="font-display text-2xl font-semibold tracking-tight text-bone">{cat.name}</h2>
               <span className="rounded-full border border-char-hairline bg-char-raised px-2.5 py-0.5 text-xs text-bone-faint">
-                {cat.items?.length ?? 0}, {((cat.items?.length ?? 0) === 1 ? 'dish' : 'dishes')}
+                {cat.items?.length ?? 0} {(cat.items?.length ?? 0) === 1 ? 'dish' : 'dishes'}
               </span>
             </div>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {(cat.items ?? []).map((item) => (
-                <MenuItemCard key={item.id} item={item} onAdd={add} />
+                <MenuItemCard key={item.id} item={item} onAdd={add} canOrder={canOrder} allergies={allergies} />
               ))}
             </div>
           </section>

@@ -1,117 +1,112 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { customerApi } from '@/lib/api';
-import type { Customer } from '@/types';
-import { Card } from '@/components/ui/card';
-import { Spinner } from '@/components/ui/spinner';
+import { useState } from 'react';
+import Link from 'next/link';
+import type { Order } from '@/types';
+import { ORDER_STATUS, PAYMENT_STATUS, formatDateTime, money, titleCase } from '@/lib/format';
+import { StatusPill } from '@/components/storefront/status-pill';
 
-export function OrderHistory() {
-  const [customer, setCustomer] = useState<Customer | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+const PAGE = 8;
 
-  useEffect(() => {
-    let cancelled = false;
-    customerApi
-      .me()
-      .then((res) => {
-        if (cancelled) return;
-        setCustomer(res.customer);
-        setLoading(false);
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setError(err instanceof Error ? err.message : 'Failed to load orders.');
-        setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+function itemsText(order: Order): string {
+  return order.items.map((i) => (i.qty > 1 ? `${i.qty}× ${i.name}` : i.name)).join(', ');
+}
 
-  if (loading) {
+/**
+ * Past orders, newest first (US1.4): date, dishes, total, payment status and
+ * refunds, with a receipt for paid or refunded orders.
+ */
+export function OrderHistory({
+  orders,
+  onReceipt,
+  receiptLoadingId,
+}: {
+  orders: Order[];
+  onReceipt: (order: Order) => void;
+  receiptLoadingId: string | null;
+}) {
+  const [shown, setShown] = useState(PAGE);
+  const sorted = orders.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+  if (sorted.length === 0) {
     return (
-      <Card>
-        <Spinner label="Loading order history…" />
-      </Card>
+      <div className="rounded-2xl border border-dashed border-char-hairline px-4 py-8 text-center">
+        <p className="text-sm font-medium text-bone">No past orders yet</p>
+        <p className="mt-1 text-sm text-bone-dim">Finished and cancelled orders will appear here.</p>
+        <Link href="/menu" className="btn-secondary mt-4 !py-2 text-sm">
+          Browse the menu
+        </Link>
+      </div>
     );
   }
-
-  if (error) {
-    return (
-      <Card>
-        <p className="text-sm text-red-400">{error}</p>
-      </Card>
-    );
-  }
-
-  if (!customer) return null;
-
-  const orders = customer.orderHistory ?? [];
 
   return (
-    <Card>
-      <div className="flex items-center justify-between">
-        <h3 className="font-display text-xl font-semibold tracking-tight text-bone">
-          Order history
-        </h3>
-        <span className="rounded-full border border-char-hairline bg-char-deep px-2.5 py-0.5 text-xs text-bone-faint">
-          {orders.length} {orders.length === 1 ? 'order' : 'orders'}
-        </span>
-      </div>
+    <div>
+      <ul className="divide-y divide-char-hairline overflow-hidden rounded-2xl border border-char-hairline">
+        {sorted.slice(0, shown).map((o) => {
+          const payment = PAYMENT_STATUS[o.paymentStatus];
+          const refunded = o.refund?.amount ?? 0;
+          const canReceipt = o.paymentStatus !== 'unpaid';
+          return (
+            <li key={o.id} className="bg-char-raised px-4 py-3.5">
+              <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-bone">
+                    #{o.number}
+                    <span className="ml-2 font-normal text-bone-faint">
+                      {formatDateTime(o.createdAt)} · {o.tableNumber ? `Table ${o.tableNumber}` : titleCase(o.fulfillment)}
+                    </span>
+                  </p>
+                  <p className="mt-1 text-sm text-bone-dim">{itemsText(o)}</p>
+                </div>
+                <div className="text-right">
+                  <p className={`text-sm font-semibold ${o.status === 'cancelled' ? 'text-bone-faint line-through' : 'text-bone'}`}>
+                    {money(o.total)}
+                  </p>
+                  {o.pointsEarned > 0 && o.paymentStatus === 'paid' ? (
+                    <p className="text-xs text-ember-soft">+{o.pointsEarned} pts</p>
+                  ) : null}
+                </div>
+              </div>
 
-      {orders.length === 0 ? (
-        <p className="mt-4 text-sm text-bone-dim">
-          No orders yet. Head over to the menu and place your first one.
-        </p>
-      ) : (
-        <div className="mt-5 overflow-hidden rounded-xl border border-char-hairline">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-char-deep">
-              <tr>
-                <th className="px-4 py-2.5 font-medium text-bone-faint">Date</th>
-                <th className="px-4 py-2.5 font-medium text-bone-faint">Items</th>
-                <th className="px-4 py-2.5 text-right font-medium text-bone-faint">Total</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-char-hairline bg-char-raised">
-              {orders.map((o) => (
-                <tr key={o.id}>
-                  <td className="px-4 py-3 text-bone-dim">{o.date}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      {o.items.map((i) => (
-                        <span key={i} className="chip chip-muted">
-                          {i}
-                        </span>
-                      ))}
-                      {o.pointsEarned ? (
-                        <span className="chip chip-diet">+{o.pointsEarned} pts</span>
-                      ) : null}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <span className="font-semibold text-bone">${o.total.toFixed(2)}</span>
-                    {o.paymentMethod ? (
-                      <span className="block text-xs capitalize text-bone-faint">
-                        {o.paymentMethod}
-                      </span>
-                    ) : null}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+              <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                {o.status === 'cancelled' ? <StatusPill tone={ORDER_STATUS.cancelled.tone}>Cancelled</StatusPill> : null}
+                <StatusPill tone={payment.tone}>
+                  {payment.label}
+                  {o.paymentMethod && o.paymentStatus !== 'unpaid' ? ` · ${o.paymentMethod}` : ''}
+                </StatusPill>
+                {o.pointsUsed > 0 ? <span className="text-xs text-bone-faint">{o.pointsUsed} points used</span> : null}
+                {canReceipt ? (
+                  <button
+                    type="button"
+                    className="ml-auto rounded-pill border border-char-hairline px-3 py-1 text-xs font-medium text-bone-dim transition hover:border-ember/40 hover:text-bone disabled:opacity-50"
+                    onClick={() => onReceipt(o)}
+                    disabled={receiptLoadingId === o.id}
+                    aria-label={`Receipt for order ${o.number}`}
+                  >
+                    {receiptLoadingId === o.id ? 'Loading…' : 'Receipt'}
+                  </button>
+                ) : null}
+              </div>
+
+              {refunded > 0 ? (
+                <p className="mt-2 text-xs text-red-300">
+                  Refunded {money(refunded)}
+                  {o.refund?.reason ? ` — ${o.refund.reason}` : ''}
+                  {o.refund?.at ? ` · ${formatDateTime(o.refund.at)}` : ''}
+                </p>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+      {sorted.length > shown ? (
+        <div className="mt-3 text-center">
+          <button type="button" className="btn-ghost !py-1.5 text-sm" onClick={() => setShown((n) => n + PAGE)}>
+            Show more ({sorted.length - shown} older)
+          </button>
         </div>
-      )}
-
-      {orders.length > 0 ? (
-        <p className="mt-4 text-xs text-bone-faint">
-          Spending: ${customer.totalSpend?.toFixed(2) ?? '0.00'} total, {customer.loyaltyPoints}{' '}
-          Flame Points
-        </p>
       ) : null}
-    </Card>
+    </div>
   );
 }

@@ -2,72 +2,122 @@
 
 import type { Customer } from '@/types';
 import { Badge } from '@/components/ui/badge';
+import { ORDER_STATUS, PAYMENT_STATUS, formatDateTime, money, titleCase } from '@/lib/format';
 
+/**
+ * A customer's profile in the ledger: contact, loyalty points, spend, dietary
+ * preferences and allergies (US1.5) and order history newest first (US1.4).
+ */
 export function CustomerDetail({
   customer,
   onEdit,
   onDelete,
+  onClose,
+  deleting = false,
 }: {
   customer: Customer;
   onEdit: () => void;
   onDelete: () => void;
+  onClose?: () => void;
+  deleting?: boolean;
 }) {
-  const totalOrders = customer.orderHistory?.length ?? 0;
-  const avgOrder = totalOrders > 0 ? (customer.totalSpend / totalOrders).toFixed(2) : '0.00';
+  const history = (customer.orderHistory ?? []).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const totalOrders = customer.orderCount ?? history.length;
+  const avgOrder = totalOrders > 0 ? customer.totalSpend / totalOrders : 0;
 
   return (
     <div className="space-y-5">
       <div>
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h3 className="text-lg font-semibold">{customer.name}</h3>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="text-lg font-semibold text-stone-900">{customer.name}</h3>
             <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-stone-500">
-              <Badge tone={customer.type === 'online' ? 'blue' : 'stone'}>{customer.type}</Badge>
-              {customer.email && <span>{customer.email}</span>}
-              {customer.phone && <span>· {customer.phone}</span>}
+              <Badge tone={customer.type === 'online' ? 'blue' : 'stone'}>{titleCase(customer.type)}</Badge>
+              {customer.email ? <span className="break-all">{customer.email}</span> : null}
+              {customer.phone ? <span>· {customer.phone}</span> : null}
             </div>
+            <p className="mt-1 text-xs text-stone-400">Customer since {formatDateTime(customer.createdAt)}</p>
           </div>
           <div className="flex gap-2">
-            <button onClick={onEdit} className="btn-secondary !px-3 !py-1.5 text-xs">
+            <button type="button" onClick={onEdit} className="btn-secondary !px-3 !py-1.5 text-xs">
               Edit
             </button>
-            <button onClick={onDelete} className="btn-danger !px-3 !py-1.5 text-xs">
-              Delete
+            <button type="button" onClick={onDelete} className="btn-danger !px-3 !py-1.5 text-xs" disabled={deleting}>
+              {deleting ? 'Deleting…' : 'Delete'}
             </button>
+            {onClose ? (
+              <button
+                type="button"
+                onClick={onClose}
+                className="btn-ghost !px-2 !py-1.5 text-xs"
+                aria-label={`Close ${customer.name}`}
+              >
+                ✕
+              </button>
+            ) : null}
           </div>
         </div>
-        {customer.notes ? <p className="mt-2 text-sm text-stone-500">{customer.notes}</p> : null}
+        {customer.notes ? (
+          <p className="mt-3 rounded-lg bg-stone-50 px-3 py-2 text-sm text-stone-600">{customer.notes}</p>
+        ) : null}
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
-        <Stat label="Total spend" value={`$${customer.totalSpend.toFixed(2)}`} />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Stat label="Total spend" value={money(customer.totalSpend)} />
         <Stat label="Orders" value={String(totalOrders)} />
-        <Stat label="Avg / order" value={`$${avgOrder}`} />
+        <Stat label="Avg / order" value={money(avgOrder)} />
+        <Stat label="Flame Points" value={String(customer.loyaltyPoints)} />
       </div>
 
       <div>
         <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-400">Preferences</p>
-        <div className="space-y-1.5 text-sm">
-          <PrefRow label="Dietary" values={customer.preferences.dietary} />
-          <PrefRow label="Allergies" values={customer.preferences.allergies} danger />
+        <div className="space-y-2 text-sm">
+          <PrefRow label="Dietary" values={customer.preferences?.dietary ?? []} />
+          <PrefRow label="Allergies" values={customer.preferences?.allergies ?? []} danger />
         </div>
       </div>
 
       <div>
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-400">Order history</p>
-        {totalOrders === 0 ? (
-          <p className="text-sm text-stone-400">No orders yet.</p>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-400">
+          Order history <span className="font-normal normal-case tracking-normal">· newest first</span>
+        </p>
+        {history.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-stone-200 px-4 py-6 text-center text-sm text-stone-400">
+            No orders yet.
+          </p>
         ) : (
-          <ul className="divide-y divide-stone-100 rounded-lg border border-stone-200">
-            {customer.orderHistory?.map((o) => (
-              <li key={o.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
-                <div>
-                  <p className="font-medium text-stone-800">{o.items.join(', ')}</p>
-                  <p className="text-xs text-stone-400">{o.date}</p>
-                </div>
-                <span className="font-semibold">${o.total.toFixed(2)}</span>
-              </li>
-            ))}
+          <ul className="max-h-[420px] divide-y divide-stone-100 overflow-y-auto rounded-lg border border-stone-200">
+            {history.map((o) => {
+              const status = ORDER_STATUS[o.status];
+              const payment = PAYMENT_STATUS[o.paymentStatus];
+              return (
+                <li key={o.id} className="px-4 py-3 text-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-medium text-stone-800">
+                        #{o.number}
+                        <span className="ml-2 font-normal text-stone-400">
+                          {formatDateTime(o.createdAt)} · {titleCase(o.fulfillment)}
+                        </span>
+                      </p>
+                      <p className="mt-0.5 text-stone-600">{o.items.join(', ')}</p>
+                    </div>
+                    <span className="shrink-0 font-semibold text-stone-800">{money(o.total)}</span>
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                    <Badge tone={status.tone}>{status.label}</Badge>
+                    <Badge tone={payment.tone}>
+                      {payment.label}
+                      {o.paymentMethod && o.paymentStatus !== 'unpaid' ? ` · ${o.paymentMethod}` : ''}
+                    </Badge>
+                    {o.refundedAmount > 0 ? (
+                      <span className="text-xs text-red-600">Refunded {money(o.refundedAmount)}</span>
+                    ) : null}
+                    {o.pointsEarned ? <span className="text-xs text-stone-400">+{o.pointsEarned} pts</span> : null}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
@@ -87,18 +137,19 @@ function Stat({ label, value }: { label: string; value: string }) {
 function PrefRow({ label, values, danger = false }: { label: string; values: string[]; danger?: boolean }) {
   return (
     <div className="flex items-start gap-3">
-      <span className="w-16 shrink-0 text-stone-500">{label}</span>
+      <span className="w-20 shrink-0 text-stone-500">{label}</span>
       {values.length === 0 ? (
-        <span className="text-stone-400">None</span>
+        <span className="text-stone-400">None recorded</span>
       ) : (
         <div className="flex flex-wrap gap-1.5">
           {values.map((v) => (
             <span
               key={v}
               className={`rounded-md px-2 py-0.5 text-xs font-medium ${
-                danger ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'
+                danger ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-700'
               }`}
             >
+              {danger ? '⚠ ' : ''}
               {v}
             </span>
           ))}
