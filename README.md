@@ -1,64 +1,89 @@
-# Restaurant Operations & Ordering Platform
+# Plate & Flame — Restaurant Operations & Ordering Platform
 
-A full-stack **Restaurant Operations & Ordering Platform** — the working software deliverable for a 10-sprint Agile/Scrum intern project. This repository currently implements the **foundation (Sprints 1–2)**: authentication/RBAC, Customer Management, and Menu Management, plus an in-app Scrum board that documents the Agile delivery.
+A full-stack restaurant operations platform built as a 10-sprint Agile/Scrum project. It covers the whole flow from **customer orders** through **waiter confirms**, **kitchen prepares** and **waiter serves**, to **bill settled**, and from there **inventory deducts** and **analytics update**. Five stakeholder roles each get their own permissions and screens.
+
+All **10 modules / 49 user stories / 217 story points** of the Product Backlog are implemented. Each story's acceptance criteria are checked by an automated test (`server/test/`, one file per sprint). Each story also has a demo path, listed on the in-app **Scrum board** (`/dev`).
 
 ## Monorepo layout
 
 ```
 .
-├── server/      Express 4 REST API — in-memory storage (no database)
-└── frontend/    Next.js 14 (App Router) + React 18 + TypeScript + Tailwind CSS
+├── server/                 Express 4 REST API (in-memory store, seeded on start)
+│   ├── src/app.js          app factory (routes + middleware)
+│   ├── src/data/           store.js (data model + live seed), seed-history.js (60 days of history)
+│   ├── src/lib/            order-math (money/splits), orders (lifecycle), reservations (capacity/holds), notify
+│   ├── src/routes/         auth, customers, menu, orders, tables, reservations, billing,
+│   │                       inventory, staff, analytics, notifications, settings
+│   └── test/               acceptance tests per sprint (node:test)
+├── frontend/               Next.js 14 (App Router) + React 18 + TypeScript + Tailwind
+│   └── src/
+│       ├── app/            storefront (/, /menu, /book, /account, /careers), staff console (/staff/*), Scrum board (/dev)
+│       ├── components/     feature components (orders, billing, tables, inventory, staff, analytics, …)
+│       ├── lib/            api client, permissions (RBAC map), formatting, menu pricing
+│       └── data/backlog.ts Product Backlog with acceptance criteria + evidence
+├── .github/workflows/ci.yml  Definition-of-Done gate: lint + tests + type check + build
+└── *.docx                  Agile documentation (proposal, backlogs, WBS, Gantt, ceremonies, velocity)
 ```
 
 ## Tech stack
 
-| Layer      | Technology                                                    |
-|------------|---------------------------------------------------------------|
-| Frontend   | Next.js 14 (App Router), React 18, TypeScript, Tailwind CSS 3 |
-| Backend    | Express 4 (REST)                                              |
-| Storage    | In-memory server store (+ client-side state) — **no database** |
-| Auth/RBAC  | Mock JWT auth, role-based access for 5 stakeholder roles       |
-| Charts     | Chart.js (react-chartjs-2) — wired for later Analytics sprint  |
-
-> **Note:** Storage is intentionally in-memory. All data is seeded on server start and **resets whenever the server restarts**. There is no persistence layer yet.
-
-## The 5 stakeholder roles
-
-Customer · Waiter · Chef · Manager · Admin
-
-Each role has its own dashboard and permission set, enforced by RBAC middleware on the API and route guards on the client.
+| Layer      | Technology                                                            |
+|------------|-----------------------------------------------------------------------|
+| Frontend   | Next.js 14 (App Router), React 18, TypeScript (strict), Tailwind CSS 3 |
+| Charts     | Chart.js via react-chartjs-2 (analytics dashboard)                    |
+| Backend    | Express 4 (REST, ES modules)                                           |
+| Auth/RBAC  | JWT (bcrypt-hashed passwords), role guards on every API route, matching UI guards |
+| Storage    | In-memory store — **resets on restart** (see *Design decisions*)     |
+| Tests / CI | `node:test` acceptance tests, ESLint (next/core-web-vitals), GitHub Actions |
 
 ## Getting started
 
-```bash
-# 1. Install all workspace dependencies (server + frontend)
-npm install
+Requires Node 18+ (CI uses Node 22) and pnpm (`corepack enable`).
 
-# 2. Run both servers (Express on :4000, Next.js on :3000)
-npm run dev
+```bash
+pnpm install          # installs server + frontend workspaces
+pnpm dev              # API on :4000, web on :3000
 ```
 
-Open http://localhost:3000 · API base: http://localhost:4000/api
+Open http://localhost:3000. The API base is http://localhost:4000/api (Next proxies `/api/*` to it).
 
-### Demo accounts (seeded on server start)
+| Command                     | What it does                                   |
+|-----------------------------|------------------------------------------------|
+| `pnpm test`                 | API acceptance tests (51 tests, US1.1–US10.6)   |
+| `pnpm --dir server lint`    | Syntax-check every server file                 |
+| `pnpm --dir frontend lint`  | ESLint for the web app                         |
+| `pnpm build`                | Production build of the web app (includes type check) |
 
-| Role    | Email             | Password |
-|---------|-------------------|----------|
-| Admin   | admin@rest.test   | password |
-| Manager | manager@rest.test | password |
-| Chef    | chef@rest.test    | password |
-| Waiter  | waiter@rest.test  | password |
-| Customer| customer@rest.test | password |
+### Demo accounts (password: `password`)
 
-## Sprint roadmap
+| Role     | Email               | Try this                                                    |
+|----------|---------------------|-------------------------------------------------------------|
+| Admin    | admin@rest.test     | Staff management → roles, suspend/remove; everything else   |
+| Manager  | manager@rest.test   | Analytics, inventory reorder form, shifts, refunds, settings |
+| Chef     | chef@rest.test      | Kitchen display: start/ready items, rush & reorder queue     |
+| Waiter   | waiter@rest.test    | Orders, floor plan, reservations, billing, notifications     |
+| Customer | customer@rest.test  | Order with modifiers, dine-in/pickup/delivery, bookings, receipts |
 
-| Sprint | Module                 | Status             |
-|--------|------------------------|--------------------|
-| 1      | Auth/RBAC + Customers   | ✅ In this build   |
-| 2      | Menu Management         | ✅ In this build   |
-| 3      | Order Management        | 🔜 Planned         |
-| 4      | Kitchen Workflow (KDS)  | 🔜 Planned         |
-| 5      | Billing                 | 🔜 Planned         |
-| 6–10   | Tables, Reservations, Inventory, Staff, Analytics | 🔜 Planned |
+Also seeded: `chef2@rest.test` (Cara Cook) and `waiter2@rest.test` (Wendy Server), so staff performance has more than one person to compare.
 
-See the `docs/` folder and the in-app **Scrum board** for the full product backlog and sprint tracking.
+## What each module delivers
+
+| Sprint | Module | Highlights |
+|--------|--------|------------|
+| 1 | Auth/RBAC + Customers | JWT login/registration, role guards (API + UI, 403 screen), customer ledger search/filter, order history newest-first, dietary/allergy preferences shown to waiter & chef |
+| 2 | Menu | Item & category CRUD, modifiers with price deltas, dietary/allergen tags, personal allergy warnings, out-of-stock control (chef) |
+| 3 | Orders | Customer orders (dine-in at table / pickup / delivery), staff orders, confirm, edit-before-confirm, per-item status, table assignment, live refresh |
+| 4 | Kitchen (KDS) | Oldest-first queue, rush + manual reordering, elapsed timers with configurable delay flag, start/ready per item, ready-for-pickup list, waiter notifications |
+| 5 | Billing | Itemized bills, tax + service charge + tip, split evenly or by items (cent-exact), paid/unpaid, printable receipts, manager refunds |
+| 6 | Tables | Floor plan by zone with live status, add/edit tables, hold tables, auto-free when the bill closes |
+| 7 | Reservations | Slot availability by party size, full-slot alternatives, confirm (customer notified), table holds at booking time, grace-period no-shows, cancellations |
+| 8 | Inventory | Ingredient CRUD, recipes (bill of materials), auto-deduction on order close, stock movement log, low-stock alerts, supplier reorder form → purchase orders → receive |
+| 9 | Staff | Public job applications → approval creates accounts, role assignment, suspend/remove (immediate), shift rota + personal schedule, performance metrics |
+| 10 | Analytics | Revenue/order trends by day/week/month, top dishes by qty/revenue, table turnover & occupancy, peak hours, inventory health, no-show rate |
+
+## Design decisions
+
+- **In-memory storage instead of Firebase.** The proposal planned Firebase/Firestore. The team kept a seeded in-memory store so the app runs anywhere with no cloud credentials, and so every demo starts from the same data. Seed data is generated relative to today: 60 days of history, live orders in progress, tonight's bookings and this week's rota. The trade-off is that data resets when the API restarts. Persistence is the natural next backlog item.
+- **The server is the source of truth for money.** Prices, modifier deltas, tax, service charge, points and splits are all computed server-side in integer cents. Clients only send menu item IDs and selected options.
+- **One permissions map.** `frontend/src/lib/permissions.ts` mirrors the API's `requireRole` guards, so the UI never offers an action the API would refuse.
+- **Live updates via polling** every 5–10 s for orders, the KDS, the floor plan, billing and notifications. This meets "within a few seconds" without a websocket server.

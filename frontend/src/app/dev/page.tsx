@@ -8,6 +8,39 @@ import { Badge } from '@/components/ui/badge';
 import { SprintCard } from '@/components/scrum/sprint-card';
 import { useAuth } from '@/context/auth-context';
 
+const DEFINITION_OF_DONE: { text: string; how: string; automated: boolean }[] = [
+  {
+    text: 'Code merged to main branch and passes CI (build + lint + tests).',
+    how: '.github/workflows/ci.yml runs API syntax check, acceptance tests, web lint, type check and production build.',
+    automated: true,
+  },
+  {
+    text: 'All acceptance criteria for every committed story verified manually or via automated test.',
+    how: 'server/test/ has one acceptance-test file per sprint, named by story ID — run `npm test`. Expand a story below for its test and demo path.',
+    automated: true,
+  },
+  {
+    text: 'UI reviewed for the relevant stakeholder role(s) and is responsive/usable.',
+    how: 'Role-based staff console (403 for out-of-role pages) and storefront; layouts adapt down to phone width.',
+    automated: true,
+  },
+  {
+    text: 'No known critical or blocking defects remain open.',
+    how: 'Tracked in docs/COMPLETION_REPORT.md (defects found and fixed).',
+    automated: true,
+  },
+  {
+    text: 'Feature deployed to the staging environment and demoed at Sprint Review.',
+    how: 'Team ceremony — record the demo in that week’s Sprint Review notes.',
+    automated: false,
+  },
+  {
+    text: 'WPDS entry for the week completed and story statuses updated on the board.',
+    how: 'Team ceremony — written by the Product Owner each week.',
+    automated: false,
+  },
+];
+
 export default function ScrumBoardPage() {
   const { user, loading } = useAuth();
   const delivered = SPRINTS.filter((s) => s.status === 'done');
@@ -37,6 +70,24 @@ export default function ScrumBoardPage() {
         <StatCard label="Delivered" value={`${BACKLOG_SUMMARY.donePoints} pts`} tone="emerald" />
         <StatCard label="Planned velocity" value={`${BACKLOG_SUMMARY.averageVelocity}/sprint`} />
       </div>
+
+      <Card className="mt-6">
+        <h2 className="font-semibold">Definition of Done</h2>
+        <p className="mt-1 text-sm text-stone-500">From Sprint_Backlogs.docx — applied to every sprint increment.</p>
+        <ul className="mt-4 space-y-2">
+          {DEFINITION_OF_DONE.map((item) => (
+            <li key={item.text} className="flex items-start gap-3 text-sm">
+              <Badge tone={item.automated ? 'emerald' : 'stone'} className="mt-0.5 shrink-0">
+                {item.automated ? 'In repo' : 'Team step'}
+              </Badge>
+              <span>
+                <span className="text-stone-800">{item.text}</span>
+                <span className="block text-xs text-stone-500">{item.how}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      </Card>
 
       <div className="mt-6 rounded-xl border border-stone-200 bg-white p-5">
         <div className="flex items-center justify-between">
