@@ -1,0 +1,39 @@
+# Definition of Done gate: every push/PR must build, lint and pass the
+# acceptance tests (one test file per sprint, named after the user stories).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: API — syntax check
+        run: pnpm --dir server run lint
+
+      - name: API — acceptance tests (US1.1–US10.6)
+        run: pnpm --dir server test
+
+      - name: Web — lint
+        run: pnpm --dir frontend run lint
+
+      - name: Web — type check
+        run: pnpm --dir frontend exec tsc --noEmit
+
+      - name: Web — production build
+        run: pnpm --dir frontend run build
