@@ -1,25 +1,48 @@
 import { Router } from 'express';
-import {
-  customers,
-  customerOrderHistory,
-  findCustomerByUserId,
-  nextId,
-} from '../data/store.js';
+import { customers, orders, users, findCustomerByUserId, nextId } from '../data/store.js';
 import { requireRole } from '../middleware/auth.js';
+import { localDate } from '../lib/time.js';
 
 const router = Router();
 
-// Ledger endpoints (list/create/get/patch/delete) are staff-only.
-// Self-service /me endpoints are available to any authenticated user.
+// Ledger endpoints are for floor staff and management.
+// Self-service /me endpoints are available to the signed-in customer.
 const staffOnly = requireRole('waiter', 'manager', 'admin');
 
-/** Normalize a customer record for API output. */
+const round2 = (n) => Math.round(n * 100) / 100;
+
+/** Past orders for a customer, newest first (US1.4). */
+function historyFor(customerId) {
+  return orders
+    .filter((o) => o.customerId === customerId && o.status !== 'cancelled')
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .map((o) => ({
+      id: o.id,
+      number: o.number,
+      date: localDate(new Date(o.createdAt)),
+      createdAt: o.createdAt,
+      total: o.total,
+      items: o.items.map((i) => (i.qty > 1 ? `${i.qty}× ${i.name}` : i.name)),
+      status: o.status,
+      paymentStatus: o.paymentStatus,
+      paymentMethod: o.paymentMethod,
+      pointsEarned: o.pointsEarned,
+      type: o.type,
+      fulfillment: o.fulfillment,
+      refundedAmount: o.refund?.amount ?? 0,
+    }));
+}
+
 function serialize(customer) {
-  return {
-    ...customer,
-    orderHistory: customerOrderHistory[customer.id] || [],
-    orderCount: (customerOrderHistory[customer.id] || []).length,
-  };
+  const history = historyFor(customer.id);
+  const totalSpend = history
+    .filter((h) => h.paymentStatus !== 'unpaid')
+    .reduce((sum, h) => sum + h.total - h.refundedAmount, 0);
+  return { ...customer, orderHistory: history, orderCount: history.length, totalSpend: round2(totalSpend) };
+}
+
+function cleanList(value, fallback) {
+  return Array.isArray(value) ? value.map((v) => String(v).trim().toLowerCase()).filter(Boolean) : fallback;
 }
 
 /** Auto-provision a ledger profile for a Customer-role user. */
@@ -34,12 +57,10 @@ function provisionForUser(user) {
     phone: '',
     type: 'online',
     loyaltyPoints: 0,
-    totalSpend: 0,
     preferences: { dietary: [], allergies: [] },
     notes: '',
     createdAt: new Date().toISOString(),
   };
-  customerOrderHistory[customer.id] = [];
   customers.push(customer);
   return customer;
 }
@@ -58,31 +79,38 @@ router.get('/me', (req, res) => {
 
 /** PATCH /api/customers/me — edit the caller's own profile. */
 router.patch('/me', (req, res) => {
-  let customer = findCustomerByUserId(req.user.id);
-  if (!customer) {
-    if (req.user.role !== 'customer') {
-      return res.status(404).json({ error: 'No customer profile is linked to this account.' });
-    }
-    customer = provisionForUser(req.user);
+  if (req.user.role !== 'customer') {
+    return res.status(403).json({ error: 'Only customers have a self-service profile.' });
   }
-
+  const customer = provisionForUser(req.user);
   const { name, email, phone, preferences, notes } = req.body || {};
-  if (name !== undefined) customer.name = name;
-  if (email !== undefined) customer.email = email;
-  if (phone !== undefined) customer.phone = phone;
+
+  if (name !== undefined && !String(name).trim()) {
+    return res.status(400).json({ error: 'Name cannot be empty.' });
+  }
+  if (email !== undefined) {
+    const normalized = String(email).toLowerCase().trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+      return res.status(400).json({ error: 'Please enter a valid email address.' });
+    }
+    if (users.some((u) => u.id !== req.user.id && u.email === normalized)) {
+      return res.status(409).json({ error: 'That email is already used by another account.' });
+    }
+    customer.email = normalized;
+    req.user.email = normalized;
+  }
+  if (name !== undefined) {
+    customer.name = String(name).trim();
+    req.user.name = customer.name;
+  }
+  if (phone !== undefined) customer.phone = String(phone);
   if (preferences !== undefined) {
     customer.preferences = {
-      dietary: Array.isArray(preferences.dietary) ? preferences.dietary : customer.preferences.dietary,
-      allergies: Array.isArray(preferences.allergies) ? preferences.allergies : customer.preferences.allergies,
+      dietary: cleanList(preferences?.dietary, customer.preferences.dietary),
+      allergies: cleanList(preferences?.allergies, customer.preferences.allergies),
     };
   }
-  if (notes !== undefined) customer.notes = notes;
-
-  // Keep the linked auth user display data in sync.
-  if (req.user && (name !== undefined || email !== undefined)) {
-    if (name !== undefined) req.user.name = name;
-    if (email !== undefined) req.user.email = email.toLowerCase().trim();
-  }
+  if (notes !== undefined) customer.notes = String(notes);
 
   return res.json({ customer: serialize(customer) });
 });
@@ -105,6 +133,7 @@ router.get('/', staffOnly, (req, res) => {
   if (dietary) result = result.filter((c) => (c.preferences.dietary || []).includes(dietary));
   if (allergy) result = result.filter((c) => (c.preferences.allergies || []).includes(allergy));
 
+  result.sort((a, b) => a.name.localeCompare(b.name));
   return res.json({ customers: result.map(serialize) });
 });
 
@@ -119,25 +148,23 @@ router.get('/:id', staffOnly, (req, res) => {
 router.post('/', staffOnly, (req, res) => {
   const { name, email = '', phone = '', type = 'walk-in', preferences = {}, notes = '' } = req.body || {};
 
-  if (!name) return res.status(400).json({ error: 'Customer name is required.' });
+  if (!String(name || '').trim()) return res.status(400).json({ error: 'Customer name is required.' });
 
   const customer = {
     id: nextId('cus'),
     userId: null,
-    name,
-    email,
-    phone,
+    name: String(name).trim(),
+    email: String(email).trim(),
+    phone: String(phone),
     type: ['walk-in', 'online'].includes(type) ? type : 'walk-in',
     loyaltyPoints: 0,
-    totalSpend: 0,
     preferences: {
-      dietary: preferences.dietary || [],
-      allergies: preferences.allergies || [],
+      dietary: cleanList(preferences.dietary, []),
+      allergies: cleanList(preferences.allergies, []),
     },
-    notes,
+    notes: String(notes),
     createdAt: new Date().toISOString(),
   };
-  customerOrderHistory[customer.id] = [];
   customers.push(customer);
 
   return res.status(201).json({ customer: serialize(customer) });
@@ -150,27 +177,29 @@ router.patch('/:id', staffOnly, (req, res) => {
 
   const { name, email, phone, type, preferences, notes } = req.body || {};
 
-  if (name !== undefined) customer.name = name;
-  if (email !== undefined) customer.email = email;
-  if (phone !== undefined) customer.phone = phone;
+  if (name !== undefined) {
+    if (!String(name).trim()) return res.status(400).json({ error: 'Customer name is required.' });
+    customer.name = String(name).trim();
+  }
+  if (email !== undefined) customer.email = String(email).trim();
+  if (phone !== undefined) customer.phone = String(phone);
   if (type !== undefined && ['walk-in', 'online'].includes(type)) customer.type = type;
   if (preferences !== undefined) {
     customer.preferences = {
-      dietary: Array.isArray(preferences.dietary) ? preferences.dietary : customer.preferences.dietary,
-      allergies: Array.isArray(preferences.allergies) ? preferences.allergies : customer.preferences.allergies,
+      dietary: cleanList(preferences?.dietary, customer.preferences.dietary),
+      allergies: cleanList(preferences?.allergies, customer.preferences.allergies),
     };
   }
-  if (notes !== undefined) customer.notes = notes;
+  if (notes !== undefined) customer.notes = String(notes);
 
   return res.json({ customer: serialize(customer) });
 });
 
-/** DELETE /api/customers/:id — remove a customer record. */
+/** DELETE /api/customers/:id — remove a customer record (past orders are kept). */
 router.delete('/:id', staffOnly, (req, res) => {
   const idx = customers.findIndex((c) => c.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'Customer not found.' });
   const [removed] = customers.splice(idx, 1);
-  delete customerOrderHistory[removed.id];
   return res.json({ deleted: true, id: removed.id });
 });
 
