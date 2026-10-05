@@ -1,149 +1,235 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { StaffLayout } from '@/components/layout/staff-layout';
-import { tableApi, orderApi } from '@/lib/api';
-import type { Table } from '@/types';
-import { Badge } from '@/components/ui/badge';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { Table, TableStatus } from '@/types';
+import { tableApi } from '@/lib/api';
+import { can } from '@/lib/permissions';
+import { TABLE_STATUS, errorMessage } from '@/lib/format';
+import { usePolling } from '@/hooks/use-polling';
 import { useAuth } from '@/context/auth-context';
-import { useToast } from '@/components/ui/toast';
+import { StaffLayout } from '@/components/layout/staff-layout';
+import { PageHeader } from '@/components/ui/page-header';
+import { Card } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Modal } from '@/components/ui/modal';
+import { useToast } from '@/components/ui/toast';
+import { FloorLegend } from '@/components/tables/floor-legend';
+import { TableTile } from '@/components/tables/table-tile';
+import { TableForm, type TableFormValues } from '@/components/tables/table-form';
 
-const STATUS_TONE: Record<string, 'emerald' | 'amber' | 'blue' | 'stone'> = {
-  free: 'emerald',
-  occupied: 'amber',
-  reserved: 'blue',
-  cleaning: 'stone',
-};
+type FloorData = { tables: Table[]; zones: string[]; statuses: TableStatus[] };
 
-export default function TablesPage() {
+const zoneId = (zone: string) => `zone-${zone.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+
+/** Live floor plan (US6.1, US6.2, US6.4). */
+export default function FloorPlanPage() {
+  return (
+    <StaffLayout section="tables">
+      <FloorPlan />
+    </StaffLayout>
+  );
+}
+
+function FloorPlan() {
   const toast = useToast();
   const { user } = useAuth();
-  const [tables, setTables] = useState<Table[]>([]);
-  const [orderCounts, setOrderCounts] = useState<Record<string, number>>({});
-  const [loading, setLoading] = useState(true);
+  const canEditLayout = can.editFloorLayout(user?.role);
 
-  const load = useCallback(
-    async () => {
-      try {
-        const [t, o] = await Promise.all([tableApi.list(), orderApi.list()]);
-        setTables(t.tables);
-        const counts: Record<string, number> = {};
-        const active = o.orders.filter((x) => ['placed', 'confirmed', 'in_kitchen', 'ready', 'served'].includes(x.status));
-        for (const ord of active) {
-          if (ord.tableId) counts[ord.tableId] = (counts[ord.tableId] || 0) + 1;
-        }
-        setOrderCounts(counts);
-      } catch {
-        toast('Failed to load tables.', 'error');
-      } finally {
-        setLoading(false);
-      }
-    },
-    [toast],
-  );
+  const [data, setData] = useState<FloorData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [stale, setStale] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [form, setForm] = useState<{ table: Table | null } | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const request = useRef(0);
+
+  // Only the latest request may write state, so a slow poll never overwrites
+  // the result of an action the user just took.
+  const load = useCallback(async () => {
+    const id = ++request.current;
+    try {
+      const res = await tableApi.list();
+      if (id !== request.current) return;
+      setData(res);
+      setStale(false);
+    } catch (err) {
+      if (id !== request.current) return;
+      setStale(true);
+      return err;
+    } finally {
+      if (id === request.current) setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    load().then((err) => {
+      if (err) toast(errorMessage(err, 'Failed to load the floor plan.'), 'error');
+    });
+  }, [load, toast]);
 
-  async function setStatus(t: Table, status: Table['status']) {
+  usePolling(load, 5000);
+
+  const zones = useMemo(() => {
+    if (!data) return [];
+    const order = [...data.zones, ...data.tables.map((t) => t.zone).filter((z) => !data.zones.includes(z))];
+    return order
+      .map((zone) => ({ zone, tables: data.tables.filter((t) => t.zone === zone) }))
+      .filter((g) => g.tables.length > 0);
+  }, [data]);
+
+  async function run(table: Table, action: () => Promise<unknown>, success: string) {
+    setBusyId(table.id);
     try {
-      await tableApi.update(t.id, { status });
-      toast(`Table ${t.number} → ${status}`, 'success');
-      load();
+      await action();
+      toast(success, 'success');
+      await load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Update failed.', 'error');
+      toast(errorMessage(err), 'error');
+    } finally {
+      setBusyId(null);
     }
   }
 
-  async function assignMe(t: Table) {
-    if (!user) return;
-    try {
-      await tableApi.update(t.id, { waiterId: user.role === 'waiter' || user.role === 'manager' || user.role === 'admin' ? user.id : t.waiterId });
-      toast(`Table ${t.number} assigned to ${user.name}.`, 'success');
-      load();
-    } catch (err) {
-      toast(err instanceof Error ? err.message : 'Update failed.', 'error');
-    }
+  const setStatus = (t: Table, status: TableStatus) =>
+    run(t, () => tableApi.update(t.id, { status }), `Table ${t.number} marked ${TABLE_STATUS[status].label.toLowerCase()}.`);
+
+  const toggleHold = (t: Table) =>
+    run(
+      t,
+      () => tableApi.update(t.id, { held: !t.held }),
+      t.held ? `Hold released on table ${t.number}.` : `Table ${t.number} is held — it won't be freed automatically.`,
+    );
+
+  const take = (t: Table) =>
+    user && run(t, () => tableApi.update(t.id, { waiterId: user.id }), `You're now looking after table ${t.number}.`);
+
+  function remove(t: Table) {
+    if (!window.confirm(`Remove table ${t.number} (${t.zone}) from the floor plan?`)) return;
+    run(t, () => tableApi.remove(t.id), `Table ${t.number} removed.`);
   }
 
-  const isManager = user?.role === 'manager' || user?.role === 'admin';
+  async function save(values: TableFormValues) {
+    if (!form) return;
+    setSaving(true);
+    try {
+      if (form.table) {
+        await tableApi.update(form.table.id, values);
+        toast(`Table ${values.number} updated.`, 'success');
+      } else {
+        await tableApi.create(values);
+        toast(`Table ${values.number} added to ${values.zone}.`, 'success');
+      }
+      setForm(null);
+      await load();
+    } catch (err) {
+      toast(errorMessage(err), 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
-    <StaffLayout>
-      <div className="mb-6 flex items-center gap-3">
-        <h1 className="text-2xl font-bold">Tables</h1>
-        <Badge tone="blue">Sprint 6 · Live</Badge>
-      </div>
+    <>
+      <PageHeader
+        title="Floor plan"
+        subtitle="Live table status by zone, refreshed every 5 seconds."
+        action={
+          canEditLayout ? (
+            <button type="button" className="btn-primary" onClick={() => setForm({ table: null })}>
+              + Add table
+            </button>
+          ) : null
+        }
+      />
 
       {loading ? (
-        <Spinner label="Loading tables…" />
+        <Card>
+          <Spinner label="Loading floor plan…" />
+        </Card>
+      ) : !data ? (
+        <Card>
+          <EmptyState
+            title="Couldn't load the floor plan"
+            hint="Check your connection and try again."
+            action={
+              <button type="button" className="btn-secondary" onClick={() => load()}>
+                Retry
+              </button>
+            }
+          />
+        </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {tables.map((t) => (
-            <div key={t.id} className="card p-5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-stone-100 text-lg font-bold text-stone-700">
-                    {t.number}
-                  </div>
-                  <div>
-                    <p className="font-semibold">{t.seats} seats</p>
-                    {orderCounts[t.id] ? (
-                      <span className="text-xs text-amber-600">{orderCounts[t.id]} active order(s)</span>
-                    ) : (
-                      <span className="text-xs text-stone-400">No active orders</span>
-                    )}
-                  </div>
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <FloorLegend tables={data.tables} statuses={data.statuses} />
+            <p className="text-xs text-stone-500">
+              <span className="font-medium text-stone-600">Reserved</span> is set automatically from an hour before a
+              confirmed booking. Tables are freed automatically when their last order is paid — unless they&apos;re{' '}
+              <span className="font-medium text-stone-600">Held</span> (e.g. guests staying on for drinks). A held table
+              keeps its status until you change it yourself.
+            </p>
+            {stale ? (
+              <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800" role="status">
+                Couldn&apos;t refresh just now — showing the last known floor. Retrying…
+              </p>
+            ) : null}
+          </div>
+
+          {zones.length === 0 ? (
+            <Card>
+              <EmptyState
+                title="No tables yet"
+                hint={canEditLayout ? 'Add your first table to build the floor plan.' : 'A manager needs to set up the floor plan.'}
+              />
+            </Card>
+          ) : (
+            zones.map(({ zone, tables }) => (
+              <section key={zone} aria-labelledby={zoneId(zone)}>
+                <div className="mb-2 flex items-baseline justify-between gap-2">
+                  <h2 id={zoneId(zone)} className="text-base font-semibold text-stone-800">
+                    {zone}
+                  </h2>
+                  <span className="text-xs text-stone-500">
+                    {tables.length} {tables.length === 1 ? 'table' : 'tables'} ·{' '}
+                    {tables.filter((t) => t.status === 'free').length} free
+                  </span>
                 </div>
-                <Badge tone={STATUS_TONE[t.status]}>{t.status}</Badge>
-              </div>
-
-              <div className="mt-4 flex flex-wrap gap-2">
-                {(['free', 'occupied', 'reserved', 'cleaning'] as Table['status'][]).map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setStatus(t, s)}
-                    disabled={t.status === s}
-                    className={`rounded px-2.5 py-1 text-xs font-medium transition ${
-                      t.status === s
-                        ? 'bg-stone-200 text-stone-500'
-                        : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-                    }`}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-
-              <div className="mt-3 flex items-center justify-between">
-                <span className="text-xs text-stone-400">
-                  {t.waiterId ? 'Assigned' : 'Unassigned'}
-                </span>
-                {t.status !== 'free' && !t.waiterId ? (
-                  <button className="btn-ghost !py-1 text-xs" onClick={() => assignMe(t)}>
-                    Take this table
-                  </button>
-                ) : null}
-              </div>
-
-              {isManager ? (
-                <button
-                  className="btn-ghost mt-2 !py-1 text-xs text-red-500"
-                  onClick={async () => {
-                    await tableApi.remove(t.id);
-                    toast(`Table ${t.number} removed.`, 'success');
-                    load();
-                  }}
-                >
-                  Remove table
-                </button>
-              ) : null}
-            </div>
-          ))}
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+                  {tables.map((t) => (
+                    <TableTile
+                      key={t.id}
+                      table={t}
+                      currentUserId={user?.id ?? null}
+                      canEditLayout={canEditLayout}
+                      busy={busyId === t.id}
+                      onStatus={(s) => setStatus(t, s)}
+                      onToggleHold={() => toggleHold(t)}
+                      onTake={() => take(t)}
+                      onEdit={() => setForm({ table: t })}
+                      onRemove={() => remove(t)}
+                    />
+                  ))}
+                </div>
+              </section>
+            ))
+          )}
         </div>
       )}
-    </StaffLayout>
+
+      {form ? (
+        <Modal title={form.table ? `Edit table ${form.table.number}` : 'Add table'} onClose={() => !saving && setForm(null)}>
+          <TableForm
+            initial={form.table}
+            zones={data?.zones ?? []}
+            takenNumbers={(data?.tables ?? []).filter((t) => t.id !== form.table?.id).map((t) => t.number)}
+            submitting={saving}
+            onSubmit={save}
+            onCancel={() => setForm(null)}
+          />
+        </Modal>
+      ) : null}
+    </>
   );
 }
