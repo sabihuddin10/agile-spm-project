@@ -11,7 +11,7 @@
  */
 import { test } from 'vitest';
 
-test.todo('floor-legend: <describe the behaviour to verify>');
-test.todo('status-style: <describe the behaviour to verify>');
-test.todo('table-form: <describe the behaviour to verify>');
-test.todo('table-tile: <describe the behaviour to verify>');
+// status-style now has a real test in this folder.
+test.todo('floor-legend: legend of table status colors');
+test.todo('table-form: add/edit a table, rejects a duplicate number');
+test.todo('table-tile: floor-plan tile showing status, zone and active orders');

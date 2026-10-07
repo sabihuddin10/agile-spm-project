@@ -11,7 +11,7 @@
  */
 import { test } from 'vitest';
 
-test.todo('customer-detail: <describe the behaviour to verify>');
-test.todo('customer-form: <describe the behaviour to verify>');
-test.todo('customer-table: <describe the behaviour to verify>');
-test.todo('preference-options: <describe the behaviour to verify>');
+// customer-table (+ CustomerFilters) now has a real test in this folder.
+// preference-options is covered indirectly via components/account/profile-editor's tests.
+test.todo('customer-detail: one customer\'s profile, order history and notes (staff view)');
+test.todo('customer-form: add/edit a customer, validation');
