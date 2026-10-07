@@ -11,9 +11,8 @@
  */
 import { test } from 'vitest';
 
-test.todo('cart-drawer: <describe the behaviour to verify>');
-test.todo('category-manager: <describe the behaviour to verify>');
-test.todo('menu-item-form: <describe the behaviour to verify>');
-test.todo('menu-item-list: <describe the behaviour to verify>');
-test.todo('modifier-picker: <describe the behaviour to verify>');
-test.todo('public-menu: <describe the behaviour to verify>');
+// category-manager and modifier-picker now have real tests in this folder.
+test.todo('cart-drawer: storefront cart/checkout drawer (US2.3, US3.1)');
+test.todo('menu-item-form: staff dish editor, validation (price, required fields, modifiers)');
+test.todo('menu-item-list: staff dish list with search/filter and availability toggle');
+test.todo('public-menu: customer-facing menu composing menu-item-card + cart');
