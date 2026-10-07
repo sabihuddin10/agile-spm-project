@@ -20,7 +20,7 @@ Tests are organized **module-wise**, mirroring the source directory structure
 | 3 | Frontend — lib & context unit tests | 6 | 0 | 0 | 6 |
 | 4 | Frontend — high-risk business components | 2 | 10 | 0 | 12 |
 | 5 | Frontend — supporting/presentational components | 6 | 0 | 0 | 6 |
-| 6 | Frontend — app pages | 14 | 0 | 7 | 21 |
+| 6 | Frontend — app pages | 17 | 0 | 4 | 21 |
 
 "Partial" (Phase 4) = the module has one file with a real test (`menu-item-card`,
 `profile-editor`) but other files in that same module folder are still `test.todo`.
@@ -150,13 +150,13 @@ logic lives in the components they render.
 | `app/register` ✅ | `[x]` metadata title, RegisterForm + sign-in link |
 | `app/staff` (overview) ✅ | `[x]` wraps OverviewDashboard in the "overview" section, only once the user is known |
 | `app/staff/analytics` | `[ ]` |
-| `app/staff/billing` | `[ ]` |
-| `app/staff/customers` | `[ ]` |
+| `app/staff/billing` ✅ | `[x]` loading/loaded summary+list, empty state, scope-tab reload, selecting a bill opens its panel, error+retry |
+| `app/staff/customers` ✅ | `[x]` loading/loaded ledger count, empty state, select→detail, add/edit/delete flows with toasts |
 | `app/staff/inventory` | `[ ]` |
 | `app/staff/kitchen` ✅ | `[x]` loading/loaded stat tallies (queue/delayed/rush/ready), empty states, error+retry |
 | `app/staff/menu` | `[ ]` |
 | `app/staff/orders` ✅ | `[x]` loading/loaded active orders, role-gated "+ New order", status filtering, history table count, create-order reload, error+retry |
-| `app/staff/reservations` | `[ ]` |
+| `app/staff/reservations` ✅ | `[x]` loading/grouped-by-date, empty state, scope-tab reload, confirm/cancel actions, new-booking reload |
 | `app/staff/schedule` ✅ | `[x]` wraps My schedule in the "schedule" section |
 | `app/staff/settings` ✅ | `[x]` wraps the settings form + heading in the "settings" section |
 | `app/staff/tables` ✅ | `[x]` loading/grouped-by-zone, role-gated "+ Add table", status change/hold/take actions, add/remove table flows |
