@@ -19,7 +19,7 @@ Tests are organized **module-wise**, mirroring the source directory structure
 | 2 | Backend — lib & middleware unit tests | 6 | 0 | 0 | 6 |
 | 3 | Frontend — lib & context unit tests | 6 | 0 | 0 | 6 |
 | 4 | Frontend — high-risk business components | 2 | 10 | 0 | 12 |
-| 5 | Frontend — supporting/presentational components | 5 | 0 | 1 | 6 |
+| 5 | Frontend — supporting/presentational components | 6 | 0 | 0 | 6 |
 | 6 | Frontend — app pages | 0 | 0 | 21 | 21 |
 
 "Partial" (Phase 4) = the module has one file with a real test (`menu-item-card`,
@@ -126,7 +126,7 @@ Lower risk (mostly rendering/props-driven), but still part of "every module has 
 | `components/overview` | **live-tile, low-stock-banner, next-shift-card, overview-dashboard, quick-links, role-widgets, use-overview-data ✅** | `[x]` role-widgets (Floor/Kitchen/TodaySummary) render only the widgets relevant to the signed-in role, with correct flags/hints; `[x]` use-overview-data role-based fetch skipping, error toast-once, loaded/updatedAt state; `[x]` overview-dashboard greeting, connecting/live state, composes child widgets by role access | `[x]` done |
 | `components/scrum` | **sprint-card ✅** | `[x]` renders sprint metadata (number, module, goal, priority, lead, points, story count); `[x]` Planned/Delivered badge by status; `[x]` expand/collapse a story's acceptance criteria & evidence, one at a time | `[x]` done |
 | `components/settings` | **settings-form ✅** | `[x]` loading/error states; `[x]` manager can view & edit, waiter sees a read-only disabled form; `[x]` dirty indicator + Reset; `[x]` client-side required-field validation; `[x]` save success toast; `[x]` server range-validation error mapped onto the matching field with friendly units | `[x]` done |
-| `components/storefront` | cart-lines, checkout-estimate, checkout-form, flame-mark, item-options-modal, order-placed, qty-stepper, status-pill | `[ ]` checkout-estimate totals match `lib/menu` pricing; `[ ]` qty-stepper min/max clamping; `[ ]` item-options-modal (already indirectly covered by `menu-item-card` test — add its own direct test) | `[ ]` |
+| `components/storefront` | **cart-lines, checkout-estimate, checkout-form, flame-mark, item-options-modal, order-placed, qty-stepper, status-pill ✅** | `[x]` checkout-estimate totals (points discount, dine-in service charge, tax, floor at zero); `[x]` qty-stepper min/max clamping + "Remove" label at qty 1; `[x]` item-options-modal default selection, qty-aware Add total, allergy warning; `[x]` checkout-form fulfillment/payment selection, points redemption, 409 sold-out handling, success clears cart & fires the order-placed event | `[x]` done |
 | `components/tables` *(status-style)* | covered under Phase 4 | — | `[ ]` |
 | `components/ui` | **badge, card, empty-state, modal, page-header, spinner, toast ✅** | `[x]` modal closes on close-button/Escape/backdrop click but not on inner-panel click; `[x]` toast fire/dismiss + tone-specific styling + throws outside provider; `[x]` empty-state/card/page-header render given title/subtitle/action; `[x]` badge tone classes | `[x]` done |
 
