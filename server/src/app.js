@@ -15,8 +15,10 @@ import notificationRoutes from './routes/notifications.js';
 import settingsRoutes from './routes/settings.js';
 import staffRoutes from './routes/staff.js';
 import { authenticate, optionalAuth } from './middleware/auth.js';
+import { persistState } from './data/persist.js';
 
-export function createApp({ logging = true } = {}) {
+/** `persistence` keeps the store in Postgres; on by default when DATABASE_URL is set. */
+export function createApp({ logging = true, persistence = Boolean(process.env.DATABASE_URL) } = {}) {
   const app = express();
 
   app.use(cors());
@@ -26,6 +28,9 @@ export function createApp({ logging = true } = {}) {
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', service: 'restaurant-ops-api', time: new Date().toISOString() });
   });
+
+  // Everything below the health check reads and writes the persisted store.
+  if (persistence) app.use('/api', persistState());
 
   app.use('/api/auth', authRoutes);
 

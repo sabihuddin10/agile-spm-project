@@ -9,7 +9,8 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import pg from 'pg';
+import { gunzipSync } from 'node:zlib';
+import { Pool } from '@neondatabase/serverless';
 
 const STATE_KEY = `test_${process.pid}_${Date.now()}`;
 const SERVER_DIR = fileURLToPath(new URL('..', import.meta.url));
@@ -20,7 +21,7 @@ let pool;
 const servers = [];
 
 before(() => {
-  pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+  pool = new Pool({ connectionString: process.env.DATABASE_URL });
 });
 
 after(async () => {
@@ -50,6 +51,7 @@ async function spawnServer() {
       method,
       headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       body: body === undefined ? undefined : JSON.stringify(body),
+      signal: AbortSignal.timeout(180_000),
     });
     const text = await res.text();
     return { status: res.status, body: text ? JSON.parse(text) : null };
@@ -75,7 +77,7 @@ async function spawnServer() {
 const customerNames = async (api, token) =>
   (await api.call('GET', '/customers', { token })).body.customers.map((c) => c.name);
 
-test('the first request seeds a missing state row from the demo data', async () => {
+test('the first request seeds a missing state row with the gzip-compressed demo data', async () => {
   const api = await spawnServer();
   const menu = await api.call('GET', '/menu');
   assert.equal(menu.status, 200);
@@ -83,7 +85,8 @@ test('the first request seeds a missing state row from the demo data', async () 
   const { rows } = await pool.query('SELECT version, data FROM app_state WHERE key = $1', [STATE_KEY]);
   assert.equal(rows.length, 1);
   assert.equal(rows[0].version, 1);
-  assert.equal(rows[0].data.users.length, 7);
+  const data = JSON.parse(gunzipSync(rows[0].data));
+  assert.equal(data.users.length, 7);
   await api.close();
 });
 
