@@ -11,7 +11,7 @@
  */
 import { test } from 'vitest';
 
-test.todo('active-order-card: <describe the behaviour to verify>');
-test.todo('my-orders: <describe the behaviour to verify>');
-test.todo('my-reservations: <describe the behaviour to verify>');
-test.todo('order-history: <describe the behaviour to verify>');
+// order-history now has a real test in this folder.
+test.todo('active-order-card: a customer\'s current in-progress order card');
+test.todo('my-orders: a customer\'s own active + past orders view');
+test.todo('my-reservations: a customer\'s own upcoming bookings');

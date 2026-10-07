@@ -18,7 +18,7 @@ Tests are organized **module-wise**, mirroring the source directory structure
 | 1 | Backend — route/acceptance tests | 10 | 0 | 0 | 10 |
 | 2 | Backend — lib & middleware unit tests | 6 | 0 | 0 | 6 |
 | 3 | Frontend — lib & context unit tests | 6 | 0 | 0 | 6 |
-| 4 | Frontend — high-risk business components | 0 | 7 | 5 | 12 |
+| 4 | Frontend — high-risk business components | 2 | 10 | 0 | 12 |
 | 5 | Frontend — supporting/presentational components | 0 | 0 | 6 | 6 |
 | 6 | Frontend — app pages | 0 | 0 | 21 | 21 |
 
@@ -110,9 +110,9 @@ over presentational ones.
 | `components/customers` | customer-detail, customer-form, **customer-table ✅**, preference-options (covered indirectly via `components/account/profile-editor`) | `[x]` customer-table search/filter (CustomerFilters: search, clear filters); `[ ]` customer-form validation (email, required fields) | `[ ]` partial |
 | `components/staff` | account-table, all-accounts-panel, applications-panel, careers-form, **confirm-dialog ✅**, **credentials-modal ✅**, my-schedule, performance-panel, **role-meta ✅**, **shift-form ✅**, shift-planner, team-panel | `[x]` shift-form rejects an inverted (end before start) shift, confirms before delete, creates/edits/saves status; `[x]` confirm-dialog blocks (disables buttons, ignores close) while busy; `[x]` role-meta: role ranking, initials, time/hours math, week start; `[ ]` application approve/reject flow; `[ ]` role-change reflected in account-table — `account-table`/`all-accounts-panel`/`applications-panel`/`careers-form`/`my-schedule`/`performance-panel`/`shift-planner`/`team-panel` left as scaffolded todos | `[ ]` partial |
 | `components/analytics` | analytics-card, analytics-dashboard, **analytics-format ✅**, chart-setup, **inventory-health ✅**, **kpi-tiles ✅**, peak-hours-chart, **range-controls ✅**, reservation-stats, revenue-trend-chart, table-utilization, top-dishes | `[x]` `analytics-format` helpers format numbers/percentages/dates correctly, flags partial buckets; `[x]` range-controls presets/custom dates change the requested period; `[x]` kpi-tiles render the right values and no-data hints; `[x]` inventory-health ranks at-risk items first, toggles healthy items — `analytics-card`/`analytics-dashboard`/`chart-setup`/`peak-hours-chart`/`reservation-stats`/`revenue-trend-chart`/`table-utilization`/`top-dishes` left as scaffolded todos | `[ ]` partial |
-| `components/auth` | login-form, register-form | `[ ]` login-form validates and submits credentials, shows server errors; `[ ]` register-form validates password length/email and submits | `[ ]` |
-| `components/booking` | booking-form | `[ ]` validates name/email/date/time; `[ ]` shows alternative slots on a 409 conflict; `[ ]` success state shows the booking reference | `[ ]` |
-| `components/account` | active-order-card, my-orders, my-reservations, order-history, **profile-editor ✅** | `[ ]` my-orders/my-reservations list the signed-in customer's own records only; `[ ]` order-history sorted newest first | `[x]` profile-editor / `[ ]` rest |
+| `components/auth` | **login-form ✅**, **register-form ✅** | `[x]` login-form validates and submits credentials, routes by role, shows server errors, demo-account quick-fill; `[x]` register-form validates name/email/password length/match and submits | `[x]` done |
+| `components/booking` | **booking-form ✅** | `[x]` validates name/email/date/time; `[x]` shows alternative slots on a 409 conflict; `[x]` success state shows the booking confirmation | `[x]` done |
+| `components/account` | active-order-card, my-orders, my-reservations, **order-history ✅**, **profile-editor ✅** | `[x]` order-history sorted newest first, receipt button gating, refund display, pagination; `[ ]` my-orders/my-reservations list the signed-in customer's own records only — `active-order-card`/`my-orders`/`my-reservations` left as scaffolded todos | `[ ]` partial |
 
 ---
 
