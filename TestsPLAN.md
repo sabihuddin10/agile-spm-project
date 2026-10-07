@@ -20,7 +20,7 @@ Tests are organized **module-wise**, mirroring the source directory structure
 | 3 | Frontend — lib & context unit tests | 6 | 0 | 0 | 6 |
 | 4 | Frontend — high-risk business components | 2 | 10 | 0 | 12 |
 | 5 | Frontend — supporting/presentational components | 6 | 0 | 0 | 6 |
-| 6 | Frontend — app pages | 0 | 0 | 21 | 21 |
+| 6 | Frontend — app pages | 11 | 0 | 10 | 21 |
 
 "Partial" (Phase 4) = the module has one file with a real test (`menu-item-card`,
 `profile-editor`) but other files in that same module folder are still `test.todo`.
@@ -140,15 +140,15 @@ logic lives in the components they render.
 
 | Page | Status |
 |---|---|
-| `app/page.tsx` (home) + `app/layout.tsx` — **not yet scaffolded, add first** | `[ ]` |
-| `app/account` | `[ ]` |
-| `app/book` | `[ ]` |
-| `app/careers` | `[ ]` |
-| `app/dev` | `[ ]` |
-| `app/login` | `[ ]` |
-| `app/menu` | `[ ]` |
-| `app/register` | `[ ]` |
-| `app/staff` (overview) | `[ ]` |
+| `app/page.tsx` (home) + `app/layout.tsx` ✅ | `[x]` hero heading/CTAs, compact public-menu preview; root layout nests Auth → Toast → Cart providers |
+| `app/account` ✅ | `[x]` loading state, redirects non-customers to `/staff`, loads & shows stats/profile/orders/reservations, error+retry on load failure |
+| `app/book` ✅ | `[x]` heading + BookingForm renders |
+| `app/careers` ✅ | `[x]` metadata title, heading, perks, CareersForm renders |
+| `app/dev` ✅ | `[x]` loading/signed-out states, renders every sprint card and team roster row for a signed-in user |
+| `app/login` ✅ | `[x]` metadata title, brand mark + LoginForm renders |
+| `app/menu` ✅ | `[x]` heading + full (non-compact) public menu |
+| `app/register` ✅ | `[x]` metadata title, RegisterForm + sign-in link |
+| `app/staff` (overview) ✅ | `[x]` wraps OverviewDashboard in the "overview" section, only once the user is known |
 | `app/staff/analytics` | `[ ]` |
 | `app/staff/billing` | `[ ]` |
 | `app/staff/customers` | `[ ]` |
@@ -157,8 +157,8 @@ logic lives in the components they render.
 | `app/staff/menu` | `[ ]` |
 | `app/staff/orders` | `[ ]` |
 | `app/staff/reservations` | `[ ]` |
-| `app/staff/schedule` | `[ ]` |
-| `app/staff/settings` | `[ ]` |
+| `app/staff/schedule` ✅ | `[x]` wraps My schedule in the "schedule" section |
+| `app/staff/settings` ✅ | `[x]` wraps the settings form + heading in the "settings" section |
 | `app/staff/tables` | `[ ]` |
 | `app/staff/users` | `[ ]` |
 

@@ -1,15 +1,19 @@
-/**
- * Module-wise test scaffold for src/app/menu (page).
- *
- * Real tests for this module go here, in __tests__/, mirroring the
- * app/ and components/ directory structure. Follow the Arrange-Act-Assert
- * (AAA) pattern used in src/lib/__tests__/menu.test.ts,
- * src/components/menu/__tests__/menu-item-card.test.tsx and
- * src/components/account/__tests__/profile-editor.test.tsx — Arrange the
- * data/props, Act (render / interact), then Assert the outcome, with each
- * phase commented.
- */
-import { test } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import MenuPage from '@/app/menu/page';
 
-test.todo('renders the menu page without crashing');
-test.todo('shows the primary heading / call to action for this page');
+vi.mock('@/components/layout/storefront-shell', () => ({ StorefrontShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
+vi.mock('@/components/menu/public-menu', () => ({
+  PublicMenu: ({ compact }: { compact?: boolean }) => <div data-testid="public-menu" data-compact={String(Boolean(compact))} />,
+}));
+
+describe('MenuPage', () => {
+  it('shows the page heading and the full (non-compact) public menu', () => {
+    // Arrange / Act
+    render(<MenuPage />);
+
+    // Assert
+    expect(screen.getByRole('heading', { name: 'The menu' })).toBeInTheDocument();
+    expect(screen.getByTestId('public-menu')).toHaveAttribute('data-compact', 'false');
+  });
+});
