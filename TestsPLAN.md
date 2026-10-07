@@ -18,7 +18,7 @@ Tests are organized **module-wise**, mirroring the source directory structure
 | 1 | Backend — route/acceptance tests | 10 | 0 | 0 | 10 |
 | 2 | Backend — lib & middleware unit tests | 6 | 0 | 0 | 6 |
 | 3 | Frontend — lib & context unit tests | 6 | 0 | 0 | 6 |
-| 4 | Frontend — high-risk business components | 0 | 2 | 10 | 12 |
+| 4 | Frontend — high-risk business components | 0 | 3 | 9 | 12 |
 | 5 | Frontend — supporting/presentational components | 0 | 0 | 6 | 6 |
 | 6 | Frontend — app pages | 0 | 0 | 21 | 21 |
 
@@ -101,7 +101,7 @@ over presentational ones.
 
 | Module | Files (✅ = already has a real test) | Functionality to cover | Status |
 |---|---|---|---|
-| `components/billing` | bill-list, bill-panel, bill-summary, bill-utils, payment-actions, receipt, refund-dialog, split-dialog, split-parts, tip-control, use-bill-action | `[ ]` itemized bill renders every line + modifier deltas; `[ ]` tip entry recalculates total; `[ ]` even/by-item split sums exactly to the total; `[ ]` pay/unpay toggles outstanding view; `[ ]` refund requires a reason and is manager-only in the UI; `[ ]` receipt only available once paid | `[ ]` |
+| `components/billing` | bill-list, bill-panel, **bill-summary ✅**, **bill-utils ✅**, **payment-actions ✅**, receipt, **refund-dialog ✅**, split-dialog, **split-parts ✅**, **tip-control ✅**, **use-bill-action ✅** | `[x]` itemized split sums exactly to the total (`previewEvenSplit`/`previewItemSplit`); `[x]` tip entry (presets + custom, locked once a share is paid); `[x]` split shares pay/undo and the sum-check banner; `[x]` pay/unpay toggles outstanding view, requires a confirm step; `[x]` refund requires a reason, amount bounds, manager-only in the UI; `[ ]` `bill-list`/`bill-panel` (container components) and `receipt`/`split-dialog` left as scaffolded todos | `[ ]` partial |
 | `components/orders` | allergy-banner, customer-lookup, edit-items-modal, kitchen-ticket, labels, new-order-modal, order-card, order-editor, order-history-table, order-progress, ready-ticket, use-order-menu | `[ ]` new-order flow builds a valid order payload; `[ ]` edit-items blocked after confirmation; `[ ]` kitchen ticket reflects item status and rush/priority; `[ ]` allergy banner shows for conflicting allergens; `[ ]` order-progress renders the correct step for each status | `[ ]` |
 | `components/inventory` | helpers, ingredient-form, low-stock-banner, movements, purchase-orders, recipe-editor, recipes-panel, reorder-form, stock-adjust, stock-table | `[ ]` ingredient CRUD form validation; `[ ]` low-stock banner appears at/below reorder level; `[ ]` reorder form suggests the documented quantity; `[ ]` purchase-order receive updates stock; `[ ]` recipe editor rejects a zero/negative quantity | `[ ]` |
 | `components/menu` | cart-drawer, category-manager, **menu-item-card ✅**, menu-item-form, menu-item-list, modifier-picker, public-menu | `[ ]` cart-drawer totals and line removal; `[ ]` category visibility toggle; `[ ]` modifier-picker enforces single- vs multi-choice; `[ ]` menu-item-form validation (price, required fields) | `[x]` menu-item-card / `[ ]` rest |

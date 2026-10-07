@@ -11,14 +11,9 @@
  */
 import { test } from 'vitest';
 
-test.todo('bill-list: <describe the behaviour to verify>');
-test.todo('bill-panel: <describe the behaviour to verify>');
-test.todo('bill-summary: <describe the behaviour to verify>');
-test.todo('bill-utils: <describe the behaviour to verify>');
-test.todo('payment-actions: <describe the behaviour to verify>');
-test.todo('receipt: <describe the behaviour to verify>');
-test.todo('refund-dialog: <describe the behaviour to verify>');
-test.todo('split-dialog: <describe the behaviour to verify>');
-test.todo('split-parts: <describe the behaviour to verify>');
-test.todo('tip-control: <describe the behaviour to verify>');
-test.todo('use-bill-action: <describe the behaviour to verify>');
+// bill-summary, bill-utils, payment-actions, refund-dialog, split-parts,
+// tip-control and use-bill-action now have real tests in this folder.
+test.todo('bill-list: renders open/today/all bills and lets staff pick one');
+test.todo('bill-panel: assembles the bill detail view (lines, tip, split, pay actions) for one invoice');
+test.todo('receipt: renders a paid invoice as a printable receipt');
+test.todo('split-dialog: starts an even or by-items split and validates the groups');
