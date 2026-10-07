@@ -15,7 +15,7 @@ import { seedHistory } from './seed-history.js';
 export const ROLES = ['customer', 'waiter', 'chef', 'manager', 'admin'];
 export const STAFF_ROLES = ['waiter', 'chef', 'manager', 'admin'];
 
-const counters = {};
+export const counters = {};
 
 export function nextId(prefix) {
   counters[prefix] = (counters[prefix] || 0) + 1;
