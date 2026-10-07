@@ -1,5 +1,6 @@
 # Definition of Done gate: every push/PR must build, lint and pass the
-# acceptance tests (one test file per sprint, named after the user stories).
+# acceptance tests (one test file per route module, named after the user stories)
+# and the frontend unit tests (one test file per app/component module).
 name: CI
 
 on:
@@ -31,6 +32,9 @@ jobs:
 
       - name: Web — lint
         run: pnpm --dir frontend run lint
+
+      - name: Web — unit tests
+        run: pnpm --dir frontend run test
 
       - name: Web — type check
         run: pnpm --dir frontend exec tsc --noEmit

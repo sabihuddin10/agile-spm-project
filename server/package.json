@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "node --watch-path=src src/index.js",
     "start": "node src/index.js",
-    "test": "node --test test/*.test.js",
+    "test": "node --test test/**/*.test.js",
     "lint": "node scripts/check-syntax.js"
   },
   "dependencies": {
