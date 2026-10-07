@@ -11,15 +11,13 @@
  */
 import { test } from 'vitest';
 
-test.todo('analytics-card: <describe the behaviour to verify>');
-test.todo('analytics-dashboard: <describe the behaviour to verify>');
-test.todo('analytics-format: <describe the behaviour to verify>');
-test.todo('chart-setup: <describe the behaviour to verify>');
-test.todo('inventory-health: <describe the behaviour to verify>');
-test.todo('kpi-tiles: <describe the behaviour to verify>');
-test.todo('peak-hours-chart: <describe the behaviour to verify>');
-test.todo('range-controls: <describe the behaviour to verify>');
-test.todo('reservation-stats: <describe the behaviour to verify>');
-test.todo('revenue-trend-chart: <describe the behaviour to verify>');
-test.todo('table-utilization: <describe the behaviour to verify>');
-test.todo('top-dishes: <describe the behaviour to verify>');
+// analytics-format, inventory-health, kpi-tiles and range-controls now
+// have real tests in this folder.
+test.todo('analytics-card: shared card chrome (title, story tag, action slot) and the Segmented control');
+test.todo('analytics-dashboard: top-level dashboard composing range-controls + the cards below');
+test.todo('chart-setup: Chart.js registration (side-effect module, low value to unit test)');
+test.todo('peak-hours-chart: renders the busiest-hours chart from dashboard data');
+test.todo('reservation-stats: no-show rate and booking funnel stats (US10.6)');
+test.todo('revenue-trend-chart: renders the revenue/orders trend from dashboard data');
+test.todo('table-utilization: occupancy and turnover stats per table/zone (US10.3)');
+test.todo('top-dishes: best-selling dishes by qty/revenue (US10.2)');
