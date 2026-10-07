@@ -11,7 +11,6 @@
  */
 import { test } from 'vitest';
 
-test.todo('new-booking-form: <describe the behaviour to verify>');
-test.todo('reservation-card: <describe the behaviour to verify>');
-test.todo('slot-grid: <describe the behaviour to verify>');
-test.todo('use-availability: <describe the behaviour to verify>');
+// slot-grid and use-availability now have real tests in this folder.
+test.todo('new-booking-form: staff-side booking form (date/party/slot), validation');
+test.todo('reservation-card: one reservation\'s details and status actions');
