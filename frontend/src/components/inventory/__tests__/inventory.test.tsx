@@ -11,13 +11,11 @@
  */
 import { test } from 'vitest';
 
-test.todo('helpers: <describe the behaviour to verify>');
-test.todo('ingredient-form: <describe the behaviour to verify>');
-test.todo('low-stock-banner: <describe the behaviour to verify>');
-test.todo('movements: <describe the behaviour to verify>');
-test.todo('purchase-orders: <describe the behaviour to verify>');
-test.todo('recipe-editor: <describe the behaviour to verify>');
-test.todo('recipes-panel: <describe the behaviour to verify>');
-test.todo('reorder-form: <describe the behaviour to verify>');
-test.todo('stock-adjust: <describe the behaviour to verify>');
-test.todo('stock-table: <describe the behaviour to verify>');
+// helpers, low-stock-banner, recipe-editor and stock-adjust now have
+// real tests in this folder.
+test.todo('ingredient-form: add/edit an ingredient, validating required fields');
+test.todo('movements: lists stock movements with reason and sale/restock labels');
+test.todo('purchase-orders: lists purchase orders and receives one into stock');
+test.todo('recipes-panel: lists dishes and opens the recipe editor for one');
+test.todo('reorder-form: suggests quantities and raises a purchase order (US8.5)');
+test.todo('stock-table: lists ingredients with health badges and filters');

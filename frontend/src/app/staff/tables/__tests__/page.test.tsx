@@ -1,15 +1,141 @@
-/**
- * Module-wise test scaffold for src/app/staff/tables (page).
- *
- * Real tests for this module go here, in __tests__/, mirroring the
- * app/ and components/ directory structure. Follow the Arrange-Act-Assert
- * (AAA) pattern used in src/lib/__tests__/menu.test.ts,
- * src/components/menu/__tests__/menu-item-card.test.tsx and
- * src/components/account/__tests__/profile-editor.test.tsx — Arrange the
- * data/props, Act (render / interact), then Assert the outcome, with each
- * phase commented.
- */
-import { test } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import FloorPlanPage from '@/app/staff/tables/page';
+import { useAuth } from '@/context/auth-context';
+import { tableApi } from '@/lib/api';
+import type { Table, User } from '@/types';
 
-test.todo('renders the tables page without crashing');
-test.todo('shows the primary heading / call to action for this page');
+const toastFn = vi.fn();
+vi.mock('@/components/ui/toast', () => ({ useToast: () => toastFn }));
+vi.mock('@/context/auth-context', () => ({ useAuth: vi.fn() }));
+vi.mock('@/components/layout/staff-layout', () => ({ StaffLayout: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
+vi.mock('@/lib/api', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/api')>('@/lib/api');
+  return {
+    ...actual,
+    tableApi: { ...actual.tableApi, list: vi.fn(), update: vi.fn(), create: vi.fn(), remove: vi.fn() },
+  };
+});
+vi.mock('@/components/tables/floor-legend', () => ({ FloorLegend: () => <div data-testid="floor-legend" /> }));
+vi.mock('@/components/tables/table-tile', () => ({
+  TableTile: ({ table, canEditLayout, onStatus, onToggleHold, onTake, onEdit, onRemove }: {
+    table: Table;
+    canEditLayout: boolean;
+    onStatus: (s: string) => void;
+    onToggleHold: () => void;
+    onTake: () => void;
+    onEdit: () => void;
+    onRemove: () => void;
+  }) => (
+    <div data-testid={`table-tile-${table.id}`}>
+      <span>T{table.number}</span>
+      <button onClick={() => onStatus('cleaning')}>Mark cleaning</button>
+      <button onClick={onToggleHold}>Toggle hold</button>
+      <button onClick={onTake}>Take table</button>
+      {canEditLayout ? <button onClick={onEdit}>Edit</button> : null}
+      {canEditLayout ? <button onClick={onRemove}>Remove</button> : null}
+    </div>
+  ),
+}));
+vi.mock('@/components/tables/table-form', () => ({
+  TableForm: ({ onSubmit, onCancel }: { onSubmit: (v: { number: number; seats: number; zone: string }) => void; onCancel: () => void }) => (
+    <div data-testid="table-form">
+      <button onClick={() => onSubmit({ number: 9, seats: 2, zone: 'Main' })}>Save table</button>
+      <button onClick={onCancel}>Cancel form</button>
+    </div>
+  ),
+}));
+
+function makeUser(overrides: Partial<User> = {}): User {
+  return { id: 'u1', name: 'Jamie', email: 'jamie@rest.test', role: 'manager', active: true, ...overrides };
+}
+
+function makeTable(overrides: Partial<Table> = {}): Table {
+  return { id: 't1', number: 1, seats: 4, zone: 'Main', status: 'free', waiterId: null, held: false, reservedFor: null, ...overrides };
+}
+
+describe('FloorPlanPage', () => {
+  beforeEach(() => {
+    toastFn.mockClear();
+    vi.mocked(tableApi.update).mockResolvedValue({ table: makeTable() });
+    vi.mocked(tableApi.create).mockResolvedValue({ table: makeTable({ id: 't_new' }) });
+    vi.mocked(tableApi.remove).mockResolvedValue({ deleted: true });
+    vi.stubGlobal('confirm', vi.fn(() => true));
+  });
+
+  it('shows a loading spinner, then groups tables by zone', async () => {
+    // Arrange
+    vi.mocked(useAuth).mockReturnValue({ user: makeUser() } as unknown as ReturnType<typeof useAuth>);
+    vi.mocked(tableApi.list).mockResolvedValue({ tables: [makeTable({ zone: 'Main' })], zones: ['Main'], statuses: ['free'] });
+
+    // Act
+    render(<FloorPlanPage />);
+
+    // Assert
+    expect(screen.getByText('Loading floor plan…')).toBeInTheDocument();
+    expect(await screen.findByText('Main')).toBeInTheDocument();
+    expect(screen.getByTestId('table-tile-t1')).toBeInTheDocument();
+  });
+
+  it('shows "+ Add table" only for a role that can edit the floor layout', async () => {
+    // Arrange
+    vi.mocked(tableApi.list).mockResolvedValue({ tables: [], zones: [], statuses: [] });
+    vi.mocked(useAuth).mockReturnValue({ user: makeUser({ role: 'waiter' }) } as unknown as ReturnType<typeof useAuth>);
+
+    // Act
+    render(<FloorPlanPage />);
+    await screen.findByText('No tables yet');
+
+    // Assert
+    expect(screen.queryByRole('button', { name: '+ Add table' })).not.toBeInTheDocument();
+  });
+
+  it('changes a table status and shows a success toast', async () => {
+    // Arrange
+    vi.mocked(useAuth).mockReturnValue({ user: makeUser() } as unknown as ReturnType<typeof useAuth>);
+    vi.mocked(tableApi.list).mockResolvedValue({ tables: [makeTable()], zones: ['Main'], statuses: ['free'] });
+    const user = userEvent.setup();
+    render(<FloorPlanPage />);
+    await screen.findByTestId('table-tile-t1');
+
+    // Act
+    await user.click(screen.getByRole('button', { name: 'Mark cleaning' }));
+
+    // Assert
+    await waitFor(() => expect(tableApi.update).toHaveBeenCalledWith('t1', { status: 'cleaning' }));
+    expect(toastFn).toHaveBeenCalledWith(expect.stringContaining('marked cleaning'), 'success');
+  });
+
+  it('adds a new table via the form and reloads the floor plan', async () => {
+    // Arrange
+    vi.mocked(useAuth).mockReturnValue({ user: makeUser() } as unknown as ReturnType<typeof useAuth>);
+    vi.mocked(tableApi.list).mockResolvedValue({ tables: [], zones: [], statuses: [] });
+    const user = userEvent.setup();
+    render(<FloorPlanPage />);
+    await screen.findByRole('button', { name: '+ Add table' });
+
+    // Act
+    await user.click(screen.getByRole('button', { name: '+ Add table' }));
+    await user.click(screen.getByRole('button', { name: 'Save table' }));
+
+    // Assert
+    await waitFor(() => expect(tableApi.create).toHaveBeenCalledWith({ number: 9, seats: 2, zone: 'Main' }));
+    expect(screen.queryByTestId('table-form')).not.toBeInTheDocument();
+  });
+
+  it('removes a table after the user confirms', async () => {
+    // Arrange
+    vi.mocked(useAuth).mockReturnValue({ user: makeUser() } as unknown as ReturnType<typeof useAuth>);
+    vi.mocked(tableApi.list).mockResolvedValue({ tables: [makeTable()], zones: ['Main'], statuses: ['free'] });
+    const user = userEvent.setup();
+    render(<FloorPlanPage />);
+    await screen.findByTestId('table-tile-t1');
+
+    // Act
+    await user.click(screen.getByRole('button', { name: 'Remove' }));
+
+    // Assert
+    await waitFor(() => expect(tableApi.remove).toHaveBeenCalledWith('t1'));
+  });
+});

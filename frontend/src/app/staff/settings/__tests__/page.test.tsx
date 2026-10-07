@@ -1,15 +1,24 @@
-/**
- * Module-wise test scaffold for src/app/staff/settings (page).
- *
- * Real tests for this module go here, in __tests__/, mirroring the
- * app/ and components/ directory structure. Follow the Arrange-Act-Assert
- * (AAA) pattern used in src/lib/__tests__/menu.test.ts,
- * src/components/menu/__tests__/menu-item-card.test.tsx and
- * src/components/account/__tests__/profile-editor.test.tsx — Arrange the
- * data/props, Act (render / interact), then Assert the outcome, with each
- * phase commented.
- */
-import { test } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import SettingsPage from '@/app/staff/settings/page';
 
-test.todo('renders the settings page without crashing');
-test.todo('shows the primary heading / call to action for this page');
+vi.mock('@/components/layout/staff-layout', () => ({
+  StaffLayout: ({ children, section }: { children: React.ReactNode; section?: string }) => (
+    <div data-testid="staff-layout" data-section={section}>
+      {children}
+    </div>
+  ),
+}));
+vi.mock('@/components/settings/settings-form', () => ({ SettingsForm: () => <div data-testid="settings-form" /> }));
+
+describe('SettingsPage', () => {
+  it('wraps the settings form and heading in the "settings" staff-layout section', () => {
+    // Arrange / Act
+    render(<SettingsPage />);
+
+    // Assert
+    expect(screen.getByTestId('staff-layout')).toHaveAttribute('data-section', 'settings');
+    expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument();
+    expect(screen.getByTestId('settings-form')).toBeInTheDocument();
+  });
+});
