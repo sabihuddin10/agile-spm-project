@@ -1,15 +1,23 @@
-/**
- * Module-wise test scaffold for src/app/staff/analytics (page).
- *
- * Real tests for this module go here, in __tests__/, mirroring the
- * app/ and components/ directory structure. Follow the Arrange-Act-Assert
- * (AAA) pattern used in src/lib/__tests__/menu.test.ts,
- * src/components/menu/__tests__/menu-item-card.test.tsx and
- * src/components/account/__tests__/profile-editor.test.tsx — Arrange the
- * data/props, Act (render / interact), then Assert the outcome, with each
- * phase commented.
- */
-import { test } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import AnalyticsPage from '@/app/staff/analytics/page';
 
-test.todo('renders the analytics page without crashing');
-test.todo('shows the primary heading / call to action for this page');
+vi.mock('@/components/layout/staff-layout', () => ({
+  StaffLayout: ({ children, section }: { children: React.ReactNode; section?: string }) => (
+    <div data-testid="staff-layout" data-section={section}>
+      {children}
+    </div>
+  ),
+}));
+vi.mock('@/components/analytics/analytics-dashboard', () => ({ AnalyticsDashboard: () => <div data-testid="analytics-dashboard" /> }));
+
+describe('AnalyticsPage', () => {
+  it('wraps the analytics dashboard in the "analytics" staff-layout section', () => {
+    // Arrange / Act
+    render(<AnalyticsPage />);
+
+    // Assert
+    expect(screen.getByTestId('staff-layout')).toHaveAttribute('data-section', 'analytics');
+    expect(screen.getByTestId('analytics-dashboard')).toBeInTheDocument();
+  });
+});
