@@ -78,10 +78,14 @@ const customerNames = async (api, token) =>
   (await api.call('GET', '/customers', { token })).body.customers.map((c) => c.name);
 
 test('the first request seeds a missing state row with the gzip-compressed demo data', async () => {
+  // Arrange
   const api = await spawnServer();
-  const menu = await api.call('GET', '/menu');
-  assert.equal(menu.status, 200);
 
+  // Act
+  const menu = await api.call('GET', '/menu');
+
+  // Assert
+  assert.equal(menu.status, 200);
   const { rows } = await pool.query('SELECT version, data FROM app_state WHERE key = $1', [STATE_KEY]);
   assert.equal(rows.length, 1);
   assert.equal(rows[0].version, 1);
@@ -91,25 +95,33 @@ test('the first request seeds a missing state row with the gzip-compressed demo 
 });
 
 test('a write survives a cold start on another instance', async () => {
+  // Arrange
   const first = await spawnServer();
   const token = await first.login('manager');
-  const created = await first.call('POST', '/customers', { token, body: { name: 'Persisted Pat' } });
-  assert.equal(created.status, 201);
-  await first.close();
 
+  // Act
+  const created = await first.call('POST', '/customers', { token, body: { name: 'Persisted Pat' } });
+  await first.close();
   const second = await spawnServer();
   const token2 = await second.login('manager');
+
+  // Assert
+  assert.equal(created.status, 201);
   assert.ok((await customerNames(second, token2)).includes('Persisted Pat'));
   await second.close();
 });
 
 test('concurrent writes on two instances are all kept', async () => {
+  // Arrange
   const [a, b] = [await spawnServer(), await spawnServer()];
   const [tokenA, tokenB] = [await a.login('manager'), await b.login('waiter')];
-
   const names = Array.from({ length: 6 }, (_, i) => `Concurrent ${i}`);
+
+  // Act
   const results = await Promise.all(names.map((name, i) =>
     (i % 2 ? b : a).call('POST', '/customers', { token: i % 2 ? tokenB : tokenA, body: { name } })));
+
+  // Assert
   assert.deepEqual(results.map((r) => r.status), names.map(() => 201));
 
   const ids = results.map((r) => r.body.customer.id);
