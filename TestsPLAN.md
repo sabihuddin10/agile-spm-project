@@ -16,7 +16,7 @@ Tests are organized **module-wise**, mirroring the source directory structure
 | Phase | Area | Done | Partial | Left | Total |
 |---|---|---|---|---|---|
 | 1 | Backend — route/acceptance tests | 10 | 0 | 0 | 10 |
-| 2 | Backend — lib & middleware unit tests | 4 | 0 | 2 | 6 |
+| 2 | Backend — lib & middleware unit tests | 6 | 0 | 0 | 6 |
 | 3 | Frontend — lib & context unit tests | 1 | 0 | 5 | 6 |
 | 4 | Frontend — high-risk business components | 0 | 2 | 10 | 12 |
 | 5 | Frontend — supporting/presentational components | 0 | 0 | 6 | 6 |
@@ -73,8 +73,8 @@ directly instead of relying on an HTTP round-trip to reach them.
 | JWT signing/verification | `src/lib/jwt.js` → `test/lib/jwt.test.js` | `[x]` `signToken` produces a token `verifyToken` can decode back to the same payload; `[x]` `verifyToken` rejects a tampered/expired/garbage/wrong-secret token |
 | Notifications | `src/lib/notify.js` → `test/lib/notify.test.js` | `[x]` `notify()` stores a notification addressable by `userId` or `role`; `[x]` `notificationsFor(user)` returns only notifications for that user's id/role, newest first, in-app channel only; `[x]` `serializeNotification` shapes the response and marks read/unread correctly; `[x]` the 1000-entry cap drops the oldest first |
 | Date/time helpers | `src/lib/time.js` → `test/lib/time.test.js` | `[x]` `localDate`/`localTime` formatting; `[x]` `combine(date, time)` round-trips; `[x]` `addDays` across month/year boundaries; `[x]` `isValidDate`/`isValidTime` reject malformed input; `[x]` `weekStart` always returns the correct Monday |
-| Order lifecycle helpers | `src/lib/orders.js` → `test/lib/orders.test.js` | `[ ]` `syncOrderStatus` derives order status from item statuses correctly; `[ ]` `confirmOrder`/`closeOrder`/`cancelOrder` transitions and guards; `[ ]` `markPaid`/`markUnpaid` idempotency; `[ ]` `occupyTable`/`releaseTable` table-state side effects; `[ ]` `deductStock`/`adjustStock`/`recordMovement` stock math and movement logging; `[ ]` `kitchenQueue`/`moveInQueue` ordering and rush/priority logic |
-| Reservation helpers | `src/lib/reservations.js` → `test/lib/reservations.test.js` | `[ ]` `canAccommodate` capacity/overlap checks; `[ ]` `availability` slot generation; `[ ]` `suggestAlternatives` returns genuinely open nearby slots; `[ ]` `syncTableHolds`/`releaseHold` hold expiry; `[ ]` `isLate` grace-period boundary |
+| Order lifecycle helpers | `src/lib/orders.js` → `test/lib/orders.test.js` | `[x]` `syncOrderStatus` derives order status from item statuses correctly; `[x]` `confirmOrder`/`closeOrder`/`cancelOrder` transitions and guards; `[x]` `markPaid`/`markUnpaid` idempotency; `[x]` `occupyTable`/`releaseTable` table-state side effects; `[x]` `deductStock`/`adjustStock`/`recordMovement` stock math and movement logging; `[x]` `kitchenQueue`/`moveInQueue` ordering and rush/priority logic |
+| Reservation helpers | `src/lib/reservations.js` → `test/lib/reservations.test.js` | `[x]` `canAccommodate` capacity/overlap checks; `[x]` `availability` slot generation; `[x]` `suggestAlternatives` returns genuinely open nearby slots; `[x]` `syncTableHolds`/`releaseHold` hold expiry; `[x]` `isLate` grace-period boundary |
 | Auth middleware | `src/middleware/auth.js` → `test/middleware/auth.test.js` | `[x]` `authenticate` accepts a valid token, rejects missing/invalid, rejects a deactivated user immediately (US9.4); `[x]` `optionalAuth` doesn't block anonymous requests; `[x]` `requireRole`/`requireAdmin` allow/deny per role correctly |
 
 ---
