@@ -11,15 +11,13 @@
  */
 import { test } from 'vitest';
 
-test.todo('account-table: <describe the behaviour to verify>');
-test.todo('all-accounts-panel: <describe the behaviour to verify>');
-test.todo('applications-panel: <describe the behaviour to verify>');
-test.todo('careers-form: <describe the behaviour to verify>');
-test.todo('confirm-dialog: <describe the behaviour to verify>');
-test.todo('credentials-modal: <describe the behaviour to verify>');
-test.todo('my-schedule: <describe the behaviour to verify>');
-test.todo('performance-panel: <describe the behaviour to verify>');
-test.todo('role-meta: <describe the behaviour to verify>');
-test.todo('shift-form: <describe the behaviour to verify>');
-test.todo('shift-planner: <describe the behaviour to verify>');
-test.todo('team-panel: <describe the behaviour to verify>');
+// confirm-dialog, credentials-modal, role-meta and shift-form now have
+// real tests in this folder.
+test.todo('account-table: lists staff accounts with role-change and suspend actions');
+test.todo('all-accounts-panel: every account across all roles, admin view');
+test.todo('applications-panel: approve/reject a staff application (US9.1)');
+test.todo('careers-form: public application form validation and submit');
+test.todo('my-schedule: a staff member\'s own upcoming shifts');
+test.todo('performance-panel: per-staff performance figures (US9.5)');
+test.todo('shift-planner: weekly shift calendar, opens ShiftForm for a slot');
+test.todo('team-panel: roster grouped by role');
