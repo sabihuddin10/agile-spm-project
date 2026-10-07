@@ -1,15 +1,17 @@
-/**
- * Module-wise test scaffold for src/app/book (page).
- *
- * Real tests for this module go here, in __tests__/, mirroring the
- * app/ and components/ directory structure. Follow the Arrange-Act-Assert
- * (AAA) pattern used in src/lib/__tests__/menu.test.ts,
- * src/components/menu/__tests__/menu-item-card.test.tsx and
- * src/components/account/__tests__/profile-editor.test.tsx — Arrange the
- * data/props, Act (render / interact), then Assert the outcome, with each
- * phase commented.
- */
-import { test } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import BookPage from '@/app/book/page';
 
-test.todo('renders the book page without crashing');
-test.todo('shows the primary heading / call to action for this page');
+vi.mock('@/components/layout/storefront-shell', () => ({ StorefrontShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
+vi.mock('@/components/booking/booking-form', () => ({ BookingForm: () => <div data-testid="booking-form" /> }));
+
+describe('BookPage', () => {
+  it('shows the page heading and the booking form', () => {
+    // Arrange / Act
+    render(<BookPage />);
+
+    // Assert
+    expect(screen.getByRole('heading', { name: 'Reserve your evening' })).toBeInTheDocument();
+    expect(screen.getByTestId('booking-form')).toBeInTheDocument();
+  });
+});

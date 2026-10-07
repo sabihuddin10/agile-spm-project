@@ -1,15 +1,21 @@
-/**
- * Module-wise test scaffold for src/app/login (page).
- *
- * Real tests for this module go here, in __tests__/, mirroring the
- * app/ and components/ directory structure. Follow the Arrange-Act-Assert
- * (AAA) pattern used in src/lib/__tests__/menu.test.ts,
- * src/components/menu/__tests__/menu-item-card.test.tsx and
- * src/components/account/__tests__/profile-editor.test.tsx — Arrange the
- * data/props, Act (render / interact), then Assert the outcome, with each
- * phase commented.
- */
-import { test } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import LoginPage, { metadata } from '@/app/login/page';
 
-test.todo('renders the login page without crashing');
-test.todo('shows the primary heading / call to action for this page');
+vi.mock('@/components/auth/login-form', () => ({ LoginForm: () => <div data-testid="login-form" /> }));
+
+describe('LoginPage', () => {
+  it('sets the page title', () => {
+    // Arrange / Act / Assert
+    expect(metadata.title).toBe('Sign in');
+  });
+
+  it('shows the brand mark and the login form', () => {
+    // Arrange / Act
+    render(<LoginPage />);
+
+    // Assert
+    expect(screen.getByText('Plate & Flame')).toBeInTheDocument();
+    expect(screen.getByTestId('login-form')).toBeInTheDocument();
+  });
+});

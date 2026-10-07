@@ -1,15 +1,21 @@
-/**
- * Module-wise test scaffold for src/app/register (page).
- *
- * Real tests for this module go here, in __tests__/, mirroring the
- * app/ and components/ directory structure. Follow the Arrange-Act-Assert
- * (AAA) pattern used in src/lib/__tests__/menu.test.ts,
- * src/components/menu/__tests__/menu-item-card.test.tsx and
- * src/components/account/__tests__/profile-editor.test.tsx — Arrange the
- * data/props, Act (render / interact), then Assert the outcome, with each
- * phase commented.
- */
-import { test } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import RegisterPage, { metadata } from '@/app/register/page';
 
-test.todo('renders the register page without crashing');
-test.todo('shows the primary heading / call to action for this page');
+vi.mock('@/components/auth/register-form', () => ({ RegisterForm: () => <div data-testid="register-form" /> }));
+
+describe('RegisterPage', () => {
+  it('sets the page title', () => {
+    // Arrange / Act / Assert
+    expect(metadata.title).toBe('Create account');
+  });
+
+  it('shows the registration form and a link back to sign in', () => {
+    // Arrange / Act
+    render(<RegisterPage />);
+
+    // Assert
+    expect(screen.getByTestId('register-form')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/login');
+  });
+});
