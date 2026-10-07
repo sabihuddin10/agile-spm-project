@@ -20,7 +20,7 @@ Tests are organized **module-wise**, mirroring the source directory structure
 | 3 | Frontend — lib & context unit tests | 6 | 0 | 0 | 6 |
 | 4 | Frontend — high-risk business components | 2 | 10 | 0 | 12 |
 | 5 | Frontend — supporting/presentational components | 6 | 0 | 0 | 6 |
-| 6 | Frontend — app pages | 8 | 0 | 13 | 21 |
+| 6 | Frontend — app pages | 11 | 0 | 10 | 21 |
 
 "Partial" (Phase 4) = the module has one file with a real test (`menu-item-card`,
 `profile-editor`) but other files in that same module folder are still `test.todo`.
@@ -148,7 +148,7 @@ logic lives in the components they render.
 | `app/login` ✅ | `[x]` metadata title, brand mark + LoginForm renders |
 | `app/menu` ✅ | `[x]` heading + full (non-compact) public menu |
 | `app/register` ✅ | `[x]` metadata title, RegisterForm + sign-in link |
-| `app/staff` (overview) | `[ ]` |
+| `app/staff` (overview) ✅ | `[x]` wraps OverviewDashboard in the "overview" section, only once the user is known |
 | `app/staff/analytics` | `[ ]` |
 | `app/staff/billing` | `[ ]` |
 | `app/staff/customers` | `[ ]` |
@@ -157,8 +157,8 @@ logic lives in the components they render.
 | `app/staff/menu` | `[ ]` |
 | `app/staff/orders` | `[ ]` |
 | `app/staff/reservations` | `[ ]` |
-| `app/staff/schedule` | `[ ]` |
-| `app/staff/settings` | `[ ]` |
+| `app/staff/schedule` ✅ | `[x]` wraps My schedule in the "schedule" section |
+| `app/staff/settings` ✅ | `[x]` wraps the settings form + heading in the "settings" section |
 | `app/staff/tables` | `[ ]` |
 | `app/staff/users` | `[ ]` |
 
