@@ -17,7 +17,7 @@ Tests are organized **module-wise**, mirroring the source directory structure
 |---|---|---|---|---|---|
 | 1 | Backend — route/acceptance tests | 10 | 0 | 0 | 10 |
 | 2 | Backend — lib & middleware unit tests | 6 | 0 | 0 | 6 |
-| 3 | Frontend — lib & context unit tests | 4 | 0 | 2 | 6 |
+| 3 | Frontend — lib & context unit tests | 6 | 0 | 0 | 6 |
 | 4 | Frontend — high-risk business components | 0 | 2 | 10 | 12 |
 | 5 | Frontend — supporting/presentational components | 0 | 0 | 6 | 6 |
 | 6 | Frontend — app pages | 0 | 0 | 21 | 21 |
@@ -89,8 +89,8 @@ Pure logic and shared state — highest value-per-test, no rendering needed (exc
 | API client | `lib/api.ts` → `lib/__tests__/api.test.ts` | `[x]` request builder attaches auth header/body correctly; `[x]` `ApiError` carries status + parsed error body; `[x]` `storeAuth`/`getStoredToken`/`getStoredUser`/`clearAuth` read/write storage correctly; `[x]` a 401 on a protected page clears the session and redirects to login |
 | Formatting helpers | `lib/format.ts` → `lib/__tests__/format.test.ts` | `[x]` `money`/`percent` formatting incl. null/undefined; `[x]` `localDateISO`/`addDaysISO`/`formatDate` correctness; `[x]` `minutesSince`/`formatMinutes`/`timeAgo` boundary values (just now / minutes / hours / days); `[x]` `modifierText` joins price deltas correctly; `[x]` status-label maps (`ORDER_STATUS`, `ITEM_STATUS`, etc.) have an entry for every enum value |
 | Role permissions | `lib/permissions.ts` → `lib/__tests__/permissions.test.ts` | `[x]` `canAccess` matches `SECTION_ROLES` for every role × section pair; `[x]` `isStaff` true only for non-customer roles; `[x]` each `can.*` predicate matches its documented allowed roles |
-| Auth context | `context/auth-context.tsx` → `context/__tests__/auth-context.test.tsx` | `[ ]` restores a stored session on mount, then re-validates with the server; `[ ]` `login`/`register`/`logout` update `user`/`token` and storage; `[ ]` `refreshUser` updates state on success, silently no-ops on failure; `[ ]` `hasRole` reflects the current user; `[ ]` reacts to the `auth:expired` event by clearing the session |
-| Cart context | `context/cart-context.tsx` → `context/__tests__/cart-context.test.tsx` | `[ ]` add/remove/update line quantities; `[ ]` merges identical item+modifier selections into one line (`selectionKey`); `[ ]` computed totals update as lines change; `[ ]` cart persists/restores across remount if backed by storage; `[ ]` clearing the cart |
+| Auth context | `context/auth-context.tsx` → `context/__tests__/auth-context.test.tsx` | `[x]` restores a stored session on mount, then re-validates with the server; `[x]` `login`/`register`/`logout` update `user`/`token` and storage; `[x]` `refreshUser` updates state on success, silently no-ops on failure; `[x]` `hasRole` reflects the current user; `[x]` reacts to the `auth:expired` event by clearing the session |
+| Cart context | `context/cart-context.tsx` → `context/__tests__/cart-context.test.tsx` | `[x]` add/remove/update line quantities; `[x]` merges identical item+modifier selections into one line (`selectionKey`); `[x]` computed totals update as lines change; `[x]` cart persists/restores across remount if backed by storage; `[x]` clearing the cart; `[x]` a different account signing in clears the cart |
 
 ---
 
