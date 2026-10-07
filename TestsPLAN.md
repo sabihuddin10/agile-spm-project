@@ -19,7 +19,7 @@ Tests are organized **module-wise**, mirroring the source directory structure
 | 2 | Backend — lib & middleware unit tests | 6 | 0 | 0 | 6 |
 | 3 | Frontend — lib & context unit tests | 6 | 0 | 0 | 6 |
 | 4 | Frontend — high-risk business components | 2 | 10 | 0 | 12 |
-| 5 | Frontend — supporting/presentational components | 3 | 0 | 3 | 6 |
+| 5 | Frontend — supporting/presentational components | 5 | 0 | 1 | 6 |
 | 6 | Frontend — app pages | 0 | 0 | 21 | 21 |
 
 "Partial" (Phase 4) = the module has one file with a real test (`menu-item-card`,
@@ -122,8 +122,8 @@ Lower risk (mostly rendering/props-driven), but still part of "every module has 
 
 | Module | Files | Functionality to cover | Status |
 |---|---|---|---|
-| `components/layout` | dev-shell, menu-drawer, mobile-bottom-nav, notification-bell, staff-layout, staff-shell, storefront-shell | `[ ]` nav renders the links permitted for the current role; `[ ]` notification-bell shows unread count | `[ ]` |
-| `components/overview` | live-tile, low-stock-banner, next-shift-card, overview-dashboard, quick-links, role-widgets, use-overview-data | `[ ]` role-widgets render only the widgets relevant to the signed-in role | `[ ]` |
+| `components/layout` | **dev-shell, menu-drawer, mobile-bottom-nav, notification-bell, staff-layout, staff-shell, storefront-shell ✅** | `[x]` nav renders only the links permitted for the current role (dev-shell, mobile-bottom-nav, staff-shell); `[x]` notification-bell loads, shows unread count, opens/marks read/mark-all-read, navigates on click; `[x]` staff-layout loading/redirect-anonymous/redirect-customer/403-forbidden-then-redirect; `[x]` menu-drawer role-aware links + Escape/sign-out close; `[x]` storefront-shell cart button, guest vs signed-in vs staff header | `[x]` done |
+| `components/overview` | **live-tile, low-stock-banner, next-shift-card, overview-dashboard, quick-links, role-widgets, use-overview-data ✅** | `[x]` role-widgets (Floor/Kitchen/TodaySummary) render only the widgets relevant to the signed-in role, with correct flags/hints; `[x]` use-overview-data role-based fetch skipping, error toast-once, loaded/updatedAt state; `[x]` overview-dashboard greeting, connecting/live state, composes child widgets by role access | `[x]` done |
 | `components/scrum` | **sprint-card ✅** | `[x]` renders sprint metadata (number, module, goal, priority, lead, points, story count); `[x]` Planned/Delivered badge by status; `[x]` expand/collapse a story's acceptance criteria & evidence, one at a time | `[x]` done |
 | `components/settings` | **settings-form ✅** | `[x]` loading/error states; `[x]` manager can view & edit, waiter sees a read-only disabled form; `[x]` dirty indicator + Reset; `[x]` client-side required-field validation; `[x]` save success toast; `[x]` server range-validation error mapped onto the matching field with friendly units | `[x]` done |
 | `components/storefront` | cart-lines, checkout-estimate, checkout-form, flame-mark, item-options-modal, order-placed, qty-stepper, status-pill | `[ ]` checkout-estimate totals match `lib/menu` pricing; `[ ]` qty-stepper min/max clamping; `[ ]` item-options-modal (already indirectly covered by `menu-item-card` test — add its own direct test) | `[ ]` |
