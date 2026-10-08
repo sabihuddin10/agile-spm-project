@@ -11,7 +11,7 @@ storage before it can be deployed.
 
 ## Decision
 
-Persist the **whole store as one JSONB snapshot** in Neon Postgres (chosen over
+Persist the **whole store as one gzip-compressed JSON snapshot** in Neon Postgres (chosen over
 a relational rewrite of ~2,500 lines of route code, and over per-collection
 JSON tables). Deploy as **two Vercel projects**: the Express API and the
 Next.js frontend.
@@ -21,7 +21,7 @@ Next.js frontend.
 ```sql
 CREATE TABLE IF NOT EXISTS app_state (
   key        text PRIMARY KEY,
-  data       jsonb NOT NULL,
+  data       bytea NOT NULL,   -- gzip-compressed JSON snapshot
   version    integer NOT NULL,
   updated_at timestamptz NOT NULL DEFAULT now()
 );
@@ -51,8 +51,17 @@ For every `/api/*` request except `/api/health`:
    response. A failed save rolls back, restores the last committed state and
    returns 500, so a client never sees success for an unsaved write.
 
-Driver: `pg` with Neon's pooled connection string (transaction-mode pooling
-supports the per-request transaction).
+Driver: `@neondatabase/serverless` Pool (pg-compatible, WebSockets on port 443,
+supports the per-request transaction). Chosen over `pg` on port 5432 because
+it suits serverless instances and the development network could not hold
+5432 connections reliably.
+
+The snapshot is ~1.3 MB of JSON (mostly 60 days of seeded orders) and ~90 KB
+gzipped, so it is stored compressed.
+
+Connection errors on idle or checked-out clients are logged, the broken
+connection is discarded, and the request fails with 500 instead of crashing
+the process. Queries time out after 30 s.
 
 `npm run db:reset` overwrites the row with freshly seeded data (the seed's
 "today" is fixed when the row is first written).
@@ -70,14 +79,15 @@ supports the per-request transaction).
 - Unit (`test/snapshot.test.js`, in default `npm test`): snapshot is
   JSON-safe; `restore()` round-trips and keeps array/object identity.
 - Integration against real Neon (`test-db/persistence.test.js`, run with
-  `npm run test:db`, needs `DATABASE_URL`):
+  `npm run test:db`, needs `DATABASE_URL`, each server in its own process):
   - a write survives wiping in-memory state (simulated cold start);
   - concurrent writes are both persisted;
   - first request seeds a missing row.
 - The 51 existing acceptance tests keep running without a database, so CI is
   unchanged.
-- After deploy: log in on the live site, create data, confirm it on a fresh
-  request.
+- After deploy: the same scenarios against the live API (login, write read
+  back on later requests, 8 concurrent writes from two users with unique ids,
+  cleanup).
 
 ## Known limitations
 

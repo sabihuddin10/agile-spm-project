@@ -32,9 +32,6 @@ importers:
       react-dom:
         specifier: 18.3.1
         version: 18.3.1(react@18.3.1)
-      restaurant-ops-platform:
-        specifier: file:..
-        version: 'file:'
       yup:
         specifier: ^1.4.0
         version: 1.7.1
@@ -87,6 +84,9 @@ importers:
 
   server:
     dependencies:
+      '@neondatabase/serverless':
+        specifier: ^1.2.0
+        version: 1.2.0
       bcryptjs:
         specifier: ^2.4.3
         version: 2.4.3
@@ -105,9 +105,6 @@ importers:
       morgan:
         specifier: ^1.10.0
         version: 1.12.0
-      restaurant-ops-platform:
-        specifier: file:..
-        version: 'file:'
 
 packages:
 
@@ -253,6 +250,10 @@ packages:
     peerDependencies:
       '@emnapi/core': ^1.7.1 || ^2.0.0-alpha.4
       '@emnapi/runtime': ^1.7.1 || ^2.0.0-alpha.4
+
+  '@neondatabase/serverless@1.2.0':
+    resolution: {integrity: sha512-tnaqgixUengZQNd9ZrS3ytQfamJzLKY8QxgqWQTNHHtB+KrFQWk77JTbbpg4RD+J3qE4eO2lVytvGDX5Kj6FdQ==}
+    engines: {node: '>=19.0.0'}
 
   '@next/env@14.2.35':
     resolution: {integrity: sha512-DuhvCtj4t9Gwrx80dmz2F4t/zKQ4ktN8WrMwOuVzkJfBilwAwGr6v16M5eI8yCuZ63H9TTuEU09Iu2HqkzFPVQ==}
@@ -2262,10 +2263,6 @@ packages:
     engines: {node: '>= 0.4'}
     hasBin: true
 
-  'restaurant-ops-platform@file:':
-    resolution: {directory: '', type: directory}
-    engines: {node: '>=18.0.0'}
-
   reusify@1.1.0:
     resolution: {integrity: sha512-g6QUff04oZpHs0eG5p83rFLhHeV00ug/Yf9nZM6fLeUrPguBTkTQOdpAWWspMh55TZfVQDPaN3NQJfbVRAxdIw==}
     engines: {iojs: '>=1.0.0', node: '>=0.10.0'}
@@ -2947,6 +2944,8 @@ snapshots:
       '@emnapi/runtime': 1.10.0
       '@tybys/wasm-util': 0.10.3
     optional: true
+
+  '@neondatabase/serverless@1.2.0': {}
 
   '@next/env@14.2.35': {}
 
@@ -5052,8 +5051,6 @@ snapshots:
       object-keys: 1.1.1
       path-parse: 1.0.7
       supports-preserve-symlinks-flag: 1.0.0
-
-  'restaurant-ops-platform@file:': {}
 
   reusify@1.1.0: {}
 

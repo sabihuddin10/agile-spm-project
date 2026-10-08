@@ -8,13 +8,16 @@ All **10 modules / 49 user stories / 217 story points** of the Product Backlog a
 
 ```
 .
-├── server/                 Express 4 REST API (in-memory store, seeded on start)
+├── server/                 Express 4 REST API (in-memory store, persisted to Neon Postgres)
+│   ├── api/index.js        Vercel serverless entry (vercel.json routes every path here)
 │   ├── src/app.js          app factory (routes + middleware)
-│   ├── src/data/           store.js (data model + live seed), seed-history.js (60 days of history)
+│   ├── src/data/           store.js (data model + live seed), seed-history.js (60 days of history),
+│   │                       snapshot.js + persist.js + db.js (Neon persistence)
 │   ├── src/lib/            order-math (money/splits), orders (lifecycle), reservations (capacity/holds), notify
 │   ├── src/routes/         auth, customers, menu, orders, tables, reservations, billing,
 │   │                       inventory, staff, analytics, notifications, settings
-│   └── test/               acceptance tests per sprint (node:test)
+│   ├── test/               acceptance tests per sprint (node:test, in memory)
+│   └── test-db/            persistence tests against a real Neon database
 ├── frontend/               Next.js 14 (App Router) + React 18 + TypeScript + Tailwind
 │   └── src/
 │       ├── app/            storefront (/, /menu, /book, /account, /careers), staff console (/staff/*), Scrum board (/dev)
@@ -33,7 +36,8 @@ All **10 modules / 49 user stories / 217 story points** of the Product Backlog a
 | Charts     | Chart.js via react-chartjs-2 (analytics dashboard)                    |
 | Backend    | Express 4 (REST, ES modules)                                           |
 | Auth/RBAC  | JWT (bcrypt-hashed passwords), role guards on every API route, matching UI guards |
-| Storage    | In-memory store — **resets on restart** (see *Design decisions*)     |
+| Storage    | In-memory store, persisted to Neon Postgres when `DATABASE_URL` is set |
+| Hosting    | Vercel: API and web as two projects (see *Deployment*)                |
 | Tests / CI | `node:test` acceptance tests, ESLint (next/core-web-vitals), GitHub Actions |
 
 ## Getting started
@@ -49,7 +53,9 @@ Open http://localhost:3000. The API base is http://localhost:4000/api (Next prox
 
 | Command                     | What it does                                   |
 |-----------------------------|------------------------------------------------|
-| `pnpm test`                 | API acceptance tests (51 tests, US1.1–US10.6)   |
+| `pnpm test`                 | API acceptance + unit tests, in memory (53 tests, US1.1–US10.6) |
+| `pnpm --dir server test:db` | Persistence tests against Neon (needs `DATABASE_URL`) |
+| `pnpm --dir server db:reset`| Reseed the persisted demo data in Neon          |
 | `pnpm --dir server lint`    | Syntax-check every server file                 |
 | `pnpm --dir frontend lint`  | ESLint for the web app                         |
 | `pnpm build`                | Production build of the web app (includes type check) |
@@ -65,6 +71,24 @@ Open http://localhost:3000. The API base is http://localhost:4000/api (Next prox
 | Customer | customer@rest.test  | Order with modifiers, dine-in/pickup/delivery, bookings, receipts |
 
 Also seeded: `chef2@rest.test` (Cara Cook) and `waiter2@rest.test` (Wendy Server), so staff performance has more than one person to compare.
+
+## Deployment
+
+Live: **https://plate-and-flame-web.vercel.app** (web) and **https://plate-and-flame-api.vercel.app/api/health** (API).
+
+Two Vercel projects, deployed with the Vercel CLI from their own folders:
+
+| Project               | Folder      | Environment variables                         |
+|-----------------------|-------------|-----------------------------------------------|
+| `plate-and-flame-api` | `server/`   | `DATABASE_URL` (Neon pooled URL), `JWT_SECRET` |
+| `plate-and-flame-web` | `frontend/` | `API_URL` = the API's URL (used by the `/api/*` rewrite at build time) |
+
+```bash
+cd server && vercel deploy --prod      # API
+cd frontend && vercel deploy --prod    # web
+```
+
+For local persistence put `DATABASE_URL=...` in `server/.env` (gitignored; `.vercelignore` keeps it out of uploads). Optional `STATE_KEY` picks the `app_state` row (default `main`).
 
 ## What each module delivers
 
@@ -83,7 +107,7 @@ Also seeded: `chef2@rest.test` (Cara Cook) and `waiter2@rest.test` (Wendy Server
 
 ## Design decisions
 
-- **In-memory storage instead of Firebase.** The proposal planned Firebase/Firestore. The team kept a seeded in-memory store so the app runs anywhere with no cloud credentials, and so every demo starts from the same data. Seed data is generated relative to today: 60 days of history, live orders in progress, tonight's bookings and this week's rota. The trade-off is that data resets when the API restarts. Persistence is the natural next backlog item.
+- **In-memory store, persisted as one snapshot in Neon Postgres.** The proposal planned Firebase/Firestore. The team kept a seeded in-memory store so the app runs anywhere with no cloud credentials. Seed data is generated relative to the day it is first written: 60 days of history, live orders in progress, tonight's bookings and this week's rota. When `DATABASE_URL` is set, each API request locks the `app_state` row, reloads the store if another serverless instance saved a newer version, and saves the gzip-compressed snapshot (about 90 KB) before responding. Writes are therefore serialised and each one rewrites the whole snapshot: fine for a course demo, not for real traffic. Without `DATABASE_URL` the API stays purely in memory and resets on restart. Design: `docs/specs/2026-10-07-neon-persistence-design.md`.
 - **The server is the source of truth for money.** Prices, modifier deltas, tax, service charge, points and splits are all computed server-side in integer cents. Clients only send menu item IDs and selected options.
 - **One permissions map.** `frontend/src/lib/permissions.ts` mirrors the API's `requireRole` guards, so the UI never offers an action the API would refuse.
 - **Live updates via polling** every 5–10 s for orders, the KDS, the floor plan, billing and notifications. This meets "within a few seconds" without a websocket server.
