@@ -8,7 +8,7 @@ describe('ConfirmDialog', () => {
     // Arrange
     const onConfirm = vi.fn();
     const onCancel = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(
       <ConfirmDialog title="Remove staff member?" confirmLabel="Remove" onConfirm={onConfirm} onCancel={onCancel}>
         This cannot be undone.
@@ -29,7 +29,7 @@ describe('ConfirmDialog', () => {
   it('disables both buttons and ignores close while busy', async () => {
     // Arrange
     const onCancel = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(
       <ConfirmDialog title="Removing…" confirmLabel="Remove" busy onConfirm={vi.fn()} onCancel={onCancel}>
         Working.

@@ -31,7 +31,7 @@ describe('PayActions', () => {
     const onUpdated = vi.fn();
     const paid = makeInvoice({ paymentStatus: 'paid' });
     vi.mocked(billingApi.pay).mockResolvedValue({ invoice: paid, alreadyPaid: false });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<PayActions invoice={makeInvoice()} onUpdated={onUpdated} />);
 
     // Act
@@ -98,7 +98,7 @@ describe('PaidActions', () => {
     const onUpdated = vi.fn();
     const unpaid = makeInvoice({ paymentStatus: 'unpaid', status: 'served' });
     vi.mocked(billingApi.unpay).mockResolvedValue({ invoice: unpaid });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<PaidActions invoice={makeInvoice({ paymentStatus: 'paid' })} role="manager" onUpdated={onUpdated} onRefund={vi.fn()} />);
 
     // Act

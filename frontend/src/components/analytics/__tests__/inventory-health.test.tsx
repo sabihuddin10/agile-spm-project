@@ -37,7 +37,7 @@ describe('InventoryHealth', () => {
   it('hides healthy items behind a toggle', async () => {
     // Arrange
     const items = [makeRow({ id: 'a', status: 'low' }), makeRow({ id: 'b', name: 'Mozzarella', status: 'ok', coverage: 150 })];
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<InventoryHealth items={items} />);
 
     // Assert — healthy item not shown yet

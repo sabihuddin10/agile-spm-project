@@ -75,7 +75,7 @@ describe('OrdersPage', () => {
       orders: [makeOrder({ id: 'placed_1', status: 'placed' }), makeOrder({ id: 'ready_1', status: 'ready' })],
     });
     vi.mocked(tableApi.list).mockResolvedValue({ tables: [], zones: [], statuses: [] });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<OrdersPage />);
     await screen.findByTestId('order-card-placed_1');
 
@@ -108,7 +108,7 @@ describe('OrdersPage', () => {
     vi.mocked(orderApi.list).mockResolvedValueOnce({ orders: [] });
     vi.mocked(orderApi.list).mockResolvedValue({ orders: [makeOrder({ id: 'new_1', status: 'placed' })] });
     vi.mocked(tableApi.list).mockResolvedValue({ tables: [], zones: [], statuses: [] });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<OrdersPage />);
     await screen.findByText(/active orders right now/i);
 
@@ -127,7 +127,7 @@ describe('OrdersPage', () => {
     vi.mocked(orderApi.list).mockRejectedValueOnce(new Error('Network error'));
     vi.mocked(orderApi.list).mockResolvedValue({ orders: [makeOrder({ id: 'o1' })] });
     vi.mocked(tableApi.list).mockResolvedValue({ tables: [], zones: [], statuses: [] });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<OrdersPage />);
 
     // Assert

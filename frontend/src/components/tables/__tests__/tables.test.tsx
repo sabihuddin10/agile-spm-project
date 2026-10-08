@@ -113,7 +113,7 @@ describe('TableForm', () => {
 
   it('suggests the next free number and adds a table', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { onSubmit } = renderForm();
     expect(screen.getByLabelText('Table number')).toHaveValue(6);
 
@@ -129,7 +129,7 @@ describe('TableForm', () => {
 
   it('rejects a number already used by another table', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { onSubmit } = renderForm();
 
     // Act
@@ -145,7 +145,7 @@ describe('TableForm', () => {
 
   it('edits an existing table, keeping its own number', async () => {
     // Arrange — takenNumbers excludes the table being edited
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const initial = makeTable({ id: 't3', number: 3, seats: 4, zone: 'Main' });
     const { onSubmit } = renderForm({ initial, takenNumbers: [1, 2] });
     expect(screen.getByLabelText('Table number')).toHaveValue(3);
@@ -161,7 +161,7 @@ describe('TableForm', () => {
 
   it('validates the number and seat range', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { onSubmit } = renderForm();
 
     // Act
@@ -179,7 +179,7 @@ describe('TableForm', () => {
 
   it('requires a name when creating a new zone, then submits it trimmed', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { onSubmit } = renderForm();
     await user.selectOptions(screen.getByLabelText('Zone'), '+ New zone…');
 
@@ -200,7 +200,7 @@ describe('TableForm', () => {
 
   it('cancels, and disables both buttons while saving', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { onCancel, unmount } = renderForm();
 
     // Act
@@ -296,7 +296,7 @@ describe('TableTile', () => {
 
   it('calls back for status changes, hold and take-over', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const handlers = renderTile(makeTable({ status: 'free' }));
 
     // Act
@@ -325,7 +325,7 @@ describe('TableTile', () => {
 
   it('offers edit/remove only to layout editors', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const handlers = renderTile(makeTable({ number: 9 }), { canEditLayout: true });
 
     // Act

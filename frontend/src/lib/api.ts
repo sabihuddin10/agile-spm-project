@@ -142,6 +142,18 @@ export const authApi = {
   updateUser: (id: string, data: { role?: User['role']; active?: boolean }) =>
     api<{ user: User }>(`/auth/users/${id}`, { method: 'PATCH', body: data }),
   removeUser: (id: string) => api<{ deleted: boolean }>(`/auth/users/${id}`, { method: 'DELETE' }),
+  /** Staff self-service profile. `currentPassword` is required when the email changes. */
+  updateMe: (data: { name?: string; email?: string; phone?: string; currentPassword?: string }) =>
+    api<{ user: User }>('/auth/me', { method: 'PATCH', body: data }),
+  /** Revokes every other session — store the returned token to stay signed in. */
+  changePassword: (currentPassword: string, newPassword: string) =>
+    api<{ user: User; token: string }>('/auth/me/password', { method: 'POST', body: { currentPassword, newPassword } }),
+  /** Manager/admin editing an account strictly below their own rank. */
+  updateUserProfile: (id: string, data: { name?: string; email?: string; phone?: string }) =>
+    api<{ user: User }>(`/auth/users/${id}/profile`, { method: 'PATCH', body: data }),
+  /** Issues a one-time temporary password and signs that user out everywhere. */
+  resetPassword: (id: string) =>
+    api<{ user: User; tempPassword: string }>(`/auth/users/${id}/reset-password`, { method: 'POST' }),
 };
 
 /* -------------------------------------------------------------- customers */

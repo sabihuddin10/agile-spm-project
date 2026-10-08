@@ -95,7 +95,7 @@ describe('FloorPlanPage', () => {
     // Arrange
     vi.mocked(useAuth).mockReturnValue({ user: makeUser() } as unknown as ReturnType<typeof useAuth>);
     vi.mocked(tableApi.list).mockResolvedValue({ tables: [makeTable()], zones: ['Main'], statuses: ['free'] });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<FloorPlanPage />);
     await screen.findByTestId('table-tile-t1');
 
@@ -111,7 +111,7 @@ describe('FloorPlanPage', () => {
     // Arrange
     vi.mocked(useAuth).mockReturnValue({ user: makeUser() } as unknown as ReturnType<typeof useAuth>);
     vi.mocked(tableApi.list).mockResolvedValue({ tables: [], zones: [], statuses: [] });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<FloorPlanPage />);
     await screen.findByRole('button', { name: '+ Add table' });
 
@@ -128,7 +128,7 @@ describe('FloorPlanPage', () => {
     // Arrange
     vi.mocked(useAuth).mockReturnValue({ user: makeUser() } as unknown as ReturnType<typeof useAuth>);
     vi.mocked(tableApi.list).mockResolvedValue({ tables: [makeTable()], zones: ['Main'], statuses: ['free'] });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<FloorPlanPage />);
     await screen.findByTestId('table-tile-t1');
 

@@ -102,7 +102,7 @@ describe('MenuPage', () => {
       tags: [],
       allergens: [],
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<MenuPage />);
     await screen.findByText('Caesar Salad');
 
@@ -118,7 +118,7 @@ describe('MenuPage', () => {
     // Arrange
     vi.mocked(useAuth).mockReturnValue({ user: makeUser() } as unknown as ReturnType<typeof useAuth>);
     vi.mocked(menuApi.get).mockResolvedValue({ menu: [makeCategory()], tags: [], allergens: [] });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<MenuPage />);
     await screen.findByText('Margherita Pizza');
 
@@ -135,7 +135,7 @@ describe('MenuPage', () => {
     // Arrange
     vi.mocked(useAuth).mockReturnValue({ user: makeUser() } as unknown as ReturnType<typeof useAuth>);
     vi.mocked(menuApi.get).mockResolvedValue({ menu: [makeCategory()], tags: [], allergens: [] });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<MenuPage />);
     await screen.findByTestId('category-manager');
 

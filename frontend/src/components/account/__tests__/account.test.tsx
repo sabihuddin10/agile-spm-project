@@ -180,7 +180,7 @@ describe('ActiveOrderCard', () => {
 
   it('lets the guest cancel while the order is still placed', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onCancel = vi.fn();
     const order = makeOrder({ status: 'placed' });
     const { rerender } = render(<ActiveOrderCard order={order} now={NOW} onCancel={onCancel} />);
@@ -201,7 +201,7 @@ describe('ActiveOrderCard', () => {
 
   it('offers a receipt only once the order is paid', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onReceipt = vi.fn();
     const unpaid = makeOrder({ paymentStatus: 'unpaid' });
     const paid = makeOrder({ paymentStatus: 'paid', paymentMethod: 'card' });
@@ -259,7 +259,7 @@ describe('MyOrders', () => {
 
   it('shows a load error with a working retry', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.mocked(orderApi.mine).mockRejectedValueOnce(new Error('Network down')).mockResolvedValueOnce({ orders: [] });
     render(<MyOrders />);
     expect(await screen.findByText(/Network down/)).toBeInTheDocument();
@@ -273,7 +273,7 @@ describe('MyOrders', () => {
 
   it('cancels a placed order after confirming, then reloads', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const placed = makeOrder({ id: 'a', number: 301, status: 'placed', paymentStatus: 'paid', paymentMethod: 'card' });
     vi.mocked(orderApi.mine)
       .mockResolvedValueOnce({ orders: [placed] })
@@ -294,7 +294,7 @@ describe('MyOrders', () => {
 
   it('keeps the order when the guest declines the confirm', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.mocked(orderApi.mine).mockResolvedValue({ orders: [makeOrder({ status: 'placed' })] });
     vi.spyOn(window, 'confirm').mockReturnValue(false);
     render(<MyOrders />);
@@ -308,7 +308,7 @@ describe('MyOrders', () => {
 
   it('opens the receipt of a past paid order', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const past = makeOrder({ id: 'p', number: 401, status: 'closed', paymentStatus: 'paid', paymentMethod: 'card' });
     vi.mocked(orderApi.mine).mockResolvedValue({ orders: [past] });
     const invoice = {
@@ -436,7 +436,7 @@ describe('MyReservations', () => {
 
   it('shows a load error with a working retry', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.mocked(reservationApi.mine).mockRejectedValueOnce(new Error('Offline')).mockResolvedValueOnce({ reservations: [] });
     render(<MyReservations />);
     expect(await screen.findByText(/Offline/)).toBeInTheDocument();
@@ -450,7 +450,7 @@ describe('MyReservations', () => {
 
   it('cancels a booking after confirming and shows its new status', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const booking = makeReservation({ id: 'r1', status: 'confirmed', partySize: 4 });
     vi.mocked(reservationApi.mine).mockResolvedValue({ reservations: [booking] });
     vi.mocked(reservationApi.cancel).mockResolvedValue({ reservation: { ...booking, status: 'cancelled' } });
@@ -470,7 +470,7 @@ describe('MyReservations', () => {
 
   it('keeps the booking when the guest declines the confirm', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.mocked(reservationApi.mine).mockResolvedValue({ reservations: [makeReservation()] });
     vi.spyOn(window, 'confirm').mockReturnValue(false);
     render(<MyReservations />);

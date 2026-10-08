@@ -29,7 +29,7 @@ describe('BookingForm', () => {
 
   it('requires a name, email, date and time before submitting', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<BookingForm />);
 
     // Act
@@ -44,7 +44,7 @@ describe('BookingForm', () => {
 
   it('rejects an invalid email', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<BookingForm />);
 
     // Act
@@ -60,7 +60,7 @@ describe('BookingForm', () => {
     vi.mocked(reservationApi.create).mockResolvedValue({
       reservation: { id: 'res_1', customerName: 'Jordan Guest', email: 'jordan@example.com', partySize: 2, date: FUTURE, time: '19:00', status: 'requested' } as Reservation,
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<BookingForm />);
 
     // Act
@@ -80,7 +80,7 @@ describe('BookingForm', () => {
     vi.mocked(reservationApi.create).mockRejectedValue(
       new ApiError('Fully booked', 409, { error: 'Fully booked', alternatives: [{ date: FUTURE, time: '19:30' }] }),
     );
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<BookingForm />);
 
     // Act

@@ -10,7 +10,8 @@ import { ROLE_META, STAFF_ROLE_ORDER } from '@/components/staff/role-meta';
 
 /**
  * Team roster with per-role counts. Admins assign roles (US9.2) and suspend or
- * remove staff (US9.4); managers see the roster read-only.
+ * remove staff (US9.4); managers edit details and reset passwords for waiters
+ * and chefs. Nobody manages an account at or above their own rank.
  */
 export function TeamPanel({
   roster,
@@ -26,7 +27,7 @@ export function TeamPanel({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {STAFF_ROLE_ORDER.map((role) => {
           const members = roster.filter((u) => u.role === role);
           const suspended = members.filter((u) => !u.active).length;
@@ -49,9 +50,13 @@ export function TeamPanel({
           <>
             <p>Role changes apply on the user&apos;s next request or page load — no need for them to sign out.</p>
             <p className="mt-0.5">Suspended or removed staff are signed out on their next request.</p>
+            <p className="mt-0.5">Other admins manage their own accounts.</p>
           </>
         ) : (
-          <p>Roles and account access are managed by an admin. You can review applications and plan shifts.</p>
+          <>
+            <p>You can edit details and reset passwords for waiters and chefs, review applications and plan shifts.</p>
+            <p className="mt-0.5">Roles, suspensions and removals are managed by an admin.</p>
+          </>
         )}
       </div>
 

@@ -79,7 +79,7 @@ describe('BillingPage', () => {
   it('reloads with a new scope when a tab is selected', async () => {
     // Arrange
     vi.mocked(billingApi.list).mockResolvedValue({ bills: [], summary: makeSummary() });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<BillingPage />);
     await screen.findByText('No open bills');
 
@@ -93,7 +93,7 @@ describe('BillingPage', () => {
   it('opens a bill panel when a bill is selected', async () => {
     // Arrange
     vi.mocked(billingApi.list).mockResolvedValue({ bills: [makeBill()], summary: makeSummary() });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<BillingPage />);
     await screen.findByRole('button', { name: 'Bill #101' });
 

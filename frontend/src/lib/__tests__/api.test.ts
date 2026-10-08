@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { api, ApiError, clearAuth, customerApi, getStoredToken, getStoredUser, storeAuth } from '@/lib/api';
+import { api, ApiError, authApi, clearAuth, customerApi, getStoredToken, getStoredUser, storeAuth } from '@/lib/api';
 
 function mockFetchOnce(status: number, body: unknown, ok = status >= 200 && status < 300) {
   const fetchMock = vi.fn().mockResolvedValue({
@@ -149,5 +149,64 @@ describe('api()', () => {
     // Assert
     const [url] = fetchMock.mock.calls[0];
     expect(url).toBe('/api/customers?q=sofia');
+  });
+});
+
+describe('authApi account endpoints', () => {
+  beforeEach(() => localStorage.clear());
+  afterEach(() => vi.unstubAllGlobals());
+
+  const cases: [string, () => Promise<unknown>, string, string, unknown][] = [
+    [
+      'updateMe',
+      () => authApi.updateMe({ email: 'new@rest.test', currentPassword: 'old-pass' }),
+      '/api/auth/me',
+      'PATCH',
+      { email: 'new@rest.test', currentPassword: 'old-pass' },
+    ],
+    [
+      'changePassword',
+      () => authApi.changePassword('old-pass', 'new-pass'),
+      '/api/auth/me/password',
+      'POST',
+      { currentPassword: 'old-pass', newPassword: 'new-pass' },
+    ],
+    [
+      'updateUserProfile',
+      () => authApi.updateUserProfile('usr_9', { phone: '555-0101' }),
+      '/api/auth/users/usr_9/profile',
+      'PATCH',
+      { phone: '555-0101' },
+    ],
+    ['resetPassword', () => authApi.resetPassword('usr_9'), '/api/auth/users/usr_9/reset-password', 'POST', undefined],
+  ];
+
+  for (const [name, call, url, method, body] of cases) {
+    it(`${name} sends ${method} ${url}`, async () => {
+      // Arrange
+      const fetchMock = mockFetchOnce(200, { user: { id: 'usr_9' } });
+
+      // Act
+      await call();
+
+      // Assert
+      const [calledUrl, init] = fetchMock.mock.calls[0];
+      expect(calledUrl).toBe(url);
+      expect(init.method).toBe(method);
+      expect(init.body).toBe(body === undefined ? undefined : JSON.stringify(body));
+    });
+  }
+
+  it('surfaces a wrong current password (400) as an error without ending the session', async () => {
+    // Arrange
+    storeAuth('tok_abc', { id: 'usr_1' });
+    mockFetchOnce(400, { error: 'Current password is incorrect.' });
+
+    // Act
+    const err = await authApi.changePassword('nope', 'new-pass').catch((e) => e);
+
+    // Assert
+    expect(err).toMatchObject({ status: 400, message: 'Current password is incorrect.' });
+    expect(getStoredToken()).toBe('tok_abc');
   });
 });

@@ -91,7 +91,7 @@ describe('DevShell', () => {
     // Arrange
     const logout = vi.fn();
     vi.mocked(useAuth).mockReturnValue({ user: makeUser(), logout } as unknown as ReturnType<typeof useAuth>);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<DevShell>content</DevShell>);
 
     // Act
@@ -127,7 +127,7 @@ describe('MenuDrawer', () => {
     // Arrange
     const onClose = vi.fn();
     vi.mocked(useAuth).mockReturnValue({ user: makeUser({ role: 'customer' }), logout: vi.fn() } as unknown as ReturnType<typeof useAuth>);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<MenuDrawer open onClose={onClose} />);
 
     // Act
@@ -153,7 +153,7 @@ describe('MenuDrawer', () => {
     const logout = vi.fn();
     const onClose = vi.fn();
     vi.mocked(useAuth).mockReturnValue({ user: makeUser({ role: 'customer' }), logout } as unknown as ReturnType<typeof useAuth>);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<MenuDrawer open onClose={onClose} />);
 
     // Act
@@ -168,7 +168,7 @@ describe('MenuDrawer', () => {
     // Arrange
     const onClose = vi.fn();
     vi.mocked(useAuth).mockReturnValue({ user: null, logout: vi.fn() } as unknown as ReturnType<typeof useAuth>);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<MenuDrawer open onClose={onClose} />);
 
     // Act
@@ -253,7 +253,7 @@ describe('NotificationBell', () => {
   it('opens the dropdown and shows an empty state when there are no notifications', async () => {
     // Arrange
     vi.mocked(notificationApi.list).mockResolvedValue({ notifications: [], unreadCount: 0 });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<NotificationBell />);
     await screen.findByLabelText('Notifications');
 
@@ -268,7 +268,7 @@ describe('NotificationBell', () => {
     // Arrange
     const n = makeNotification();
     vi.mocked(notificationApi.list).mockResolvedValue({ notifications: [n], unreadCount: 1 });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<NotificationBell />);
     await screen.findByLabelText('Notifications, 1 unread');
 
@@ -287,7 +287,7 @@ describe('NotificationBell', () => {
       notifications: [makeNotification({ id: 'n1' }), makeNotification({ id: 'n2' })],
       unreadCount: 2,
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<NotificationBell />);
     await screen.findByLabelText('Notifications, 2 unread');
 
@@ -382,11 +382,67 @@ describe('StaffShell', () => {
     expect(screen.queryByRole('link', { name: 'Staff management' })).not.toBeInTheDocument();
   });
 
+  it('shows a "My account" link for every staff role', () => {
+    for (const role of ['waiter', 'chef', 'manager', 'admin'] as const) {
+      // Arrange
+      vi.mocked(useAuth).mockReturnValue({ user: makeUser({ role }), logout: vi.fn() } as unknown as ReturnType<typeof useAuth>);
+
+      // Act
+      const { unmount } = render(<StaffShell>content</StaffShell>);
+
+      // Assert
+      expect(screen.getByRole('link', { name: 'My account' })).toHaveAttribute('href', '/staff/account');
+      unmount();
+    }
+  });
+
+  it('shows a temporary-password banner linking to My account', () => {
+    // Arrange
+    pathname.value = '/staff/orders';
+    vi.mocked(useAuth).mockReturnValue({
+      user: makeUser({ mustChangePassword: true }),
+      logout: vi.fn(),
+    } as unknown as ReturnType<typeof useAuth>);
+
+    // Act
+    render(<StaffShell>content</StaffShell>);
+
+    // Assert
+    expect(screen.getByText(/You're using a temporary password/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Set your own password' })).toHaveAttribute('href', '/staff/account');
+  });
+
+  it('hides the temporary-password banner on the account page itself', () => {
+    // Arrange
+    pathname.value = '/staff/account';
+    vi.mocked(useAuth).mockReturnValue({
+      user: makeUser({ mustChangePassword: true }),
+      logout: vi.fn(),
+    } as unknown as ReturnType<typeof useAuth>);
+
+    // Act
+    render(<StaffShell>content</StaffShell>);
+
+    // Assert
+    expect(screen.queryByText(/You're using a temporary password/)).not.toBeInTheDocument();
+  });
+
+  it('shows no banner once the user has their own password', () => {
+    // Arrange
+    vi.mocked(useAuth).mockReturnValue({ user: makeUser(), logout: vi.fn() } as unknown as ReturnType<typeof useAuth>);
+
+    // Act
+    render(<StaffShell>content</StaffShell>);
+
+    // Assert
+    expect(screen.queryByText(/You're using a temporary password/)).not.toBeInTheDocument();
+  });
+
   it('signs out and routes to login', async () => {
     // Arrange
     const logout = vi.fn();
     vi.mocked(useAuth).mockReturnValue({ user: makeUser({ role: 'manager' }), logout } as unknown as ReturnType<typeof useAuth>);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<StaffShell>content</StaffShell>);
 
     // Act
@@ -421,7 +477,7 @@ describe('StorefrontShell', () => {
     const setOpen = vi.fn();
     vi.mocked(useAuth).mockReturnValue({ user: null, logout: vi.fn() } as unknown as ReturnType<typeof useAuth>);
     vi.mocked(useCart).mockReturnValue({ count: 3, setOpen } as unknown as ReturnType<typeof useCart>);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<StorefrontShell>content</StorefrontShell>);
 
     // Act
@@ -436,7 +492,7 @@ describe('StorefrontShell', () => {
     const logout = vi.fn();
     vi.mocked(useAuth).mockReturnValue({ user: makeUser({ role: 'manager' }), logout } as unknown as ReturnType<typeof useAuth>);
     vi.mocked(useCart).mockReturnValue({ count: 0, setOpen: vi.fn() } as unknown as ReturnType<typeof useCart>);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<StorefrontShell>content</StorefrontShell>);
 
     // Act

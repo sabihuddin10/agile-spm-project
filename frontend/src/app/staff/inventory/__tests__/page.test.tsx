@@ -96,7 +96,7 @@ describe('InventoryPage', () => {
     // Arrange
     vi.mocked(inventoryApi.list).mockResolvedValue({ inventory: [], units: [], categories: [] });
     vi.mocked(useAuth).mockReturnValue({ user: makeUser({ role: 'manager' }) } as unknown as ReturnType<typeof useAuth>);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<InventoryPage />);
     await screen.findByTestId('stock-table');
 
@@ -124,7 +124,7 @@ describe('InventoryPage', () => {
     // Arrange
     vi.mocked(inventoryApi.list).mockResolvedValue({ inventory: [], units: [], categories: [] });
     vi.mocked(useAuth).mockReturnValue({ user: makeUser() } as unknown as ReturnType<typeof useAuth>);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<InventoryPage />);
     await screen.findByTestId('stock-table');
 
@@ -142,7 +142,7 @@ describe('InventoryPage', () => {
     // Arrange
     vi.mocked(inventoryApi.list).mockResolvedValue({ inventory: [makeItem({ name: 'Flour' })], units: [], categories: [] });
     vi.mocked(useAuth).mockReturnValue({ user: makeUser() } as unknown as ReturnType<typeof useAuth>);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<InventoryPage />);
     await screen.findByTestId('stock-table');
 

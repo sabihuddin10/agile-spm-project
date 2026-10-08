@@ -76,7 +76,7 @@ describe('SprintCard', () => {
   it('expands a story to show its acceptance criteria and evidence, then collapses it again', async () => {
     // Arrange
     const sprint = makeSprint({ stories: [makeStory({ id: 'US1.1', text: 'Browse the menu' })] });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<SprintCard sprint={sprint} />);
     expect(screen.queryByText('Acceptance criteria')).not.toBeInTheDocument();
 
@@ -100,7 +100,7 @@ describe('SprintCard', () => {
     const sprint = makeSprint({
       stories: [makeStory({ id: 'US1.1', text: 'First story' }), makeStory({ id: 'US1.2', text: 'Second story' })],
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<SprintCard sprint={sprint} />);
 
     // Act

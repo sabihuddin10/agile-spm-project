@@ -59,7 +59,10 @@ const seedUsers = [
 
 export const users = seedUsers.map((u) => ({
   ...u,
+  phone: '',
   active: true,
+  mustChangePassword: false,
+  tokenVersion: 0,
   passwordHash: DEMO_PASSWORD_HASH,
   createdAt: iso(addDays(new Date(), -120)),
 }));
@@ -74,18 +77,21 @@ export function findUserById(id) {
 
 export function sanitizeUser(user) {
   if (!user) return null;
-  const { passwordHash, ...safe } = user;
-  return safe;
+  const { passwordHash, tokenVersion, ...safe } = user;
+  return { phone: '', mustChangePassword: false, ...safe };
 }
 
-export function createUser({ name, email, password, role = 'customer' }) {
+export function createUser({ name, email, password, role = 'customer', mustChangePassword = false }) {
   const user = {
     id: nextId('usr'),
     name: String(name).trim(),
     email: String(email).toLowerCase().trim(),
+    phone: '',
     passwordHash: bcrypt.hashSync(password, 10),
     role,
     active: true,
+    mustChangePassword,
+    tokenVersion: 0,
     createdAt: iso(),
   };
   users.push(user);

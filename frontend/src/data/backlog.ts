@@ -38,14 +38,15 @@ export interface BacklogSummary {
   averageVelocity: number;
 }
 
+// Test files are module-wise under server/test/ (see TestsPLAN.md), one per route module.
 const T = {
-  s1: 'sprint01-customers-rbac.test.js',
-  s2: 'sprint02-menu.test.js',
-  s34: 'sprint03-04-orders-kitchen.test.js',
-  s5: 'sprint05-billing.test.js',
-  s67: 'sprint06-07-floor-reservations.test.js',
-  s8: 'sprint08-inventory.test.js',
-  s910: 'sprint09-10-staff-analytics.test.js',
+  s1: 'routes/auth.test.js · routes/customers.test.js',
+  s2: 'routes/menu.test.js',
+  s34: 'routes/orders.test.js',
+  s5: 'routes/billing.test.js',
+  s67: 'routes/tables.test.js · routes/reservations.test.js',
+  s8: 'routes/inventory.test.js',
+  s910: 'routes/staff.test.js · routes/analytics.test.js',
 };
 
 export const SPRINTS: SprintBacklog[] = [
@@ -526,6 +527,223 @@ export const SPRINTS: SprintBacklog[] = [
         text: 'As a Manager, I want a reservation no-show rate metric, so that I can assess reservation policy effectiveness.',
         acceptanceCriteria: ['Given reservation history, when viewed, then the no-show percentage over a selected period is displayed.'],
         evidence: { screen: 'Analytics → No-show rate', test: T.s910 },
+      },
+    ],
+  },
+  {
+    sprint: 11,
+    module: 'Quality, Security & Operations',
+    goal: 'Close the test gaps module by module, lock every role to the access it needs, and give the team a live API status page.',
+    priority: 'Must',
+    lead: '#7',
+    status: 'done',
+    stakeholders: ['Admin', 'Manager', 'Waiter', 'Chef', 'Customer'],
+    stories: [
+      {
+        id: 'US11.1', points: 8,
+        text: 'As an Admin, I want every API endpoint to enforce a written role policy, so that no role can reach features outside its job.',
+        acceptanceCriteria: [
+          'Given any role-guarded endpoint, when a guest calls it, then it answers 401; when a signed-in role outside the policy calls it, then it answers 403.',
+          'Given a developer adds a guarded route, when it is missing from the access matrix, then CI fails.',
+        ],
+        evidence: { screen: 'README → Roles and permissions; sign in as a waiter and try a manager action', test: 'routes/access-matrix.test.js' },
+      },
+      {
+        id: 'US11.2', points: 5,
+        text: 'As a Manager, I want refunds, payment reversals and cancelling paid orders limited to management, so that floor staff cannot move money back out.',
+        acceptanceCriteria: [
+          'Given a paid bill, when a waiter tries to mark it unpaid, then the request is refused and the bill stays paid.',
+          'Given a paid open order, when a waiter cancels it, then it is refused; when a manager cancels it, then it is cancelled and refunded.',
+          'Given a customer, when they cancel their own prepaid order before the kitchen takes it, then it is cancelled and refunded.',
+        ],
+        evidence: { screen: 'Billing → paid bill (waiter vs manager); Orders → prepaid order', test: 'routes/billing.test.js · routes/orders.test.js' },
+      },
+      {
+        id: 'US11.3', points: 3,
+        text: 'As a Manager, I want customer records with order history protected from deletion, so that past orders always point at a real customer.',
+        acceptanceCriteria: [
+          'Given a customer with orders, when a manager deletes them, then the request is refused with an explanation.',
+          'Given a waiter, when they view a customer, then no delete action is offered.',
+        ],
+        evidence: { screen: 'Staff → Customers → a regular guest', test: 'routes/customers.test.js' },
+      },
+      {
+        id: 'US11.4', points: 3,
+        text: 'As a Manager, I want recipes visible only to the kitchen and management, so that recipe and costing information stays internal.',
+        acceptanceCriteria: ['Given a waiter, customer or guest, when they load the menu, then no recipe data is included; chefs and managers still see it.'],
+        evidence: { screen: 'Staff → Menu as a waiter vs a chef', test: 'routes/menu.test.js' },
+      },
+      {
+        id: 'US11.5', points: 3,
+        text: 'As a Manager, I want the public booking and job-application forms rate limited, so that they cannot be used to flood staff with notifications.',
+        acceptanceCriteria: [
+          'Given a guest, when they submit more than the allowed bookings or applications in the window, then further submissions answer 429 with a retry time.',
+          'Given signed-in staff, when they create bookings, then they are never limited.',
+        ],
+        evidence: { screen: '/book and /careers submitted repeatedly', test: 'middleware/rate-limit.test.js' },
+      },
+      {
+        id: 'US11.6', points: 5,
+        text: 'As a QA/DevOps engineer, I want a live API status page, so that I can see every endpoint, what it expects and whether it is up.',
+        acceptanceCriteria: [
+          'Given a browser, when it opens /api/health, then it sees every endpoint grouped by module with roles, inputs, an example response and live status.',
+          'Given a script, when it calls /api/health, then it still receives JSON with status, service and time.',
+          'Given the live checks run, then only read-only endpoints are called and no data changes.',
+        ],
+        evidence: { screen: '/api/health in a browser', test: 'routes/health.test.js · lib/api-catalog.test.js' },
+      },
+      {
+        id: 'US11.7', points: 3,
+        text: 'As a Manager, I want settings and menu edits to reject invalid values, so that a typo cannot silently zero the tax rate.',
+        acceptanceCriteria: ['Given a settings or category update with a blank, null or non-numeric number, when it is saved, then it is rejected and nothing changes.'],
+        evidence: { screen: 'Staff → Settings; Menu → categories', test: 'routes/settings.test.js · routes/menu.test.js' },
+      },
+    ],
+  },
+  {
+    sprint: 12,
+    module: 'Staff Accounts & Hierarchy',
+    goal: 'Give every staff member an account page, and let seniors manage the accounts below them, never above.',
+    priority: 'Must',
+    lead: '#5',
+    status: 'done',
+    stakeholders: ['Waiter', 'Chef', 'Manager', 'Admin'],
+    stories: [
+      {
+        id: 'US12.1', points: 3,
+        text: 'As a staff member, I want a My account page showing my role and what it lets me do, so that I know my permissions.',
+        acceptanceCriteria: ['Given any staff role, when they open My account, then they see their name, role, status and the list of what the role can and cannot do.'],
+        evidence: { screen: 'Staff → My account', test: 'routes/auth.test.js' },
+      },
+      {
+        id: 'US12.2', points: 3,
+        text: 'As a staff member, I want to edit my own name, email and phone, so that my details stay current.',
+        acceptanceCriteria: [
+          'Given a staff member, when they save a new name or phone, then it is stored.',
+          'Given they change their email, when they have not entered their current password, then the change is refused.',
+        ],
+        evidence: { screen: 'Staff → My account → Profile', test: 'routes/auth.test.js' },
+      },
+      {
+        id: 'US12.3', points: 5,
+        text: 'As a staff member, I want to change my password, so that only I can use my account.',
+        acceptanceCriteria: [
+          'Given the wrong current password, a password under 6 characters or an unchanged one, when submitted, then it is refused.',
+          'Given a successful change, then this session stays signed in and every other session is signed out.',
+        ],
+        evidence: { screen: 'Staff → My account → Password', test: 'routes/auth.test.js' },
+      },
+      {
+        id: 'US12.4', points: 5,
+        text: 'As a Manager or Admin, I want to edit details and reset passwords for staff below my rank, so that I can help my team without seeing their passwords.',
+        acceptanceCriteria: [
+          'Given a manager, when they act on a waiter or chef, then they can edit details and issue a one-time temporary password.',
+          'Given a reset, then the user is signed out and must set their own password at next sign-in.',
+        ],
+        evidence: { screen: 'Staff management → account row → Edit details / Reset password', test: 'routes/auth.test.js' },
+      },
+      {
+        id: 'US12.5', points: 5,
+        text: 'As an Admin, I want nobody to manage an account at or above their own rank, so that seniors cannot be locked out by juniors or peers.',
+        acceptanceCriteria: [
+          'Given the rank admin > manager > chef = waiter, when anyone edits, resets, changes the role of, suspends or removes an account that is not strictly below theirs, then it is refused.',
+          'Given an admin, when they act on another admin, then it is refused.',
+        ],
+        evidence: { screen: 'Staff management as a manager vs an admin', test: 'lib/hierarchy.test.js · routes/auth.test.js' },
+      },
+      {
+        id: 'US12.6', points: 2,
+        text: 'As an Admin, I want new hires and reset accounts flagged until they set their own password, so that temporary passwords do not linger.',
+        acceptanceCriteria: ['Given an approved hire or a reset account, when they sign in, then a banner asks them to set their own password until they do.'],
+        evidence: { screen: 'Approve an application, sign in as the hire', test: 'routes/auth.test.js' },
+      },
+    ],
+  },
+  {
+    sprint: 13,
+    module: 'Attendance & Time Tracking',
+    goal: 'Record when staff actually work, flag late arrivals, and show hours per day and per month.',
+    priority: 'Should',
+    lead: '#5',
+    status: 'planned',
+    stakeholders: ['Waiter', 'Chef', 'Manager', 'Admin'],
+    stories: [
+      {
+        id: 'US13.1', points: 5,
+        text: 'As a staff member, I want to clock in and out, so that my working time is recorded.',
+        acceptanceCriteria: [
+          'Given a staff member not clocked in, when they clock in, then an open session starts; clocking out closes it with its duration.',
+          'Given an open session, when they clock in again, then it is refused.',
+        ],
+        evidence: { screen: 'Staff → My account → Clock in / out', test: 'routes/attendance.test.js' },
+      },
+      {
+        id: 'US13.2', points: 3,
+        text: 'As a Manager, I want late arrivals flagged automatically, so that punctuality is measured fairly.',
+        acceptanceCriteria: ['Given a scheduled shift and a grace period from settings (default 5 minutes), when a staff member clocks in after start + grace, then the session is marked late with the minutes late.'],
+        evidence: { screen: 'My account → Attendance; Settings → Payroll', test: 'routes/attendance.test.js' },
+      },
+      {
+        id: 'US13.3', points: 5,
+        text: 'As a staff member, I want charts of my hours per day and per month against my schedule, so that I can see the time I worked and missed.',
+        acceptanceCriteria: ['Given my sessions and shifts, when I open My account, then I see hours per day for a month and hours per month for a year, scheduled vs worked, with late arrivals marked.'],
+        evidence: { screen: 'Staff → My account → Hours', test: 'routes/attendance.test.js' },
+      },
+      {
+        id: 'US13.4', points: 3,
+        text: 'As a Manager, I want to see the attendance of waiters and chefs, so that I can run the rota without seeing their pay.',
+        acceptanceCriteria: ['Given a manager, when they open a waiter or chef, then they see hours and lateness but no wage or pay figures; they cannot see other managers or admins.'],
+        evidence: { screen: 'Staff management → team member → Attendance', test: 'routes/attendance.test.js' },
+      },
+    ],
+  },
+  {
+    sprint: 14,
+    module: 'Payroll',
+    goal: 'Turn recorded hours into monthly pay with late deductions and bonuses, visible to each person and in full to the admin.',
+    priority: 'Should',
+    lead: '#1',
+    status: 'planned',
+    stakeholders: ['Waiter', 'Chef', 'Manager', 'Admin'],
+    stories: [
+      {
+        id: 'US14.1', points: 2,
+        text: 'As an Admin, I want to set each staff member\'s hourly wage, so that pay is calculated from it.',
+        acceptanceCriteria: ['Given an admin, when they set a wage, then it applies to hours from that date; nobody else can set or see wages except the person themselves.'],
+        evidence: { screen: 'Staff management → Pay → Hourly wage', test: 'routes/payroll.test.js' },
+      },
+      {
+        id: 'US14.2', points: 5,
+        text: 'As a staff member, I want my monthly salary calculated from the hours I worked, so that I know what I will be paid.',
+        acceptanceCriteria: ['Given my sessions in a month, when I view my pay, then gross pay = hours worked × hourly wage, and missed scheduled hours are shown unpaid.'],
+        evidence: { screen: 'Staff → My account → Pay', test: 'routes/payroll.test.js' },
+      },
+      {
+        id: 'US14.3', points: 3,
+        text: 'As an Admin, I want a deduction for each late arrival, so that the late policy is applied consistently.',
+        acceptanceCriteria: ['Given the late-arrival penalty in settings (default 5.00), when a month is calculated, then each late session deducts it and the payslip lists every one.'],
+        evidence: { screen: 'Settings → Payroll; My account → Pay', test: 'routes/payroll.test.js' },
+      },
+      {
+        id: 'US14.4', points: 3,
+        text: 'As an Admin, I want to give bonuses or adjustments (for example for Eid or a birthday), so that extra pay is recorded with a reason.',
+        acceptanceCriteria: ['Given an admin, when they add an amount, reason and date for a staff member, then it appears on that month\'s payslip; only the admin can add or remove them.'],
+        evidence: { screen: 'Staff management → Pay → Add bonus', test: 'routes/payroll.test.js' },
+      },
+      {
+        id: 'US14.5', points: 3,
+        text: 'As a staff member, I want a monthly payslip, so that I can check how my pay was worked out.',
+        acceptanceCriteria: ['Given a month, when I open my payslip, then I see hours, rate, gross pay, each late deduction, each bonus and net pay.'],
+        evidence: { screen: 'Staff → My account → Pay → payslip', test: 'routes/payroll.test.js' },
+      },
+      {
+        id: 'US14.6', points: 5,
+        text: 'As an Admin, I want a payroll overview of every staff member, so that I can see everything about everyone in one place.',
+        acceptanceCriteria: [
+          'Given the admin, when they open payroll for a month, then every staff member is listed with hours, gross, deductions, bonuses and net, with totals, and each person\'s attendance and payslip can be opened.',
+          'Given a manager, waiter or chef, when they request another person\'s pay, then it is refused.',
+        ],
+        evidence: { screen: 'Staff management → Payroll', test: 'routes/payroll.test.js' },
       },
     ],
   },

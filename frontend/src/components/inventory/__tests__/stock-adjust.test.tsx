@@ -18,7 +18,7 @@ describe('StockAdjust', () => {
     const onSaved = vi.fn();
     const updated = makeItem({ stock: 15 });
     vi.mocked(inventoryApi.update).mockResolvedValue({ item: updated });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<StockAdjust item={makeItem()} onClose={vi.fn()} onSaved={onSaved} />);
 
     // Act
@@ -34,7 +34,7 @@ describe('StockAdjust', () => {
     // Arrange
     const updated = makeItem({ stock: 8 });
     vi.mocked(inventoryApi.update).mockResolvedValue({ item: updated });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<StockAdjust item={makeItem()} onClose={vi.fn()} onSaved={vi.fn()} />);
 
     // Act
@@ -48,7 +48,7 @@ describe('StockAdjust', () => {
 
   it('refuses to waste more than is in stock', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<StockAdjust item={makeItem({ stock: 3 })} onClose={vi.fn()} onSaved={vi.fn()} />);
 
     // Act
@@ -62,7 +62,7 @@ describe('StockAdjust', () => {
 
   it('requires a quantity greater than zero', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<StockAdjust item={makeItem()} onClose={vi.fn()} onSaved={vi.fn()} />);
 
     // Assert — nothing entered yet, button disabled

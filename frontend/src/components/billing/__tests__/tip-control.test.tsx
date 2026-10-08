@@ -40,7 +40,7 @@ describe('TipControl', () => {
     const onUpdated = vi.fn();
     const updated = makeInvoice({ tip: 7.5 });
     vi.mocked(billingApi.tip).mockResolvedValue({ invoice: updated });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<TipControl invoice={makeInvoice({ subtotal: 50 })} onUpdated={onUpdated} />);
 
     // Act
@@ -72,7 +72,7 @@ describe('TipControl', () => {
     // Arrange
     const updated = makeInvoice({ tip: 12 });
     vi.mocked(billingApi.tip).mockResolvedValue({ invoice: updated });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<TipControl invoice={makeInvoice()} onUpdated={vi.fn()} />);
 
     // Act

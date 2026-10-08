@@ -27,7 +27,7 @@ const opt = (type, note = '') => ({ type, required: false, note });
 
 const ok = (example, status = 200) => ({ status, example });
 
-const USER = { id: 'usr_12', name: 'Jamie Rivera', email: 'jamie@example.com', role: 'waiter', active: true, createdAt: '2026-01-04T10:00:00.000Z' };
+const USER = { id: 'usr_12', name: 'Jamie Rivera', email: 'jamie@example.com', phone: '555-0144', role: 'waiter', active: true, mustChangePassword: false, createdAt: '2026-01-04T10:00:00.000Z' };
 const CUSTOMER = {
   id: 'cus_8', userId: 'usr_20', name: 'Alex Kim', email: 'alex@example.com', phone: '555-0100', type: 'online',
   loyaltyPoints: 120, preferences: { dietary: ['vegetarian'], allergies: ['nuts'] }, notes: '', createdAt: '2026-02-01T09:00:00.000Z',
@@ -131,6 +131,31 @@ export const ROUTE_DOCS = {
     summary: 'The signed-in user.',
     response: ok({ user: USER }),
   },
+  'PATCH /api/auth/me': {
+    summary: 'Staff edit their own name, email and phone. Changing the email (the login) needs the current password.',
+    body: { name: opt('string'), email: opt('string'), phone: opt('string', 'digits, spaces, + ( ) - .; max 30'), currentPassword: opt('string', 'Required when the email changes') },
+    response: ok({ user: USER }),
+    errors: ['400 blank name / invalid email or phone / wrong or missing current password', '409 email already in use'],
+  },
+  'POST /api/auth/me/password': {
+    summary: 'Change your own password. Your other sessions are signed out; use the returned token for this one.',
+    body: { currentPassword: req('string'), newPassword: req('string', 'At least 6 characters, different from the current one') },
+    response: ok({ user: USER, token: '<jwt>' }),
+    errors: ['400 wrong current password / too short / unchanged'],
+  },
+  'PATCH /api/auth/users/:id/profile': {
+    summary: 'Edit the name, email or phone of a staff account below your rank (managers: waiters and chefs; admins: also managers).',
+    access: 'Handler checks rank: admin > manager > chef = waiter, strictly lower only, never yourself.',
+    body: { name: opt('string'), email: opt('string'), phone: opt('string') },
+    response: ok({ user: USER }),
+    errors: ['400 invalid field', '403 account is not below your rank', '404 user not found', '409 email already in use'],
+  },
+  'POST /api/auth/users/:id/reset-password': {
+    summary: 'Issue a one-time temporary password for a staff account below your rank. They must set their own on next sign-in, and their sessions are signed out.',
+    access: 'Handler checks rank: admin > manager > chef = waiter, strictly lower only, never yourself.',
+    response: ok({ user: { ...USER, mustChangePassword: true }, tempPassword: '<generated>' }),
+    errors: ['403 account is not below your rank', '404 user not found'],
+  },
   'GET /api/auth/roles': {
     summary: 'The five stakeholder roles.',
     response: ok({ roles: ['customer', 'waiter', 'chef', 'manager', 'admin'] }),
@@ -143,12 +168,12 @@ export const ROUTE_DOCS = {
     summary: 'Change a user\'s role or suspend/reactivate them. Admins cannot change their own role or suspend themselves.',
     body: { role: opt('string', 'customer|waiter|chef|manager|admin'), active: opt('boolean') },
     response: ok({ user: USER }),
-    errors: ['400 invalid role / self-change', '404 user not found'],
+    errors: ['400 invalid role / self-change', '403 another admin (admins manage accounts below them)', '404 user not found'],
   },
   'DELETE /api/auth/users/:id': {
     summary: 'Remove an account; its tokens stop working immediately. Linked customer records are kept.',
     response: DELETED('usr_12'),
-    errors: ['400 cannot remove yourself', '404 user not found'],
+    errors: ['400 cannot remove yourself', '403 another admin', '404 user not found'],
   },
 
   /* ---- customers */

@@ -46,29 +46,42 @@ function CopyField({ label, value, mono = false }: { label: string; value: strin
 }
 
 /**
- * Shown once after approving an application (US9.1): the new account's email
- * and temporary password, with copy-to-clipboard buttons.
+ * Shown once with an account's email and temporary password, with
+ * copy-to-clipboard buttons: after approving an application (US9.1) or after a
+ * manager/admin resets someone's password.
  */
 export function CredentialsModal({
   user,
   tempPassword,
   onClose,
+  variant = 'created',
 }: {
   user: User;
   tempPassword: string;
   onClose: () => void;
+  variant?: 'created' | 'reset';
 }) {
+  const firstName = user.name.split(' ')[0];
+  const roleBadge = <Badge tone={ROLE_META[user.role].tone}>{ROLE_META[user.role].label}</Badge>;
   return (
-    <Modal title="Staff account created" onClose={onClose}>
+    <Modal title={variant === 'reset' ? 'Password reset' : 'Staff account created'} onClose={onClose}>
       <div className="space-y-4">
-        <p className="text-sm text-stone-600">
-          <span className="font-medium text-stone-800">{user.name}</span> can now sign in as{' '}
-          <Badge tone={ROLE_META[user.role].tone}>{ROLE_META[user.role].label}</Badge> with these details.
-        </p>
+        {variant === 'reset' ? (
+          <p className="text-sm text-stone-600">
+            <span className="font-medium text-stone-800">{user.name}</span> has been signed out everywhere. They can
+            sign in as {roleBadge} with these details.
+          </p>
+        ) : (
+          <p className="text-sm text-stone-600">
+            <span className="font-medium text-stone-800">{user.name}</span> can now sign in as {roleBadge} with these
+            details.
+          </p>
+        )}
         <CopyField label="Email" value={user.email} />
         <CopyField label="Temporary password" value={tempPassword} mono />
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800" role="note">
-          This password is shown only once. Copy it now and share it with {user.name.split(' ')[0]} privately.
+          This password is shown only once. Copy it now and share it with {firstName} privately. They&apos;ll be asked
+          to set their own password after signing in.
         </div>
         <div className="flex justify-end">
           <button type="button" className="btn-primary" onClick={onClose}>
