@@ -14,6 +14,8 @@ import analyticsRoutes from './routes/analytics.js';
 import notificationRoutes from './routes/notifications.js';
 import settingsRoutes from './routes/settings.js';
 import staffRoutes from './routes/staff.js';
+import healthRoutes from './routes/health.js';
+import { PROBE_HEADER } from './lib/health-probe.js';
 import { authenticate, optionalAuth } from './middleware/auth.js';
 import { persistState } from './data/persist.js';
 
@@ -23,11 +25,15 @@ export function createApp({ logging = true, persistence = Boolean(process.env.DA
 
   app.use(cors());
   app.use(express.json({ limit: '1mb' }));
-  if (logging) app.use(morgan('dev'));
+  // The status page's own probes are not worth a log line each.
+  if (logging) app.use(morgan('dev', { skip: (req) => req.headers[PROBE_HEADER] === '1' }));
 
-  app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', service: 'restaurant-ops-api', time: new Date().toISOString() });
-  });
+  app.locals.persistence = persistence;
+
+  // Health routes (status page, endpoint catalogue, live probes) stay above
+  // persistence: they never open a transaction, and the probes they send back
+  // through this app would otherwise queue behind their own request's lock.
+  app.use('/api/health', healthRoutes);
 
   // Everything below the health check reads and writes the persisted store.
   if (persistence) app.use('/api', persistState());
