@@ -67,3 +67,36 @@ test('US1.2 registration validates input and creates a logged-in customer', asyn
   const dup = await api.call('POST', '/auth/register', { body: { name: 'Nina', email: 'NINA@example.com', password: 'secret1' } });
   assert.equal(dup.status, 409);
 });
+
+test('/auth/me returns the signed-in user without the password hash', async () => {
+  // Arrange
+  const token = await api.login('customer');
+
+  // Act
+  const res = await api.call('GET', '/auth/me', { token });
+
+  // Assert
+  assert.equal(res.status, 200);
+  assert.equal(res.body.user.email, 'customer@rest.test');
+  assert.equal(res.body.user.role, 'customer');
+  assert.equal('passwordHash' in res.body.user, false);
+});
+
+test('/auth/me is 401 without a valid token', async () => {
+  // Act
+  const missing = await api.call('GET', '/auth/me');
+  const garbage = await api.call('GET', '/auth/me', { token: 'not-a-token' });
+
+  // Assert
+  assert.equal(missing.status, 401);
+  assert.equal(garbage.status, 401);
+});
+
+test('/auth/roles lists the five stakeholder roles', async () => {
+  // Act
+  const res = await api.call('GET', '/auth/roles');
+
+  // Assert
+  assert.equal(res.status, 200);
+  assert.deepEqual([...res.body.roles].sort(), ['admin', 'chef', 'customer', 'manager', 'waiter']);
+});
