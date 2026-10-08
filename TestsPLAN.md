@@ -204,15 +204,15 @@ modules without a file yet (notifications, settings) get one.
 | Notifications | `src/routes/notifications.js` → `test/routes/notifications.test.js` | `GET` returns only the caller's notifications (max 30) with the right `unreadCount`; `POST /:id/read` marks one read and lowers the count; 404 for someone else's notification; `POST /read-all` clears the count for the caller only | `[x]` |
 | Settings | `src/routes/settings.js` → `test/routes/settings.test.js` | `GET` is public and includes `timeSlots`; `PATCH` by manager/admin saves; waiter/customer refused; each numeric field rejected outside its range; blank `restaurantName`/`address` rejected; opening hour must be before closing hour; a rejected PATCH changes nothing | `[x]` |
 
-### Part 4 — staff, menu & inventory gaps — branch `feat/staff-menu-inventory-route-tests`
+### Part 4 — staff, menu & inventory gaps — branch `feat/staff-menu-inventory-route-tests` — `[x]` done
 
 | Endpoint | Test file | Functionality to cover | Status |
 |---|---|---|---|
-| `GET /api/staff/applications` | `routes/staff.test.js` | manager-only, newest first, `?status=` filter, `decidedByName` filled once decided | `[ ]` |
-| `POST /api/staff/applications/:id/reject` | `routes/staff.test.js` | pending → rejected with `decidedBy`; 409 when already decided; 404 for an unknown id | `[ ]` |
-| `PATCH /api/staff/shifts/:id` | `routes/staff.test.js` | moves/re-times a shift without clashing with itself; rejects an invalid status; rejects an inverted time or a clash with another shift (same validation as create); 404 for an unknown id | `[ ]` |
-| `PATCH /api/menu/categories/:id` | `routes/menu.test.js` | rename, re-sort, toggle active; blank name 400; duplicate name (case-insensitive) 409 | `[ ]` |
-| `GET /api/inventory/purchase-orders` | `routes/inventory.test.js` | manager-only, newest first, includes a just-raised order | `[ ]` |
+| `GET /api/staff/applications` | `routes/staff.test.js` | manager-only, newest first, `?status=` filter, `decidedByName` filled once decided | `[x]` |
+| `POST /api/staff/applications/:id/reject` | `routes/staff.test.js` | pending → rejected with `decidedBy`; 409 when already decided; 404 for an unknown id | `[x]` |
+| `PATCH /api/staff/shifts/:id` | `routes/staff.test.js` | moves/re-times a shift without clashing with itself; rejects an invalid status; rejects an inverted time or a clash with another shift (same validation as create); 404 for an unknown id | `[x]` |
+| `PATCH /api/menu/categories/:id` | `routes/menu.test.js` | rename, re-sort, toggle active; blank name 400; duplicate name (case-insensitive) 409 | `[x]` |
+| `GET /api/inventory/purchase-orders` | `routes/inventory.test.js` | manager-only, newest first, includes a just-raised order | `[x]` |
 
 ### Part 5 — persistence wiring — branch `feat/persistence-wiring-tests`
 
