@@ -179,6 +179,14 @@ describe('authApi account endpoints', () => {
       { phone: '555-0101' },
     ],
     ['resetPassword', () => authApi.resetPassword('usr_9'), '/api/auth/users/usr_9/reset-password', 'POST', undefined],
+    [
+      'changePassword (admin, no current password)',
+      () => authApi.changePassword(undefined, 'new-pass'),
+      '/api/auth/me/password',
+      'POST',
+      { newPassword: 'new-pass' },
+    ],
+    ['setUserPassword', () => authApi.setUserPassword('usr_9', 'new-pass'), '/api/auth/users/usr_9/password', 'POST', { newPassword: 'new-pass' }],
   ];
 
   for (const [name, call, url, method, body] of cases) {

@@ -37,6 +37,7 @@ vi.mock('@/lib/api', async () => ({
     removeUser: vi.fn(),
     updateUserProfile: vi.fn(),
     resetPassword: vi.fn(),
+    setUserPassword: vi.fn(),
   },
   staffApi: {
     approve: vi.fn(),
@@ -218,6 +219,7 @@ describe('AccountTable', () => {
       expect(screen.queryByRole('button', { name: `Edit details for ${name}` })).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: `Reset password for ${name}` })).not.toBeInTheDocument();
     }
+    expect(screen.queryByRole('button', { name: /^Set password for/ })).not.toBeInTheDocument();
   });
 
   it('gives an admin every control on a manager but none on another admin', () => {
@@ -232,6 +234,7 @@ describe('AccountTable', () => {
     const miaRow = screen.getByText('Mia Manager').closest('li')!;
     expect(within(miaRow).getByRole('button', { name: 'Edit details for Mia Manager' })).toBeInTheDocument();
     expect(within(miaRow).getByRole('button', { name: 'Reset password for Mia Manager' })).toBeInTheDocument();
+    expect(within(miaRow).getByRole('button', { name: 'Set password for Mia Manager' })).toBeInTheDocument();
     expect(within(miaRow).getByRole('combobox', { name: 'Role for Mia Manager' })).toBeEnabled();
     expect(within(miaRow).getByRole('button', { name: 'Suspend' })).toBeEnabled();
 
@@ -926,5 +929,27 @@ describe('TeamPanel', () => {
     // Assert
     expect(screen.getByText('Loading team…')).toBeInTheDocument();
     expect(roleCard('Admins')).toHaveTextContent('–');
+  });
+});
+
+describe('AccountTable — admin sets a password', () => {
+  it('sends the typed password for the account and reloads the list', async () => {
+    // Arrange
+    auth.user = admin;
+    const onChanged = vi.fn();
+    vi.mocked(authApi.setUserPassword).mockResolvedValue({ user: waiter });
+    const user = userEvent.setup({ delay: null });
+    render(<AccountTable users={[admin, waiter]} onChanged={onChanged} />);
+
+    // Act
+    await user.click(screen.getByRole('button', { name: 'Set password for Will Waiter' }));
+    await user.type(screen.getByLabelText('New password'), 'fresh-pass');
+    await user.type(screen.getByLabelText('Confirm new password'), 'fresh-pass');
+    await user.click(screen.getByRole('button', { name: 'Set password' }));
+
+    // Assert
+    expect(authApi.setUserPassword).toHaveBeenCalledWith('usr_waiter', 'fresh-pass');
+    expect(toastMock).toHaveBeenCalledWith(expect.stringContaining("Will Waiter's password was changed"), 'success');
+    expect(onChanged).toHaveBeenCalled();
   });
 });

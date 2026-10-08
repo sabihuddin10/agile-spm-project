@@ -21,10 +21,11 @@ const EMPTY: Fields = { current: '', next: '', confirm: '' };
 /**
  * Change your own password. The server revokes every other session and returns
  * a fresh token, which is stored through the auth context so this tab stays
- * signed in.
+ * signed in. Admins set a new password without entering the current one.
  */
 export function ChangePasswordForm({ id }: { id?: string }) {
-  const { updateSession } = useAuth();
+  const { user: me, updateSession } = useAuth();
+  const needsCurrent = me?.role !== 'admin';
   const toast = useToast();
   const [fields, setFields] = useState<Fields>(EMPTY);
   const [errors, setErrors] = useState<Partial<Fields>>({});
@@ -39,9 +40,9 @@ export function ChangePasswordForm({ id }: { id?: string }) {
 
   function validate(): Partial<Fields> {
     const found: Partial<Fields> = {};
-    if (!fields.current) found.current = 'Enter your current password.';
+    if (needsCurrent && !fields.current) found.current = 'Enter your current password.';
     if (fields.next.length < MIN_PASSWORD_LENGTH) found.next = `Use at least ${MIN_PASSWORD_LENGTH} characters.`;
-    else if (fields.next === fields.current) found.next = 'Choose a password different from your current one.';
+    else if (needsCurrent && fields.next === fields.current) found.next = 'Choose a password different from your current one.';
     if (!found.next && fields.confirm !== fields.next) found.confirm = 'Passwords do not match.';
     return found;
   }
@@ -55,7 +56,7 @@ export function ChangePasswordForm({ id }: { id?: string }) {
 
     setSaving(true);
     try {
-      const { user, token } = await authApi.changePassword(fields.current, fields.next);
+      const { user, token } = await authApi.changePassword(needsCurrent ? fields.current : undefined, fields.next);
       updateSession(user, token);
       setFields(EMPTY);
       toast('Password changed. Other sessions were signed out.', 'success');
@@ -71,21 +72,30 @@ export function ChangePasswordForm({ id }: { id?: string }) {
   return (
     <Card>
       <div id={id} className="scroll-mt-20">
-        <CardHeader title="Password" subtitle="Changing it signs you out on every other device." />
+        <CardHeader
+          title="Password"
+          subtitle={
+            needsCurrent
+              ? 'Changing it signs you out on every other device.'
+              : 'As an admin you can set a new password without the current one. It signs you out on every other device.'
+          }
+        />
       </div>
       <form onSubmit={submit} noValidate>
         <fieldset disabled={saving} className="space-y-4">
-          <div className="sm:w-1/2 sm:pr-2">
-            <TextField
-              id="password-current"
-              label="Current password"
-              type="password"
-              value={fields.current}
-              onChange={(v) => set('current', v)}
-              autoComplete="current-password"
-              error={errors.current}
-            />
-          </div>
+          {needsCurrent ? (
+            <div className="sm:w-1/2 sm:pr-2">
+              <TextField
+                id="password-current"
+                label="Current password"
+                type="password"
+                value={fields.current}
+                onChange={(v) => set('current', v)}
+                autoComplete="current-password"
+                error={errors.current}
+              />
+            </div>
+          ) : null}
           <div className="grid gap-4 sm:grid-cols-2">
             <TextField
               id="password-new"

@@ -145,15 +145,24 @@ export const authApi = {
   /** Staff self-service profile. `currentPassword` is required when the email changes. */
   updateMe: (data: { name?: string; email?: string; phone?: string; currentPassword?: string }) =>
     api<{ user: User }>('/auth/me', { method: 'PATCH', body: data }),
-  /** Revokes every other session — store the returned token to stay signed in. */
-  changePassword: (currentPassword: string, newPassword: string) =>
-    api<{ user: User; token: string }>('/auth/me/password', { method: 'POST', body: { currentPassword, newPassword } }),
+  /**
+   * Revokes every other session — store the returned token to stay signed in.
+   * Admins pass no current password.
+   */
+  changePassword: (currentPassword: string | undefined, newPassword: string) =>
+    api<{ user: User; token: string }>('/auth/me/password', {
+      method: 'POST',
+      body: currentPassword === undefined ? { newPassword } : { currentPassword, newPassword },
+    }),
   /** Manager/admin editing an account strictly below their own rank. */
   updateUserProfile: (id: string, data: { name?: string; email?: string; phone?: string }) =>
     api<{ user: User }>(`/auth/users/${id}/profile`, { method: 'PATCH', body: data }),
   /** Issues a one-time temporary password and signs that user out everywhere. */
   resetPassword: (id: string) =>
     api<{ user: User; tempPassword: string }>(`/auth/users/${id}/reset-password`, { method: 'POST' }),
+  /** Admin types a new password for an account below them; that user is signed out everywhere. */
+  setUserPassword: (id: string, newPassword: string) =>
+    api<{ user: User }>(`/auth/users/${id}/password`, { method: 'POST', body: { newPassword } }),
 };
 
 /* -------------------------------------------------------------- customers */
