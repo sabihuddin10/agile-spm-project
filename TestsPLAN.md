@@ -197,12 +197,12 @@ modules without a file yet (notifications, settings) get one.
 | `DELETE /api/billing/:id/split` | `routes/billing.test.js` | undoing a split restores the single-bill invoice; 409 once any share is paid or the bill is paid | `[ ]` |
 | `DELETE /api/staff/shifts/:id` | `routes/staff.test.js` | manager deletes a shift and it leaves the roster; 404 for an unknown id; waiter is refused | `[ ]` |
 
-### Part 3 — notifications & settings modules — branch `feat/notifications-settings-route-tests`
+### Part 3 — notifications & settings modules — branch `feat/notifications-settings-route-tests` — `[x]` done
 
 | Module | File → target test | Functionality to cover | Status |
 |---|---|---|---|
-| Notifications | `src/routes/notifications.js` → `test/routes/notifications.test.js` | `GET` returns only the caller's notifications (max 30) with the right `unreadCount`; `POST /:id/read` marks one read and lowers the count; 404 for someone else's notification; `POST /read-all` clears the count for the caller only | `[ ]` |
-| Settings | `src/routes/settings.js` → `test/routes/settings.test.js` | `GET` is public and includes `timeSlots`; `PATCH` by manager/admin saves; waiter/customer refused; each numeric field rejected outside its range; blank `restaurantName`/`address` rejected; opening hour must be before closing hour; a rejected PATCH changes nothing | `[ ]` |
+| Notifications | `src/routes/notifications.js` → `test/routes/notifications.test.js` | `GET` returns only the caller's notifications (max 30) with the right `unreadCount`; `POST /:id/read` marks one read and lowers the count; 404 for someone else's notification; `POST /read-all` clears the count for the caller only | `[x]` |
+| Settings | `src/routes/settings.js` → `test/routes/settings.test.js` | `GET` is public and includes `timeSlots`; `PATCH` by manager/admin saves; waiter/customer refused; each numeric field rejected outside its range; blank `restaurantName`/`address` rejected; opening hour must be before closing hour; a rejected PATCH changes nothing | `[x]` |
 
 ### Part 4 — staff, menu & inventory gaps — branch `feat/staff-menu-inventory-route-tests`
 
