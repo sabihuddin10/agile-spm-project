@@ -22,7 +22,7 @@ Tests are organized **module-wise**, mirroring the source directory structure
 | 5 | Frontend — supporting/presentational components | 6 | 0 | 0 | 6 |
 | 6 | Frontend — app pages | 21 | 0 | 0 | 21 |
 | 7 | Backend — remaining route & persistence coverage | 5 | 0 | 0 | 5 |
-| 8 | Frontend — remaining component todos (closes Phase 4) | 2 | 0 | 4 | 6 |
+| 8 | Frontend — remaining component todos (closes Phase 4) | 3 | 0 | 3 | 6 |
 
 Phases 7 and 8 count **parts** (one branch each), not modules.
 
