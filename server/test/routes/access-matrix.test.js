@@ -40,6 +40,7 @@ const MATRIX = [
   ['POST', '/auth/me/password', SIGNED_IN, {}],
   ['PATCH', '/auth/users/usr_nope/profile', MANAGEMENT, {}],
   ['POST', '/auth/users/usr_nope/reset-password', MANAGEMENT, {}],
+  ['POST', '/auth/users/usr_nope/password', ADMIN, {}],
   ['GET', '/auth/users', MANAGEMENT],
   ['PATCH', '/auth/users/usr_nope', ADMIN, {}],
   ['DELETE', '/auth/users/usr_nope', ADMIN],

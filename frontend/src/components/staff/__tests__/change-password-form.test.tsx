@@ -5,14 +5,18 @@ import { ChangePasswordForm } from '@/components/staff/change-password-form';
 import { ApiError, authApi } from '@/lib/api';
 import type { User } from '@/types';
 
-const { toastMock, updateSession } = vi.hoisted(() => ({ toastMock: vi.fn(), updateSession: vi.fn() }));
+const { toastMock, updateSession, auth } = vi.hoisted(() => ({
+  toastMock: vi.fn(),
+  updateSession: vi.fn(),
+  auth: { user: null as import('@/types').User | null },
+}));
 
 vi.mock('@/lib/api', async () => {
   const actual = await vi.importActual<typeof import('@/lib/api')>('@/lib/api');
   return { ...actual, authApi: { changePassword: vi.fn() } };
 });
 vi.mock('@/components/ui/toast', () => ({ useToast: () => toastMock }));
-vi.mock('@/context/auth-context', () => ({ useAuth: () => ({ updateSession }) }));
+vi.mock('@/context/auth-context', () => ({ useAuth: () => ({ user: auth.user, updateSession }) }));
 
 const chef: User = { id: 'usr_c', name: 'Carlos Chef', email: 'carlos@rest.test', role: 'chef', active: true };
 
@@ -24,7 +28,10 @@ async function fill(current: string, next: string, confirm: string) {
   await user.click(screen.getByRole('button', { name: 'Change password' }));
 }
 
-afterEach(() => vi.resetAllMocks());
+afterEach(() => {
+  vi.resetAllMocks();
+  auth.user = null;
+});
 
 describe('ChangePasswordForm', () => {
   it('rejects a new password shorter than 6 characters', async () => {
@@ -128,5 +135,33 @@ describe('ChangePasswordForm', () => {
     // Assert
     expect(screen.getByRole('button', { name: 'Changing…' })).toBeDisabled();
     expect(screen.getByLabelText('New password')).toBeDisabled();
+  });
+});
+
+describe('ChangePasswordForm — admin', () => {
+  it('asks an admin only for the new password and sends no current password', async () => {
+    // Arrange
+    auth.user = { id: 'usr_admin', name: 'Ada Admin', email: 'ada@rest.test', role: 'admin', active: true };
+    vi.mocked(authApi.changePassword).mockResolvedValue({ user: auth.user, token: 'tok_admin' });
+    render(<ChangePasswordForm />);
+
+    // Act
+    await fill('', 'admin-new', 'admin-new');
+
+    // Assert
+    expect(screen.queryByLabelText('Current password')).not.toBeInTheDocument();
+    expect(authApi.changePassword).toHaveBeenCalledWith(undefined, 'admin-new');
+    expect(updateSession).toHaveBeenCalledWith(auth.user, 'tok_admin');
+  });
+
+  it('still asks a manager for their current password', () => {
+    // Arrange
+    auth.user = { id: 'usr_manager', name: 'Mia Manager', email: 'mia@rest.test', role: 'manager', active: true };
+
+    // Act
+    render(<ChangePasswordForm />);
+
+    // Assert
+    expect(screen.getByLabelText('Current password')).toBeInTheDocument();
   });
 });
