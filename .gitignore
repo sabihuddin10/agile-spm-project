@@ -31,3 +31,6 @@ coverage/
 # Misc
 *.tsbuildinfo
 next-env.d.ts
+
+# Vercel CLI project links
+.vercel/

@@ -10,6 +10,6 @@ function files(dir) {
   });
 }
 
-const all = [...files('src'), ...files('test'), ...files('scripts')];
+const all = [...files('src'), ...files('test'), ...files('test-db'), ...files('scripts')];
 for (const file of all) execFileSync(process.execPath, ['--check', file], { stdio: 'inherit' });
 console.log(`Syntax OK — ${all.length} files`);
