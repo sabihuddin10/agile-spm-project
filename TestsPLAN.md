@@ -21,7 +21,7 @@ Tests are organized **module-wise**, mirroring the source directory structure
 | 4 | Frontend — high-risk business components | 2 | 10 | 0 | 12 |
 | 5 | Frontend — supporting/presentational components | 6 | 0 | 0 | 6 |
 | 6 | Frontend — app pages | 21 | 0 | 0 | 21 |
-| 7 | Backend — remaining route & persistence coverage | 1 | 0 | 4 | 5 |
+| 7 | Backend — remaining route & persistence coverage | 5 | 0 | 0 | 5 |
 | 8 | Frontend — remaining component todos (closes Phase 4) | 0 | 0 | 6 | 6 |
 
 Phases 7 and 8 count **parts** (one branch each), not modules.
@@ -171,7 +171,7 @@ logic lives in the components they render.
 
 ---
 
-## Phase 7 — Backend: remaining route & persistence coverage — `[ ]` in progress
+## Phase 7 — Backend: remaining route & persistence coverage — `[x]` done
 
 An endpoint-by-endpoint audit of `server/src/routes/` found these with no test reaching them.
 New cases go into the existing `test/routes/<module>.test.js` file for that module; the two
@@ -214,12 +214,12 @@ modules without a file yet (notifications, settings) get one.
 | `PATCH /api/menu/categories/:id` | `routes/menu.test.js` | rename, re-sort, toggle active; blank name 400; duplicate name (case-insensitive) 409 | `[x]` |
 | `GET /api/inventory/purchase-orders` | `routes/inventory.test.js` | manager-only, newest first, includes a just-raised order | `[x]` |
 
-### Part 5 — persistence wiring — branch `feat/persistence-wiring-tests`
+### Part 5 — persistence wiring — branch `feat/persistence-wiring-tests` — `[x]` done
 
 | Module | File → target test | Functionality to cover | Status |
 |---|---|---|---|
-| App wiring | `src/app.js` → `test/app.test.js` | persistence middleware is mounted when `DATABASE_URL` is set and skipped when it isn't (or `persistence: false`); `/api/health` never touches the database | `[ ]` |
-| DB helpers | `src/data/db.js` → `test/data/db.test.js` | `ensureTable` runs `CREATE TABLE` once and reuses the result; after a failure it retries on the next call (fake pool via `setPool`) | `[ ]` |
+| App wiring | `src/app.js` → `test/app.test.js` | persistence middleware is mounted when `DATABASE_URL` is set and skipped when it isn't (or `persistence: false`); `/api/health` never touches the database | `[x]` |
+| DB helpers | `src/data/db.js` → `test/data/db.test.js` | `ensureTable` runs `CREATE TABLE` once and reuses the result; after a failure it retries on the next call (fake pool via `setPool`) | `[x]` |
 
 Not in CI and needs a decision: `server/test-db/` (real Neon) only runs with a `DATABASE_URL`.
 Adding it to CI means storing a test-database URL as a GitHub secret.
