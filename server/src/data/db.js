@@ -19,6 +19,12 @@ export function getPool() {
   return pool;
 }
 
+/** Swap in another pool (the unit tests use an in-memory fake). */
+export function setPool(next) {
+  pool = next;
+  tableReady = undefined;
+}
+
 export function ensureTable() {
   tableReady ??= getPool()
     .query(`CREATE TABLE IF NOT EXISTS app_state (
