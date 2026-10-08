@@ -21,7 +21,7 @@ Tests are organized **module-wise**, mirroring the source directory structure
 | 4 | Frontend — high-risk business components | 2 | 10 | 0 | 12 |
 | 5 | Frontend — supporting/presentational components | 6 | 0 | 0 | 6 |
 | 6 | Frontend — app pages | 21 | 0 | 0 | 21 |
-| 7 | Backend — remaining route & persistence coverage | 0 | 0 | 5 | 5 |
+| 7 | Backend — remaining route & persistence coverage | 1 | 0 | 4 | 5 |
 | 8 | Frontend — remaining component todos (closes Phase 4) | 0 | 0 | 6 | 6 |
 
 Phases 7 and 8 count **parts** (one branch each), not modules.
@@ -171,22 +171,22 @@ logic lives in the components they render.
 
 ---
 
-## Phase 7 — Backend: remaining route & persistence coverage — `[ ]` not started
+## Phase 7 — Backend: remaining route & persistence coverage — `[ ]` in progress
 
 An endpoint-by-endpoint audit of `server/src/routes/` found these with no test reaching them.
 New cases go into the existing `test/routes/<module>.test.js` file for that module; the two
 modules without a file yet (notifications, settings) get one.
 
-### Part 1 — data privacy and public reads — branch `feat/route-privacy-tests`
+### Part 1 — data privacy and public reads — branch `feat/route-privacy-tests` — `[x]` done
 
 | Endpoint | Test file | Functionality to cover | Status |
 |---|---|---|---|
-| `GET /api/orders/mine` | `routes/orders.test.js` | a customer sees only orders linked to their own customer record, newest first, at most 50; staff get an empty list | `[ ]` |
-| `GET /api/reservations/mine` | `routes/reservations.test.js` | 401 without a token; a customer sees only their own bookings, newest first; staff get an empty list | `[ ]` |
-| `GET /api/tables/public` | `routes/tables.test.js` | works without a token; each table exposes only `id`, `number`, `seats`, `zone` (no status, holds or orders) | `[ ]` |
-| `GET /api/auth/me` | `routes/auth.test.js` | returns the signed-in user without the password hash; 401 without a token | `[ ]` |
-| `GET /api/auth/roles` | `routes/auth.test.js` | lists the five stakeholder roles | `[ ]` |
-| `GET /api/menu/items` | `routes/menu.test.js` | recipe ingredient lists are included for staff and **omitted** for customers and anonymous callers | `[ ]` |
+| `GET /api/orders/mine` | `routes/orders.test.js` | a customer sees only orders linked to their own customer record, newest first, at most 50; staff get an empty list | `[x]` |
+| `GET /api/reservations/mine` | `routes/reservations.test.js` | 401 without a token; a customer sees only their own bookings, newest first; staff get an empty list | `[x]` |
+| `GET /api/tables/public` | `routes/tables.test.js` | works without a token; each table exposes only `id`, `number`, `seats`, `zone` (no status, holds or orders) | `[x]` |
+| `GET /api/auth/me` | `routes/auth.test.js` | returns the signed-in user without the password hash; 401 without a token | `[x]` |
+| `GET /api/auth/roles` | `routes/auth.test.js` | lists the five stakeholder roles | `[x]` |
+| `GET /api/menu/items` | `routes/menu.test.js` | recipe ingredient lists are included for staff and **omitted** for customers and anonymous callers | `[x]` |
 
 ### Part 2 — destructive actions — branch `feat/route-destructive-tests`
 

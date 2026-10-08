@@ -64,3 +64,20 @@ test('US6.4 a table frees itself when its order closes, unless held', async () =
   // Assert — a held table stays occupied
   assert.equal((await tableByNumber(api.call, waiter, 5)).status, 'occupied');
 });
+
+test('/tables/public needs no login and exposes only id, number, seats and zone', async () => {
+  // Arrange
+  const floor = (await api.call('GET', '/tables', { token: waiter })).body.tables;
+
+  // Act
+  const res = await api.call('GET', '/tables/public');
+
+  // Assert
+  assert.equal(res.status, 200);
+  assert.equal(res.body.tables.length, floor.length);
+  for (const table of res.body.tables) {
+    assert.deepEqual(Object.keys(table).sort(), ['id', 'number', 'seats', 'zone']);
+  }
+  const numbers = res.body.tables.map((t) => t.number);
+  assert.deepEqual(numbers, [...numbers].sort((a, b) => a - b));
+});
