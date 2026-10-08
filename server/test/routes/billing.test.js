@@ -149,3 +149,53 @@ test('US5.5 receipts for paid bills; manager refunds update status and revenue',
   assert.equal(refunded.netTotal, 0);
   assert.equal(Math.round((before - (await revenue())) * 100), Math.round(receipt.total * 100));
 });
+
+test('DELETE /billing/:id/split undoing a split restores the single-bill invoice', async () => {
+  // Arrange
+  const id = await servedOrder([['Beef Burger', 1], ['Soda', 2]]);
+  const total = (await api.call('GET', `/billing/${id}`, { token: waiter })).body.invoice.total;
+  const split = (await api.call('POST', `/billing/${id}/split`, { token: waiter, body: { mode: 'even', ways: 2 } })).body.invoice;
+  assert.equal(split.split.parts.length, 2);
+
+  // Act
+  const res = await api.call('DELETE', `/billing/${id}/split`, { token: waiter });
+
+  // Assert
+  assert.equal(res.status, 200);
+  assert.equal(res.body.invoice.split, null);
+  assert.equal(res.body.invoice.total, total);
+  assert.equal(res.body.invoice.paymentStatus, 'unpaid');
+  assert.equal((await api.call('GET', `/billing/${id}`, { token: waiter })).body.invoice.split, null);
+});
+
+test('DELETE /billing/:id/split is refused with 409 once a share is paid', async () => {
+  // Arrange
+  const id = await servedOrder([['Vegan Bowl', 1], ['Lemonade', 1]]);
+  await api.call('POST', `/billing/${id}/split`, { token: waiter, body: { mode: 'even', ways: 2 } });
+  await api.call('POST', `/billing/${id}/split/0/pay`, { token: waiter, body: { method: 'card' } });
+
+  // Act
+  const res = await api.call('DELETE', `/billing/${id}/split`, { token: waiter });
+
+  // Assert
+  assert.equal(res.status, 409);
+  const inv = (await api.call('GET', `/billing/${id}`, { token: waiter })).body.invoice;
+  assert.equal(inv.split.parts.length, 2, 'the split is kept');
+  assert.equal(inv.split.parts[0].paid, true);
+});
+
+test('DELETE /billing/:id/split is refused with 409 once the bill is paid', async () => {
+  // Arrange
+  const id = await servedOrder([['Garlic Bread', 2]]);
+  await api.call('POST', `/billing/${id}/split`, { token: waiter, body: { mode: 'even', ways: 2 } });
+  await api.call('POST', `/billing/${id}/split/0/pay`, { token: waiter, body: { method: 'card' } });
+  await api.call('POST', `/billing/${id}/split/1/pay`, { token: waiter, body: { method: 'cash' } });
+  assert.equal((await api.call('GET', `/billing/${id}`, { token: waiter })).body.invoice.paymentStatus, 'paid');
+
+  // Act
+  const res = await api.call('DELETE', `/billing/${id}/split`, { token: waiter });
+
+  // Assert
+  assert.equal(res.status, 409);
+  assert.ok((await api.call('GET', `/billing/${id}`, { token: waiter })).body.invoice.split, 'the split is kept');
+});

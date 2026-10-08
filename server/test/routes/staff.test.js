@@ -100,3 +100,44 @@ test('US9.5 performance shows per-staff activity', async () => {
   assert.ok(carlos.itemsPrepared > 0 && carlos.avgPrepMinutes > 0);
   assert.ok(will.shiftsCompleted > 0 && will.hoursWorked > 0);
 });
+
+test('DELETE /staff/shifts/:id a manager removes a shift from the roster', async () => {
+  // Arrange
+  const date = inDays(12);
+  const created = await api.call('POST', '/staff/shifts', { token: manager, body: { userId: 'usr_chef', date, start: '09:00', end: '15:00' } });
+  const id = created.body.shift.id;
+
+  // Act
+  const res = await api.call('DELETE', `/staff/shifts/${id}`, { token: manager });
+
+  // Assert
+  assert.equal(res.status, 200);
+  assert.deepEqual(res.body, { deleted: true, id });
+  const { body } = await api.call('GET', `/staff/shifts?from=${date}&to=${date}`, { token: manager });
+  assert.ok(!body.shifts.some((s) => s.id === id));
+});
+
+test('DELETE /staff/shifts/:id returns 404 for an unknown shift', async () => {
+  // Act
+  const res = await api.call('DELETE', '/staff/shifts/shf_does_not_exist', { token: manager });
+
+  // Assert
+  assert.equal(res.status, 404);
+  assert.equal(res.body.error, 'Shift not found.');
+});
+
+test('DELETE /staff/shifts/:id is refused for a waiter', async () => {
+  // Arrange
+  const date = inDays(13);
+  const created = await api.call('POST', '/staff/shifts', { token: manager, body: { userId: 'usr_chef', date, start: '09:00', end: '15:00' } });
+  const id = created.body.shift.id;
+  const waiter = await api.login('waiter');
+
+  // Act
+  const res = await api.call('DELETE', `/staff/shifts/${id}`, { token: waiter });
+
+  // Assert
+  assert.equal(res.status, 403);
+  const { body } = await api.call('GET', `/staff/shifts?from=${date}&to=${date}`, { token: manager });
+  assert.ok(body.shifts.some((s) => s.id === id), 'the shift is still on the roster');
+});

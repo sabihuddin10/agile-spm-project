@@ -188,14 +188,14 @@ modules without a file yet (notifications, settings) get one.
 | `GET /api/auth/roles` | `routes/auth.test.js` | lists the five stakeholder roles | `[x]` |
 | `GET /api/menu/items` | `routes/menu.test.js` | recipe ingredient lists are included for staff and **omitted** for customers and anonymous callers | `[x]` |
 
-### Part 2 — destructive actions — branch `feat/route-destructive-tests`
+### Part 2 — destructive actions — branch `feat/route-destructive-tests` — `[x]` done
 
 | Endpoint | Test file | Functionality to cover | Status |
 |---|---|---|---|
-| `DELETE /api/tables/:id` | `routes/tables.test.js` | manager deletes a free table; 409 when the table has an active order; 404 for an unknown id; waiter is refused | `[ ]` |
-| `DELETE /api/customers/:id` | `routes/customers.test.js` | staff delete a customer; 404 for an unknown id; a customer is refused. **Decide first:** deleting a customer with orders is currently allowed and leaves those orders pointing at a missing customer — pin the intended behaviour (block with 409, or allow) | `[ ]` |
-| `DELETE /api/billing/:id/split` | `routes/billing.test.js` | undoing a split restores the single-bill invoice; 409 once any share is paid or the bill is paid | `[ ]` |
-| `DELETE /api/staff/shifts/:id` | `routes/staff.test.js` | manager deletes a shift and it leaves the roster; 404 for an unknown id; waiter is refused | `[ ]` |
+| `DELETE /api/tables/:id` | `routes/tables.test.js` | manager deletes a free table; 409 when the table has an active order; 404 for an unknown id; waiter is refused | `[x]` |
+| `DELETE /api/customers/:id` | `routes/customers.test.js` | staff delete a customer; 404 for an unknown id; a customer is refused. **Open decision (tests pin current behaviour only):** deleting a customer with orders is currently allowed and leaves those orders pointing at a missing customer — pin the intended behaviour (block with 409, or allow) | `[x]` |
+| `DELETE /api/billing/:id/split` | `routes/billing.test.js` | undoing a split restores the single-bill invoice; 409 once any share is paid or the bill is paid | `[x]` |
+| `DELETE /api/staff/shifts/:id` | `routes/staff.test.js` | manager deletes a shift and it leaves the roster; 404 for an unknown id; waiter is refused | `[x]` |
 
 ### Part 3 — notifications & settings modules — branch `feat/notifications-settings-route-tests` — `[x]` done
 
