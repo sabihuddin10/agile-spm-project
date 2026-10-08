@@ -17,11 +17,18 @@ import staffRoutes from './routes/staff.js';
 import healthRoutes from './routes/health.js';
 import { PROBE_HEADER } from './lib/health-probe.js';
 import { authenticate, optionalAuth } from './middleware/auth.js';
+import { rateLimit, limitPost } from './middleware/rate-limit.js';
 import { persistState } from './data/persist.js';
 
-/** `persistence` keeps the store in Postgres; on by default when DATABASE_URL is set. */
-export function createApp({ logging = true, persistence = Boolean(process.env.DATABASE_URL) } = {}) {
+/**
+ * `persistence` keeps the store in Postgres (on by default when DATABASE_URL is set);
+ * `rateLimits` throttles the public booking and application forms.
+ */
+export function createApp({ logging = true, persistence = Boolean(process.env.DATABASE_URL), rateLimits = true } = {}) {
   const app = express();
+  // Behind Vercel's proxy the client address is in X-Forwarded-For. Elsewhere the
+  // header is client-controlled, so it is only trusted on Vercel.
+  if (process.env.VERCEL) app.set('trust proxy', 1);
 
   app.use(cors());
   app.use(express.json({ limit: '1mb' }));
@@ -45,8 +52,15 @@ export function createApp({ logging = true, persistence = Boolean(process.env.DA
   app.use('/api/menu', optionalAuth, menuRoutes);
   app.use('/api/settings', optionalAuth, settingsRoutes);
   app.use('/api/tables', optionalAuth, tableRoutes);
-  app.use('/api/reservations', optionalAuth, reservationRoutes);
-  app.use('/api/staff', optionalAuth, staffRoutes);
+  // Public forms notify staff, so guests get a per-IP limit (signed-in staff are exempt).
+  const bookingLimit = rateLimits
+    ? limitPost('/', rateLimit({ limit: 5, windowMs: 10 * 60_000, message: 'Too many booking requests. Please try again in a few minutes.' }))
+    : (req, res, next) => next();
+  const applicationLimit = rateLimits
+    ? limitPost('/applications', rateLimit({ limit: 3, windowMs: 60 * 60_000, message: 'Too many applications from this connection. Please try again later.' }))
+    : (req, res, next) => next();
+  app.use('/api/reservations', optionalAuth, bookingLimit, reservationRoutes);
+  app.use('/api/staff', optionalAuth, applicationLimit, staffRoutes);
 
   app.use('/api/customers', authenticate, customerRoutes);
   app.use('/api/orders', authenticate, orderRoutes);

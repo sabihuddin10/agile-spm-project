@@ -6,7 +6,8 @@ import { syncTableHolds, isLate } from '../lib/reservations.js';
 import { localDate } from '../lib/time.js';
 
 const router = Router();
-const floorRoles = requireRole('waiter', 'manager', 'admin');
+const FLOOR_STAFF = ['waiter', 'manager', 'admin'];
+const floorRoles = requireRole(...FLOOR_STAFF);
 const managerRoles = requireRole('manager', 'admin');
 const LAYOUT_FIELDS = ['number', 'seats', 'zone'];
 
@@ -94,6 +95,9 @@ router.patch('/:id', floorRoles, (req, res) => {
   if (waiterId !== undefined) {
     if (waiterId && !users.some((u) => u.id === waiterId && u.role !== 'customer')) {
       return res.status(400).json({ error: 'Unknown staff member.' });
+    }
+    if (waiterId && !users.some((u) => u.id === waiterId && FLOOR_STAFF.includes(u.role) && u.active)) {
+      return res.status(400).json({ error: 'Only active floor staff (waiters and managers) can look after a table.' });
     }
     table.waiterId = waiterId || null;
   }

@@ -8,6 +8,8 @@ const router = Router();
 // Ledger endpoints are for floor staff and management.
 // Self-service /me endpoints are available to the signed-in customer.
 const staffOnly = requireRole('waiter', 'manager', 'admin');
+// Deleting a customer record is a management decision.
+const managerOnly = requireRole('manager', 'admin');
 
 const round2 = (n) => Math.round(n * 100) / 100;
 
@@ -196,9 +198,13 @@ router.patch('/:id', staffOnly, (req, res) => {
 });
 
 /** DELETE /api/customers/:id — remove a customer record (past orders are kept). */
-router.delete('/:id', staffOnly, (req, res) => {
+router.delete('/:id', managerOnly, (req, res) => {
   const idx = customers.findIndex((c) => c.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'Customer not found.' });
+  // Orders keep their customer link, so a customer with history stays on the ledger.
+  if (orders.some((o) => o.customerId === customers[idx].id)) {
+    return res.status(409).json({ error: "This customer has order history and can't be deleted." });
+  }
   const [removed] = customers.splice(idx, 1);
   return res.json({ deleted: true, id: removed.id });
 });

@@ -187,18 +187,19 @@ export const ROUTE_DOCS = {
     errors: ['400 empty name', '404 customer not found'],
   },
   'DELETE /api/customers/:id': {
-    summary: 'Delete a customer record; past orders are kept.',
+    summary: 'Delete a customer record that has no order history (management only).',
     response: DELETED('cus_8'),
+    errors: ['404 customer not found', "409 customer has order history and can't be deleted"],
   },
 
   /* ---- menu */
   'GET /api/menu': {
     summary: 'Menu grouped by category. Guests see active, non-empty categories; staff can ask for everything.',
-    query: { scope: opt('string', '"manage" (staff only) includes hidden categories and recipes') },
+    query: { scope: opt('string', '"manage" (staff only) includes hidden categories; recipes only for chef/manager/admin') },
     response: ok({ menu: [{ id: 'cat_2', name: 'Pizza', sort: 2, active: true, itemCount: 1, items: [MENU_ITEM] }], tags: ['vegetarian', 'vegan'], allergens: ['gluten', 'dairy'] }),
   },
   'GET /api/menu/items': {
-    summary: 'Flat list of every menu item. Staff also get each recipe.',
+    summary: 'Flat list of every menu item. Chefs, managers and admins also get each recipe.',
     response: ok({ items: [MENU_ITEM] }),
   },
   'POST /api/menu/items': {
@@ -239,7 +240,7 @@ export const ROUTE_DOCS = {
     response: ok({ category: { id: 'cat_9', name: 'Desserts', sort: 9, active: true, itemCount: 0 } }, 201),
   },
   'PATCH /api/menu/categories/:id': {
-    summary: 'Rename, reorder or hide a category.',
+    summary: 'Rename, reorder or hide a category. Sort must be a number; a rejected request changes nothing.',
     body: { name: opt('string'), sort: opt('number'), active: opt('boolean') },
     response: ok({ category: { id: 'cat_9', name: 'Desserts', sort: 9, active: false, itemCount: 0 } }),
   },
@@ -291,10 +292,10 @@ export const ROUTE_DOCS = {
   'POST /api/orders/:id/status': {
     summary: 'Move the order through placed > confirmed > preparing > ready > served, or cancel it.',
     roles: ['customer', 'waiter', 'chef', 'manager', 'admin'],
-    access: 'Per target status: confirmed/served/cancelled need floor staff, preparing/ready need kitchen staff; a customer may cancel their own order while it is still placed.',
+    access: 'Per target status: confirmed/served/cancelled need floor staff, preparing/ready need kitchen staff; a customer may cancel their own order while it is still placed. Cancelling a paid order refunds it, so otherwise only a manager or admin may.',
     body: { status: req('string', 'confirmed|preparing|ready|served|cancelled'), reason: opt('string', 'Cancellation reason') },
     response: ok({ order: { ...ORDER, status: 'preparing' } }),
-    errors: ['400 invalid status', '403 role not allowed', '409 illegal transition'],
+    errors: ['400 invalid status', '403 role not allowed / paid order needs a manager', '409 illegal transition'],
   },
   'PATCH /api/orders/:id/items/:itemId': {
     summary: 'Set one item\'s status (kitchen: preparing/ready, floor: served).',
@@ -356,7 +357,7 @@ export const ROUTE_DOCS = {
     response: ok({ invoice: { ...INVOICE, paid: true, paymentStatus: 'paid' }, alreadyPaid: false }),
   },
   'POST /api/billing/:id/unpay': {
-    summary: 'Reverse a payment recorded in error.',
+    summary: 'Reverse a payment recorded in error (management only, like refunds).',
     response: ok({ invoice: INVOICE }),
     errors: ['409 not paid or already refunded'],
   },
@@ -382,7 +383,7 @@ export const ROUTE_DOCS = {
   },
   'PATCH /api/tables/:id': {
     summary: 'Change status, assigned waiter or hold; managers can also change number, seats and zone.',
-    access: 'Handler limits layout fields (number, seats, zone) to manager/admin.',
+    access: 'Handler limits layout fields (number, seats, zone) to manager/admin; only active floor staff can be assigned as the waiter.',
     body: { status: opt('string'), waiterId: opt('string|null'), held: opt('boolean'), number: opt('integer'), seats: opt('integer'), zone: opt('string') },
     response: ok({ table: TABLE }),
   },
@@ -418,7 +419,7 @@ export const ROUTE_DOCS = {
       partySize: req('integer', '1-12'), date: req('YYYY-MM-DD'), time: req('HH:MM', 'Not in the past'), specialRequests: opt('string'),
     },
     response: ok({ reservation: RESERVATION }, 201),
-    errors: ['400 invalid fields', '409 fully booked: { error, alternatives: [{ date, time }] }'],
+    errors: ['400 invalid fields', '409 fully booked: { error, alternatives: [{ date, time }] }', '429 guests: more than 5 booking requests in 10 minutes from one address (signed-in staff are exempt)'],
   },
   'PATCH /api/reservations/:id': {
     summary: 'Confirm, seat, cancel or mark no-show; move date/time, party size or table.',
@@ -489,7 +490,7 @@ export const ROUTE_DOCS = {
     summary: 'Public "join our team" form.',
     body: { name: req('string'), email: req('string'), phone: opt('string'), desiredRole: req('string', 'waiter|chef'), experience: opt('string') },
     response: ok({ application: APPLICATION }, 201),
-    errors: ['409 account exists / application pending'],
+    errors: ['409 account exists / application pending', '429 more than 3 applications an hour from one address'],
   },
   'GET /api/staff/applications': {
     summary: 'Application review queue, newest first.',
@@ -575,7 +576,7 @@ export const ROUTE_DOCS = {
     response: ok({ settings: SETTINGS, timeSlots: ['12:00', '12:30'] }),
   },
   'PATCH /api/settings': {
-    summary: 'Update restaurant policy. Numeric fields are range-checked; opening hour must be before closing.',
+    summary: 'Update restaurant policy. Numeric fields must be numbers within range (null or blank is rejected); opening hour must be before closing.',
     body: {
       restaurantName: opt('string'), address: opt('string'), taxRate: opt('number', '0-0.5'), serviceChargeRate: opt('number', '0-0.5'),
       pointValue: opt('number', '0-1'), kitchenDelayMinutes: opt('number', '1-240'), reservationDurationMinutes: opt('number', '30-300'),

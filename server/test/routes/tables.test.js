@@ -135,3 +135,18 @@ test('DELETE /tables/:id is refused for a waiter', async () => {
   assert.equal(res.status, 403);
   assert.ok(await tableByNumber(api.call, manager, 33), 'the table is still on the floor plan');
 });
+
+test('only active floor staff can be assigned to look after a table', async () => {
+  // Arrange
+  const table = await tableByNumber(api.call, waiter, 2);
+
+  // Act
+  const chef = await api.call('PATCH', `/tables/${table.id}`, { token: manager, body: { waiterId: 'usr_chef' } });
+  const otherWaiter = await api.call('PATCH', `/tables/${table.id}`, { token: waiter, body: { waiterId: 'usr_waiter2' } });
+
+  // Assert
+  assert.equal(chef.status, 400);
+  assert.match(chef.body.error, /floor staff/);
+  assert.equal(otherWaiter.status, 200);
+  assert.equal(otherWaiter.body.table.waiterId, 'usr_waiter2');
+});

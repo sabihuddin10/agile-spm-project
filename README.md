@@ -72,6 +72,20 @@ Open http://localhost:3000. The API base is http://localhost:4000/api (Next prox
 
 Also seeded: `chef2@rest.test` (Cara Cook) and `waiter2@rest.test` (Wendy Server), so staff performance has more than one person to compare.
 
+## Roles and permissions
+
+Each role gets what its job needs. Reversing money, deleting history, and changing staffing, pricing or policy need a manager.
+
+| Role | Can | Cannot |
+|---|---|---|
+| **Customer** | Browse the menu, order (online or at their table), cancel their own order before the kitchen accepts it (refunded if prepaid), book a table, see their own orders, bookings, bills and profile | See other guests' data or anything staff-only |
+| **Waiter** | Take, confirm, edit (before confirmation) and serve orders; assign tables, set table status and holds; handle reservations; add and edit customers; take payment (tip, split, pay) | Reverse a payment, cancel a paid order, refund, delete customers, see recipes, edit the menu, inventory, shifts, analytics or settings |
+| **Chef** | Run the kitchen queue (start, ready, rush, reorder), toggle dish availability, see recipes, see inventory and record stock counts | Billing, customers, tables, reservations, menu prices or recipes, purchase orders, shifts |
+| **Manager** | Everything operational: menu and recipes, inventory and purchase orders, refunds and payment reversals, cancelling paid orders, deleting customers (only those with no order history), shifts and roster, approving waiter/chef applications, analytics, settings, viewing accounts | Change roles, suspend or delete accounts, approve managers |
+| **Admin** | Everything | — |
+
+The server enforces this with `requireRole` guards, plus handler checks where a rule depends on the record (an order's owner, a paid order, a chef editing only availability). `server/test/routes/access-matrix.test.js` calls every guarded endpoint as a guest and as each role, and fails if a route is added without an entry. The UI hides the same actions through `frontend/src/lib/permissions.ts`. The public booking and job-application forms are rate limited per IP for guests: 5 bookings per 10 minutes and 3 applications per hour.
+
 ## Deployment
 
 Live: **https://plate-and-flame-web.vercel.app** (web) and **https://plate-and-flame-api.vercel.app/api/health** (API).

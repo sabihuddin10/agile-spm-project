@@ -5,7 +5,7 @@
 import { createApp } from '../src/app.js';
 
 export async function startServer() {
-  const server = createApp({ logging: false, persistence: false }).listen(0);
+  const server = createApp({ logging: false, persistence: false, rateLimits: false }).listen(0);
   await new Promise((resolve) => server.once('listening', resolve));
   const base = `http://127.0.0.1:${server.address().port}/api`;
 
