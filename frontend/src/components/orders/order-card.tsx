@@ -54,6 +54,8 @@ export function OrderCard({
   const floor = can.confirmOrders(role);
   const canServe = can.serveOrders(role);
   const canEdit = can.placeStaffOrders(role);
+  // Cancelling a paid order refunds it, so only a manager/admin may do that.
+  const canCancel = floor && (order.paymentStatus !== 'paid' || can.cancelPaidOrders(role));
   const active = ACTIVE_ORDER_STATUSES.includes(order.status);
   const status = ORDER_STATUS[order.status];
   const payment = PAYMENT_STATUS[order.paymentStatus];
@@ -262,7 +264,7 @@ export function OrderCard({
               <span className="text-xs font-medium text-amber-700">Awaiting payment</span>
             )
           ) : null}
-          {active && floor && !confirmCancel ? (
+          {active && canCancel && !confirmCancel ? (
             <button
               type="button"
               className="btn-ghost !px-3 !py-1.5 text-xs text-red-600 hover:bg-red-50"
@@ -276,7 +278,7 @@ export function OrderCard({
       </div>
 
       {order.status === 'placed' && order.paymentStatus !== 'unpaid' ? (
-        <p className="-mt-2 text-xs text-stone-500">Prepaid online — cancel to change.</p>
+        <p className="-mt-2 text-xs text-stone-500">Prepaid online — {canCancel ? 'cancel to change.' : 'ask a manager to cancel.'}</p>
       ) : null}
 
       {confirmCancel ? (

@@ -17,7 +17,8 @@ export function CustomerDetail({
 }: {
   customer: Customer;
   onEdit: () => void;
-  onDelete: () => void;
+  /** Omit to hide Delete (only managers/admins may delete customers). */
+  onDelete?: () => void;
   onClose?: () => void;
   deleting?: boolean;
 }) {
@@ -42,9 +43,11 @@ export function CustomerDetail({
             <button type="button" onClick={onEdit} className="btn-secondary !px-3 !py-1.5 text-xs">
               Edit
             </button>
-            <button type="button" onClick={onDelete} className="btn-danger !px-3 !py-1.5 text-xs" disabled={deleting}>
-              {deleting ? 'Deleting…' : 'Delete'}
-            </button>
+            {onDelete ? (
+              <button type="button" onClick={onDelete} className="btn-danger !px-3 !py-1.5 text-xs" disabled={deleting}>
+                {deleting ? 'Deleting…' : 'Delete'}
+              </button>
+            ) : null}
             {onClose ? (
               <button
                 type="button"

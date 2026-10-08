@@ -116,7 +116,7 @@ export function SplitDialog({
         : await run(
             'split',
             () => billingApi.splitByItems(invoice.id, filled.map((g) => g.lines.map((l) => l.id))),
-            `Bill split by items between ${filled.length} guests.`,
+            `Bill split by items between ${filled.length} guest${filled.length === 1 ? '' : 's'}.`,
           );
     if (ok) onClose();
   }
@@ -251,7 +251,7 @@ export function SplitDialog({
             onClick={submit}
             disabled={pending !== null || (mode === 'items' && Boolean(itemsProblem))}
           >
-            {pending ? 'Splitting…' : mode === 'even' ? `Split ${ways} ways` : `Split between ${filled.length || '…'} guests`}
+            {pending ? 'Splitting…' : mode === 'even' ? `Split ${ways} ways` : filled.length === 1 ? 'Split between 1 guest' : `Split between ${filled.length || '…'} guests`}
           </button>
         </div>
       </div>

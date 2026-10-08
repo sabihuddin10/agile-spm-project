@@ -363,8 +363,8 @@ describe('MenuItemForm', () => {
 });
 
 describe('MenuItemList', () => {
-  const all: MenuItemPermissions = { manage: true, toggle: true, recipes: true };
-  const none: MenuItemPermissions = { manage: false, toggle: false, recipes: false };
+  const all: MenuItemPermissions = { manage: true, toggle: true, viewRecipes: true, recipes: true };
+  const none: MenuItemPermissions = { manage: false, toggle: false, viewRecipes: false, recipes: false };
 
   function handlers() {
     return { onEdit: vi.fn(), onDelete: vi.fn(), onMarkOut: vi.fn(), onMarkIn: vi.fn(), onRecipe: vi.fn(), onAdd: vi.fn() };
@@ -451,6 +451,39 @@ describe('MenuItemList', () => {
     // Assert
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
     expect(screen.queryByText(/recipe:/i)).not.toBeInTheDocument();
+  });
+
+  it('renders a waiter view of items without `recipe` and shows no recipe warning', () => {
+    // Arrange — the server omits `recipe` for waiters
+    const { recipe: _omitted, ...pizzaNoRecipe } = pizza;
+    void _omitted;
+    const items = [pizzaNoRecipe as typeof pizza, { ...calzone, recipe: undefined } as unknown as typeof calzone];
+
+    // Act
+    render(<MenuItemList categories={[makeCategory({ items })]} permissions={none} {...handlers()} />);
+
+    // Assert
+    expect(screen.getByText('Margherita')).toBeInTheDocument();
+    expect(screen.getByText('Calzone')).toBeInTheDocument();
+    expect(screen.queryByText(/no recipe/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/recipe:/i)).not.toBeInTheDocument();
+  });
+
+  it('hides recipe status from a role that cannot view recipes even if the data is present', () => {
+    // Arrange
+    const waiter: MenuItemPermissions = { ...none, viewRecipes: false };
+    const chef: MenuItemPermissions = { ...none, toggle: true, viewRecipes: true };
+
+    // Act
+    const { rerender } = render(<MenuItemList categories={[makeCategory({ items: [pizza, calzone] })]} permissions={waiter} {...handlers()} />);
+    // Assert
+    expect(screen.queryByText(/no recipe/i)).not.toBeInTheDocument();
+
+    // Act
+    rerender(<MenuItemList categories={[makeCategory({ items: [pizza, calzone] })]} permissions={chef} {...handlers()} />);
+    // Assert
+    expect(screen.getByText(/1 ingredient/)).toBeInTheDocument();
+    expect(screen.getByText(/no recipe — stock won't auto-deduct/i)).toBeInTheDocument();
   });
 });
 
