@@ -74,16 +74,18 @@ test('US1.5 allergies travel with active orders for waiter and chef', async () =
   }
 });
 
-test('DELETE /customers/:id staff remove a customer from the ledger', async () => {
+test('DELETE /customers/:id a manager removes a customer from the ledger; a waiter may not', async () => {
   // Arrange
-  const token = await api.login('waiter');
-  const created = await api.call('POST', '/customers', { token, body: { name: 'Delete Me Walkin' } });
+  const [waiter, token] = await Promise.all([api.login('waiter'), api.login('manager')]);
+  const created = await api.call('POST', '/customers', { token: waiter, body: { name: 'Delete Me Walkin' } });
   const id = created.body.customer.id;
 
   // Act
+  const refused = await api.call('DELETE', `/customers/${id}`, { token: waiter });
   const res = await api.call('DELETE', `/customers/${id}`, { token });
 
   // Assert
+  assert.equal(refused.status, 403);
   assert.equal(res.status, 200);
   assert.deepEqual(res.body, { deleted: true, id });
   assert.equal((await api.call('GET', `/customers/${id}`, { token })).status, 404);
@@ -116,4 +118,18 @@ test('DELETE /customers/:id is refused for a customer', async () => {
   // Assert
   assert.equal(res.status, 403);
   assert.equal((await api.call('GET', `/customers/${id}`, { token: manager })).status, 200, 'the customer is still on the ledger');
+});
+
+test('DELETE /customers/:id refuses a customer with order history, keeping their orders linked', async () => {
+  // Arrange — Emma Thompson has seeded orders
+  const manager = await api.login('manager');
+  const emma = (await api.call('GET', `/customers?q=${encodeURIComponent('Emma Thompson')}`, { token: manager })).body.customers[0];
+
+  // Act
+  const res = await api.call('DELETE', `/customers/${emma.id}`, { token: manager });
+
+  // Assert
+  assert.equal(res.status, 409);
+  assert.match(res.body.error, /order history/);
+  assert.equal((await api.call('GET', `/customers/${emma.id}`, { token: manager })).status, 200);
 });

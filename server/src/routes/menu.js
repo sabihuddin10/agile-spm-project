@@ -19,6 +19,8 @@ const editItems = requireRole('chef', 'manager', 'admin');
 const AVAILABILITY_FIELDS = ['available', 'outOfStockReason'];
 
 const isStaff = (req) => Boolean(req.user && STAFF_ROLES.includes(req.user.role));
+// Recipes (ingredients and quantities) are kitchen and management information.
+const canSeeRecipes = (req) => Boolean(req.user && ['chef', 'manager', 'admin'].includes(req.user.role));
 
 function serializeItem(item, withRecipe) {
   const out = { ...item, category: categories.find((c) => c.id === item.categoryId)?.name || '' };
@@ -71,7 +73,7 @@ router.get('/', (req, res) => {
     .slice()
     .sort((a, b) => a.sort - b.sort)
     .map((c) => {
-      const items = menuItems.filter((m) => m.categoryId === c.id).map((m) => serializeItem(m, manage));
+      const items = menuItems.filter((m) => m.categoryId === c.id).map((m) => serializeItem(m, manage && canSeeRecipes(req)));
       return { ...c, itemCount: items.length, items };
     })
     .filter((c) => manage || (c.active && c.items.length > 0));
@@ -80,7 +82,7 @@ router.get('/', (req, res) => {
 
 /** GET /api/menu/items — flat item list. */
 router.get('/items', (req, res) => {
-  const withRecipe = isStaff(req);
+  const withRecipe = canSeeRecipes(req);
   res.json({ items: menuItems.map((m) => serializeItem(m, withRecipe)) });
 });
 
@@ -230,6 +232,11 @@ router.patch('/categories/:id', manageMenu, (req, res) => {
   const category = categories.find((c) => c.id === req.params.id);
   if (!category) return res.status(404).json({ error: 'Category not found.' });
   const { name, sort, active } = req.body || {};
+  // Validate before changing anything, so a rejected request saves nothing.
+  const sortValue = sort === undefined ? undefined : typeof sort === 'number' || (typeof sort === 'string' && sort.trim() !== '') ? Number(sort) : NaN;
+  if (sortValue !== undefined && !Number.isFinite(sortValue)) {
+    return res.status(400).json({ error: 'Sort order must be a number.' });
+  }
   if (name !== undefined) {
     const clean = String(name).trim();
     if (!clean) return res.status(400).json({ error: 'Category name is required.' });
@@ -238,7 +245,7 @@ router.patch('/categories/:id', manageMenu, (req, res) => {
     }
     category.name = clean;
   }
-  if (sort !== undefined) category.sort = Number(sort);
+  if (sortValue !== undefined) category.sort = sortValue;
   if (active !== undefined) category.active = Boolean(active);
   return res.json({
     category: { ...category, itemCount: menuItems.filter((m) => m.categoryId === category.id).length },

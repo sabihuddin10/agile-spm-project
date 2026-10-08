@@ -104,7 +104,7 @@ test('US5.3 split bills always sum to the original total and settle the bill', a
   assert.equal(inv.status, 'closed');
 });
 
-test('US5.4 paid bills leave the outstanding view and can be marked unpaid', async () => {
+test('US5.4 paid bills leave the outstanding view; only a manager can mark them unpaid', async () => {
   // Arrange
   const id = await servedOrder([['Iced Tea', 2]]);
   const openIds = async () => (await api.call('GET', '/billing?scope=open', { token: waiter })).body.bills.map((b) => b.id);
@@ -116,8 +116,14 @@ test('US5.4 paid bills leave the outstanding view and can be marked unpaid', asy
   assert.equal(paid.paymentStatus, 'paid');
   assert.ok(!(await openIds()).includes(id));
 
-  // Act — mark it unpaid again
-  const unpaid = (await api.call('POST', `/billing/${id}/unpay`, { token: waiter })).body.invoice;
+  // Act — a waiter may not reverse a payment
+  const refused = await api.call('POST', `/billing/${id}/unpay`, { token: waiter });
+  // Assert
+  assert.equal(refused.status, 403);
+  assert.ok(!(await openIds()).includes(id), 'the bill stays paid');
+
+  // Act — a manager marks it unpaid again
+  const unpaid = (await api.call('POST', `/billing/${id}/unpay`, { token: manager })).body.invoice;
   // Assert
   assert.equal(unpaid.paymentStatus, 'unpaid');
   assert.equal(unpaid.status, 'served');

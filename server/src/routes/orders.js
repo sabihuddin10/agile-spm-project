@@ -35,6 +35,7 @@ const router = Router();
 const FLOOR = ['waiter', 'manager', 'admin'];
 const KITCHEN = ['chef', 'manager', 'admin'];
 const ALL_STAFF = ['waiter', 'chef', 'manager', 'admin'];
+const MANAGEMENT = ['manager', 'admin'];
 
 const staffRoles = requireRole(...ALL_STAFF);
 const floorRoles = requireRole(...FLOOR);
@@ -295,6 +296,11 @@ router.post('/:id/status', (req, res) => {
   const customerCancel = status === 'cancelled' && order.status === 'placed' && isOwner(order, req.user);
   if (!customerCancel && !rule.roles.includes(req.user.role)) {
     return res.status(403).json({ error: 'You do not have permission to perform this action.' });
+  }
+  // Cancelling a paid order refunds it, so outside the customer's own pre-kitchen
+  // cancel it needs the same authority as a refund (POST /billing/:id/refund).
+  if (status === 'cancelled' && order.paymentStatus === 'paid' && !customerCancel && !MANAGEMENT.includes(req.user.role)) {
+    return res.status(403).json({ error: 'Only a manager can cancel a paid order, because it refunds the payment.' });
   }
   if (!rule.from.includes(order.status)) {
     return res.status(409).json({ error: `Cannot move an order from "${order.status}" to "${status}".` });

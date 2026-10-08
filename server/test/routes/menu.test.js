@@ -111,19 +111,22 @@ test('US2.5 unavailable items cannot be ordered; chefs may only toggle availabil
   assert.equal(ok.status, 201);
 });
 
-test('/menu/items includes recipes for staff only, never for customers or guests', async () => {
+test('/menu/items includes recipes for the kitchen and management only, never for waiters, customers or guests', async () => {
   // Arrange
-  const [customer, chef] = await Promise.all([api.login('customer'), api.login('chef')]);
+  const [customer, waiter, chef] = await Promise.all([api.login('customer'), api.login('waiter'), api.login('chef')]);
 
   // Act
-  const [guestView, customerView, chefView] = await Promise.all([
+  const [guestView, customerView, waiterView, waiterManageMenu, chefView] = await Promise.all([
     api.call('GET', '/menu/items'),
     api.call('GET', '/menu/items', { token: customer }),
+    api.call('GET', '/menu/items', { token: waiter }),
+    api.call('GET', '/menu?scope=manage', { token: waiter }),
     api.call('GET', '/menu/items', { token: chef }),
   ]);
 
   // Assert
-  for (const view of [guestView, customerView]) {
+  assert.ok(waiterManageMenu.body.menu.flatMap((c) => c.items).every((i) => !('recipe' in i)), 'the staff menu view hides recipes from waiters');
+  for (const view of [guestView, customerView, waiterView]) {
     assert.equal(view.status, 200);
     assert.ok(view.body.items.length > 0);
     assert.ok(view.body.items.every((i) => !('recipe' in i)), 'recipes stay hidden');
@@ -160,4 +163,22 @@ test('a manager renames, re-sorts and toggles a category; blank or duplicate nam
   assert.equal(unknown.status, 404);
   const after = (await api.call('GET', '/menu/categories')).body.categories.find((x) => x.id === created.id);
   assert.equal(after.name, 'WEEKEND BRUNCH', 'rejected renames leave the name untouched');
+});
+
+test('a category sort order must be a number; a rejected edit changes nothing', async () => {
+  // Arrange
+  const token = await api.login('manager');
+  const created = (await api.call('POST', '/menu/categories', { token, body: { name: 'Sort Check' } })).body.category;
+
+  // Act
+  const results = await Promise.all(['abc', '', null, true].map((sort) =>
+    api.call('PATCH', `/menu/categories/${created.id}`, { token, body: { name: 'Renamed', sort } })));
+  const ok = await api.call('PATCH', `/menu/categories/${created.id}`, { token, body: { sort: '7' } });
+
+  // Assert
+  for (const res of results) assert.equal(res.status, 400);
+  const after = (await api.call('GET', '/menu/categories')).body.categories.find((c) => c.id === created.id);
+  assert.equal(ok.status, 200);
+  assert.equal(after.name, 'Sort Check', 'the rename in a rejected request was not applied');
+  assert.equal(after.sort, 7);
 });
