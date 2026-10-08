@@ -58,7 +58,7 @@ describe('ProfileEditor', () => {
   it('rejects an empty name without calling the API', async () => {
     // Arrange
     const customer = makeCustomer();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderEditor(customer);
 
     // Act
@@ -73,7 +73,7 @@ describe('ProfileEditor', () => {
   it('rejects an invalid email without calling the API', async () => {
     // Arrange
     const customer = makeCustomer();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderEditor(customer);
 
     // Act
@@ -92,7 +92,7 @@ describe('ProfileEditor', () => {
     const updated = { ...customer, name: 'Casey C.' };
     vi.mocked(customerApi.updateMe).mockResolvedValue({ customer: updated });
     const onSaved = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderEditor(customer, onSaved);
 
     // Act
@@ -112,7 +112,7 @@ describe('ProfileEditor', () => {
   it('toggles an allergy preference chip', async () => {
     // Arrange
     const customer = makeCustomer();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderEditor(customer);
     const chip = screen.getByRole('checkbox', { name: /peanuts/i });
     expect(chip).toHaveAttribute('aria-checked', 'false');

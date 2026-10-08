@@ -25,7 +25,7 @@ describe('RegisterForm', () => {
   it('rejects an empty name', async () => {
     // Arrange
     vi.mocked(useAuth).mockReturnValue({ register: vi.fn() } as unknown as ReturnType<typeof useAuth>);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<RegisterForm />);
 
     // Act
@@ -39,7 +39,7 @@ describe('RegisterForm', () => {
   it('rejects an invalid email', async () => {
     // Arrange
     vi.mocked(useAuth).mockReturnValue({ register: vi.fn() } as unknown as ReturnType<typeof useAuth>);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<RegisterForm />);
 
     // Act
@@ -53,7 +53,7 @@ describe('RegisterForm', () => {
   it('rejects a password shorter than 6 characters', async () => {
     // Arrange
     vi.mocked(useAuth).mockReturnValue({ register: vi.fn() } as unknown as ReturnType<typeof useAuth>);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<RegisterForm />);
 
     // Act
@@ -67,7 +67,7 @@ describe('RegisterForm', () => {
   it('flags a live password mismatch before submitting', async () => {
     // Arrange
     vi.mocked(useAuth).mockReturnValue({ register: vi.fn() } as unknown as ReturnType<typeof useAuth>);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<RegisterForm />);
 
     // Act
@@ -81,7 +81,7 @@ describe('RegisterForm', () => {
   it('rejects mismatched passwords on submit', async () => {
     // Arrange
     vi.mocked(useAuth).mockReturnValue({ register: vi.fn() } as unknown as ReturnType<typeof useAuth>);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<RegisterForm />);
 
     // Act
@@ -96,7 +96,7 @@ describe('RegisterForm', () => {
     // Arrange
     const register = vi.fn().mockResolvedValue(makeUser());
     vi.mocked(useAuth).mockReturnValue({ register } as unknown as ReturnType<typeof useAuth>);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<RegisterForm />);
 
     // Act
@@ -112,7 +112,7 @@ describe('RegisterForm', () => {
     // Arrange
     const register = vi.fn().mockRejectedValue(new Error('An account with that email already exists.'));
     vi.mocked(useAuth).mockReturnValue({ register } as unknown as ReturnType<typeof useAuth>);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<RegisterForm />);
 
     // Act

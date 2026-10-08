@@ -99,7 +99,7 @@ describe('SettingsForm', () => {
     mockUser('manager');
     const updated = makeSettings({ restaurantName: 'Flame Bistro & Grill' });
     vi.mocked(settingsApi.update).mockResolvedValue({ settings: updated });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<SettingsForm />);
     const nameInput = await screen.findByDisplayValue('Flame Bistro');
     expect(screen.getByText('All changes saved.')).toBeInTheDocument();
@@ -122,7 +122,7 @@ describe('SettingsForm', () => {
   it('resets the form back to the saved values when Reset is clicked', async () => {
     // Arrange
     mockUser('manager');
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<SettingsForm />);
     const nameInput = await screen.findByDisplayValue('Flame Bistro');
 
@@ -139,7 +139,7 @@ describe('SettingsForm', () => {
   it('shows a validation error and blocks submission when a required field is cleared', async () => {
     // Arrange
     mockUser('manager');
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<SettingsForm />);
     const nameInput = await screen.findByDisplayValue('Flame Bistro');
 
@@ -156,7 +156,7 @@ describe('SettingsForm', () => {
     // Arrange
     mockUser('manager');
     vi.mocked(settingsApi.update).mockRejectedValue(new Error('taxRate must be between 0 and 0.5.'));
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<SettingsForm />);
     const nameInput = await screen.findByDisplayValue('Flame Bistro');
 

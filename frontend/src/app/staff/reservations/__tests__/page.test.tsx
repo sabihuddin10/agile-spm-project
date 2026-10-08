@@ -85,7 +85,7 @@ describe('ReservationsPage', () => {
   it('reloads with a new scope when a period tab is selected', async () => {
     // Arrange
     vi.mocked(reservationApi.list).mockResolvedValue({ reservations: [], slots: [] });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ReservationsPage />);
     await screen.findByText('No bookings');
 
@@ -99,7 +99,7 @@ describe('ReservationsPage', () => {
   it('confirms a requested booking', async () => {
     // Arrange
     vi.mocked(reservationApi.list).mockResolvedValue({ reservations: [makeReservation()], slots: [] });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ReservationsPage />);
     await screen.findByTestId('reservation-res_1');
 
@@ -114,7 +114,7 @@ describe('ReservationsPage', () => {
   it('cancels a booking after confirmation', async () => {
     // Arrange
     vi.mocked(reservationApi.list).mockResolvedValue({ reservations: [makeReservation()], slots: [] });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ReservationsPage />);
     await screen.findByTestId('reservation-res_1');
 
@@ -128,7 +128,7 @@ describe('ReservationsPage', () => {
   it('opens the new-booking form and reloads once a booking is created', async () => {
     // Arrange
     vi.mocked(reservationApi.list).mockResolvedValue({ reservations: [], slots: [] });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ReservationsPage />);
     await screen.findByText('No bookings');
 

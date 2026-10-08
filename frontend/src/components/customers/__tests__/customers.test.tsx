@@ -138,7 +138,7 @@ describe('CustomerDetail', () => {
 
   it('fires edit, delete and close, and locks delete while deleting', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onEdit = vi.fn();
     const onDelete = vi.fn();
     const onClose = vi.fn();

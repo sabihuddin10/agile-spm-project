@@ -12,7 +12,7 @@ describe('CategoryManager', () => {
   it('creates a category and clears the input on success', async () => {
     // Arrange
     const onCreate = vi.fn().mockResolvedValue(true);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<CategoryManager categories={[]} onCreate={onCreate} onRename={vi.fn()} onToggleActive={vi.fn()} onDelete={vi.fn()} />);
 
     // Act
@@ -36,7 +36,7 @@ describe('CategoryManager', () => {
     // Arrange
     const onRename = vi.fn().mockResolvedValue(true);
     const category = makeCategory();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<CategoryManager categories={[category]} onCreate={vi.fn()} onRename={onRename} onToggleActive={vi.fn()} onDelete={vi.fn()} />);
 
     // Act
@@ -55,7 +55,7 @@ describe('CategoryManager', () => {
     // Arrange
     const onDelete = vi.fn();
     const category = makeCategory({ itemCount: 0 });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<CategoryManager categories={[category]} onCreate={vi.fn()} onRename={vi.fn()} onToggleActive={vi.fn()} onDelete={onDelete} />);
 
     // Act
@@ -77,7 +77,7 @@ describe('CategoryManager', () => {
     // Arrange
     const onToggleActive = vi.fn();
     const category = makeCategory({ active: true });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<CategoryManager categories={[category]} onCreate={vi.fn()} onRename={vi.fn()} onToggleActive={onToggleActive} onDelete={vi.fn()} />);
 
     // Act

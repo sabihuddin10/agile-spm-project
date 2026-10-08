@@ -67,7 +67,7 @@ describe('StaffUsersPage', () => {
     // Arrange
     vi.mocked(staffApi.applications).mockResolvedValue({ applications: [makeApplication(), makeApplication({ id: 'app_2' })] });
     vi.mocked(useAuth).mockReturnValue({ user: makeUser() } as unknown as ReturnType<typeof useAuth>);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<StaffUsersPage />);
     await screen.findByTestId('team-panel');
 
@@ -84,7 +84,7 @@ describe('StaffUsersPage', () => {
   it('shows the "All accounts" tab only for an admin', async () => {
     // Arrange / Act
     vi.mocked(useAuth).mockReturnValue({ user: makeUser({ role: 'admin' }) } as unknown as ReturnType<typeof useAuth>);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<StaffUsersPage />);
     await screen.findByTestId('team-panel');
 

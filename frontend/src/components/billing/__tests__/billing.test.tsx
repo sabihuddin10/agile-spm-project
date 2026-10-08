@@ -170,7 +170,7 @@ describe('BillList', () => {
     const onSelect = vi.fn();
     const first = makeInvoice({ id: 'b1', number: 101 });
     const second = makeInvoice({ id: 'b2', number: 102, tableNumber: 7 });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<BillList bills={[first, second]} selectedId={null} onSelect={onSelect} />);
 
     // Act
@@ -245,7 +245,7 @@ describe('BillPanel', () => {
     const onChanged = vi.fn();
     vi.mocked(billingApi.get).mockResolvedValue({ invoice: makeInvoice() });
     vi.mocked(billingApi.pay).mockResolvedValue({ invoice: paidInvoice(), alreadyPaid: false });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<BillPanel billId="inv_1" onChanged={onChanged} onClose={vi.fn()} />);
     await screen.findByRole('region', { name: 'Itemized bill' });
 
@@ -264,7 +264,7 @@ describe('BillPanel', () => {
     // Arrange
     const onDialogChange = vi.fn();
     vi.mocked(billingApi.get).mockResolvedValue({ invoice: makeInvoice() });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<BillPanel billId="inv_1" onChanged={vi.fn()} onClose={vi.fn()} onDialogChange={onDialogChange} />);
     await screen.findByRole('region', { name: 'Itemized bill' });
 
@@ -341,7 +341,7 @@ describe('BillPanel', () => {
     // Arrange
     const onClose = vi.fn();
     vi.mocked(billingApi.get).mockResolvedValue({ invoice: makeInvoice() });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<BillPanel billId="inv_1" onChanged={vi.fn()} onClose={onClose} showHeaderClose />);
     await screen.findByRole('region', { name: 'Itemized bill' });
 
@@ -441,7 +441,7 @@ describe('Receipt', () => {
   it('prints from the Print button', async () => {
     // Arrange
     const print = vi.spyOn(window, 'print').mockImplementation(() => {});
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<Receipt invoice={makeInvoice()} />);
 
     // Act
@@ -462,7 +462,7 @@ describe('SplitDialog', () => {
     const onUpdated = vi.fn();
     const updated = makeInvoice({ split: { mode: 'even', createdAt: '', parts: [] } });
     vi.mocked(billingApi.splitEven).mockResolvedValue({ invoice: updated });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<SplitDialog invoice={makeInvoice()} onClose={onClose} onUpdated={onUpdated} />);
 
     // Act
@@ -488,7 +488,7 @@ describe('SplitDialog', () => {
 
   it('keeps the number of payers between 2 and 20', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<SplitDialog invoice={makeInvoice()} onClose={vi.fn()} onUpdated={vi.fn()} />);
 
     // Assert — starts at the minimum
@@ -504,7 +504,7 @@ describe('SplitDialog', () => {
 
   it('rejects a by-items split until every item is assigned to a guest', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<SplitDialog invoice={makeInvoice()} onClose={vi.fn()} onUpdated={vi.fn()} />);
 
     // Act
@@ -526,7 +526,7 @@ describe('SplitDialog', () => {
 
   it('rejects a by-items split that gives every item to a single guest', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<SplitDialog invoice={makeInvoice()} onClose={vi.fn()} onUpdated={vi.fn()} />);
     await user.click(screen.getByRole('tab', { name: 'By items' }));
 
@@ -544,7 +544,7 @@ describe('SplitDialog', () => {
     const onClose = vi.fn();
     const updated = makeInvoice({ split: { mode: 'items', createdAt: '', parts: [] } });
     vi.mocked(billingApi.splitByItems).mockResolvedValue({ invoice: updated });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<SplitDialog invoice={makeInvoice()} onClose={onClose} onUpdated={vi.fn()} />);
     await user.click(screen.getByRole('tab', { name: 'By items' }));
 
@@ -568,7 +568,7 @@ describe('SplitDialog', () => {
 
   it('returns items to unassigned when their guest is removed', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<SplitDialog invoice={makeInvoice()} onClose={vi.fn()} onUpdated={vi.fn()} />);
     await user.click(screen.getByRole('tab', { name: 'By items' }));
     await user.click(screen.getByRole('button', { name: 'More guests' }));
@@ -600,7 +600,7 @@ describe('SplitDialog', () => {
     const onClose = vi.fn();
     const onConflict = vi.fn();
     vi.mocked(billingApi.splitEven).mockRejectedValue(new ApiError('Bill already paid', 409, null));
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<SplitDialog invoice={makeInvoice()} onClose={onClose} onUpdated={vi.fn()} onConflict={onConflict} />);
 
     // Act

@@ -300,7 +300,7 @@ describe('ReservationCard', () => {
 
   it('confirms a requested booking (no seat or no-show yet)', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const handlers = renderCard(makeReservation({ status: 'requested' }));
     expect(screen.getByText('Not assigned')).toBeInTheDocument();
 
@@ -315,7 +315,7 @@ describe('ReservationCard', () => {
 
   it('seats or cancels a confirmed booking; no-show stays locked until it is late', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const handlers = renderCard(makeReservation({ status: 'confirmed', late: false }));
 
     // Act
@@ -331,7 +331,7 @@ describe('ReservationCard', () => {
 
   it('flags a late booking and allows marking it a no-show', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const handlers = renderCard(makeReservation({ status: 'confirmed', late: true }));
 
     // Act
@@ -344,7 +344,7 @@ describe('ReservationCard', () => {
 
   it('offers only tables big enough for the party, smallest first, and assigns one', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const tables = [
       makeTable({ id: 't6', number: 6, seats: 6, zone: 'Patio' }),
       makeTable({ id: 't2', number: 2, seats: 2 }),
@@ -364,7 +364,7 @@ describe('ReservationCard', () => {
 
   it('unassigns the current table', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const tables = [makeTable({ id: 't4', number: 4, seats: 4 })];
     const handlers = renderCard(makeReservation({ tableId: 't4', tableNumber: 4 }), { tables });
 

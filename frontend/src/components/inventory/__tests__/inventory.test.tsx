@@ -138,7 +138,7 @@ describe('IngredientForm', () => {
   it('requires a name before submitting', async () => {
     // Arrange
     const onSubmit = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<IngredientForm {...baseProps} onSubmit={onSubmit} onCancel={vi.fn()} />);
 
     // Act — whitespace passes the browser's `required` check but not the form's own
@@ -154,7 +154,7 @@ describe('IngredientForm', () => {
   it('requires a category before submitting', async () => {
     // Arrange
     const onSubmit = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<IngredientForm {...baseProps} onSubmit={onSubmit} onCancel={vi.fn()} />);
 
     // Act
@@ -170,7 +170,7 @@ describe('IngredientForm', () => {
   it('rejects a negative reorder level', async () => {
     // Arrange
     const onSubmit = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<IngredientForm {...baseProps} onSubmit={onSubmit} onCancel={vi.fn()} />);
     await user.type(screen.getByLabelText('Name *'), 'Basil');
     await user.type(screen.getByLabelText('Category *'), 'Produce');
@@ -187,7 +187,7 @@ describe('IngredientForm', () => {
   it('submits a new ingredient with trimmed text, defaults to kg and blank numbers as zero', async () => {
     // Arrange
     const onSubmit = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<IngredientForm {...baseProps} onSubmit={onSubmit} onCancel={vi.fn()} />);
 
     // Act
@@ -212,7 +212,7 @@ describe('IngredientForm', () => {
   it('on edit, omits stock when unchanged and flags a changed count', async () => {
     // Arrange
     const onSubmit = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const initial = makeItem({ stock: 10 });
     render(<IngredientForm {...baseProps} initial={initial} onSubmit={onSubmit} onCancel={vi.fn()} />);
 
@@ -241,7 +241,7 @@ describe('IngredientForm', () => {
     // Arrange
     const onSubmit = vi.fn();
     const onCancel = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<IngredientForm {...baseProps} onSubmit={onSubmit} onCancel={onCancel} />);
 
     // Act
@@ -280,7 +280,7 @@ describe('StockMovements', () => {
   it('filters by ingredient through the select', async () => {
     // Arrange
     const onFilterChange = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const inventory = [makeItem({ id: 'inv_1', name: 'Flour' }), makeItem({ id: 'inv_2', name: 'Basil' })];
     render(<StockMovements movements={[makeMovement()]} inventory={inventory} inventoryId="" onFilterChange={onFilterChange} />);
 
@@ -304,7 +304,7 @@ describe('StockMovements', () => {
 describe('PurchaseOrders', () => {
   it('lists purchase orders with status, lines, suppliers and total', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const orders = [
       makePo(),
       makePo({ id: 'po_2', number: 'PO-0002', status: 'received', receivedAt: '2026-10-02T09:00:00.000Z', total: 5 }),
@@ -334,7 +334,7 @@ describe('PurchaseOrders', () => {
     const received = makePo({ status: 'received', receivedAt: '2026-10-03T10:00:00.000Z' });
     vi.mocked(inventoryApi.receivePurchaseOrder).mockResolvedValue({ purchaseOrder: received });
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<PurchaseOrders orders={[makePo()]} onReceived={onReceived} />);
 
     // Act
@@ -352,7 +352,7 @@ describe('PurchaseOrders', () => {
     vi.mocked(inventoryApi.receivePurchaseOrder).mockClear();
     vi.spyOn(window, 'confirm').mockReturnValue(false);
     const onReceived = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<PurchaseOrders orders={[makePo()]} onReceived={onReceived} />);
 
     // Act
@@ -399,7 +399,7 @@ describe('RecipesPanel', () => {
     // Arrange
     const onEdit = vi.fn();
     const dish = makeDish();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<RecipesPanel items={[dish]} inventory={inventory} canEdit onEdit={onEdit} />);
 
     // Act
@@ -412,7 +412,7 @@ describe('RecipesPanel', () => {
   it('filters to dishes without a recipe and by search text', async () => {
     // Arrange
     const items = [makeDish(), makeDish({ id: 'item_2', name: 'Garden Salad', category: 'Salads', recipe: [] })];
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<RecipesPanel items={items} inventory={inventory} canEdit onEdit={vi.fn()} />);
 
     // Act
@@ -460,7 +460,7 @@ describe('ReorderForm', () => {
     // Arrange
     vi.mocked(inventoryApi.reorder).mockResolvedValue({ lines: [], estimatedTotal: 0 });
     const basil = makeItem({ id: 'inv_2', name: 'Basil', unit: 'kg', stock: 3, reorderLevel: 5, costPerUnit: 10, supplier: 'Herb Farm' });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ReorderForm inventory={[basil]} onSubmitted={vi.fn()} />);
     await screen.findByText(/nothing is low right now/i);
 
@@ -481,7 +481,7 @@ describe('ReorderForm', () => {
     vi.mocked(inventoryApi.createPurchaseOrder).mockResolvedValue({ purchaseOrder: po });
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
     const onSubmitted = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ReorderForm inventory={[makeItem({ stock: 2 })]} onSubmitted={onSubmitted} />);
     const qtyInput = await screen.findByLabelText('Order quantity for Flour');
 
@@ -505,7 +505,7 @@ describe('ReorderForm', () => {
       estimatedTotal: 32,
     });
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(
       <ReorderForm
         inventory={[makeItem({ stock: 2 }), makeItem({ id: 'inv_2', name: 'Basil', stock: 2 })]}
@@ -525,7 +525,7 @@ describe('ReorderForm', () => {
   it('refuses to submit a line with a zero quantity', async () => {
     // Arrange
     vi.mocked(inventoryApi.reorder).mockResolvedValue({ lines: [makeReorderLine()], estimatedTotal: 16 });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ReorderForm inventory={[makeItem({ stock: 2 })]} onSubmitted={vi.fn()} />);
     const qtyInput = await screen.findByLabelText('Order quantity for Flour');
 
@@ -542,7 +542,7 @@ describe('ReorderForm', () => {
   it('removes a line from the order', async () => {
     // Arrange
     vi.mocked(inventoryApi.reorder).mockResolvedValue({ lines: [makeReorderLine()], estimatedTotal: 16 });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ReorderForm inventory={[makeItem({ stock: 2 })]} onSubmitted={vi.fn()} />);
     await screen.findByLabelText('Order quantity for Flour');
 
@@ -584,7 +584,7 @@ describe('StockTable', () => {
 
   it('filters by health with counts on each filter', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<StockTable items={items} canAdjust canManage {...handlers} />);
 
     // Act
@@ -606,7 +606,7 @@ describe('StockTable', () => {
 
   it('searches by supplier or dish and shows an empty state when nothing matches', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<StockTable items={items} canAdjust canManage {...handlers} />);
 
     // Act
@@ -636,7 +636,7 @@ describe('StockTable', () => {
     // Arrange
     const onAdjust = vi.fn();
     const onHistory = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<StockTable items={[items[0]]} canAdjust canManage={false} {...handlers} onAdjust={onAdjust} onHistory={onHistory} />);
 
     // Act
@@ -653,7 +653,7 @@ describe('StockTable', () => {
   it('disables a busy row and lets a manager edit or delete', async () => {
     // Arrange
     const onDelete = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { rerender } = render(<StockTable items={[items[0]]} canAdjust canManage busyId="inv_1" {...handlers} onDelete={onDelete} />);
 
     // Assert — busy row actions are disabled

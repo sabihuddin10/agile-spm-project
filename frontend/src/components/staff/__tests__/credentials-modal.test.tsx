@@ -51,7 +51,7 @@ describe('CredentialsModal', () => {
   it('closes when the staff member confirms they saved it', async () => {
     // Arrange
     const onClose = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<CredentialsModal user={makeUser()} tempPassword="tmp-pass-1" onClose={onClose} />);
 
     // Act

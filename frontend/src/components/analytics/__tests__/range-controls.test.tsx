@@ -22,7 +22,7 @@ describe('RangeControls', () => {
   it('highlights the active preset and switches to another one', async () => {
     // Arrange
     const onChange = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<RangeControls value={{ preset: '7', from: addDaysISO(-6), to: localDateISO(), granularity: 'day' }} onChange={onChange} />);
     expect(screen.getByRole('button', { name: 'Last 7 days' })).toHaveAttribute('aria-pressed', 'true');
 

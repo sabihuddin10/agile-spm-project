@@ -19,7 +19,7 @@ describe('LoginForm', () => {
     // Arrange
     const login = vi.fn().mockResolvedValue(makeUser({ role: 'manager' }));
     vi.mocked(useAuth).mockReturnValue({ login } as unknown as ReturnType<typeof useAuth>);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<LoginForm />);
 
     // Act
@@ -36,7 +36,7 @@ describe('LoginForm', () => {
     // Arrange
     const login = vi.fn().mockResolvedValue(makeUser({ role: 'customer' }));
     vi.mocked(useAuth).mockReturnValue({ login } as unknown as ReturnType<typeof useAuth>);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<LoginForm />);
 
     // Act
@@ -52,7 +52,7 @@ describe('LoginForm', () => {
     // Arrange
     const login = vi.fn().mockRejectedValue(new Error('Invalid email or password.'));
     vi.mocked(useAuth).mockReturnValue({ login } as unknown as ReturnType<typeof useAuth>);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<LoginForm />);
 
     // Act
@@ -68,7 +68,7 @@ describe('LoginForm', () => {
   it('fills in a demo account\'s email and a default password', async () => {
     // Arrange
     vi.mocked(useAuth).mockReturnValue({ login: vi.fn() } as unknown as ReturnType<typeof useAuth>);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<LoginForm />);
 
     // Act

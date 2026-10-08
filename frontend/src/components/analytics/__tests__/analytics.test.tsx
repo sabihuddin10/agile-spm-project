@@ -202,7 +202,7 @@ describe('Segmented', () => {
   it('reports the clicked option value', async () => {
     // Arrange
     const onChange = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<Segmented label="Rank dishes" value="qty" options={options} onChange={onChange} />);
 
     // Act
@@ -234,7 +234,7 @@ describe('TopDishes (US10.2)', () => {
 
   it('re-ranks by revenue when "By revenue" is chosen', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<TopDishes dishes={dishes} />);
 
     // Act
@@ -533,7 +533,7 @@ describe('AnalyticsDashboard', () => {
 
   it('reloads with the new period when the range or grouping changes', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.mocked(analyticsApi.dashboard).mockResolvedValue(makeDashboard());
     render(<AnalyticsDashboard />);
     await screen.findByRole('heading', { name: 'Peak hours' });
@@ -558,7 +558,7 @@ describe('AnalyticsDashboard', () => {
 
   it('shows an error state with a retry, and toasts the failure', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.mocked(analyticsApi.dashboard).mockRejectedValueOnce(new Error('Server down')).mockResolvedValueOnce(makeDashboard());
     render(<AnalyticsDashboard />);
 

@@ -133,7 +133,7 @@ describe('AccountTable', () => {
     auth.user = admin;
     const onChanged = vi.fn();
     vi.mocked(authApi.updateUser).mockResolvedValue({ user: { ...waiter, role: 'chef' } } as never);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<AccountTable users={[admin, waiter]} onChanged={onChanged} />);
 
     // Act
@@ -149,7 +149,7 @@ describe('AccountTable', () => {
     // Arrange
     auth.user = admin;
     vi.mocked(authApi.updateUser).mockResolvedValue({ user: waiter } as never);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<AccountTable users={[admin, waiter, suspendedWaiter]} onChanged={vi.fn()} />);
     const willRow = screen.getByText('Will Waiter').closest('li')!;
     const ginaRow = screen.getByText('Gina Gone').closest('li')!;
@@ -169,7 +169,7 @@ describe('AccountTable', () => {
     auth.user = admin;
     vi.mocked(authApi.removeUser).mockResolvedValue({ deleted: true } as never);
     const onChanged = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<AccountTable users={[admin, waiter]} onChanged={onChanged} />);
     const willRow = screen.getByText('Will Waiter').closest('li')!;
 
@@ -250,7 +250,7 @@ describe('AccountTable', () => {
       user: { ...waiter, mustChangePassword: true },
       tempPassword: 'Temp-9876',
     } as never);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<AccountTable users={[manager, waiter]} onChanged={onChanged} />);
 
     // Act
@@ -278,7 +278,7 @@ describe('AccountTable', () => {
     // Arrange
     auth.user = manager;
     vi.mocked(authApi.resetPassword).mockRejectedValue(new Error('You can only manage accounts below your own rank.'));
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<AccountTable users={[manager, waiter]} onChanged={vi.fn()} />);
     await user.click(screen.getByRole('button', { name: 'Reset password for Will Waiter' }));
 
@@ -338,7 +338,7 @@ describe('AllAccountsPanel', () => {
     // Arrange
     auth.user = admin;
     vi.mocked(authApi.users).mockResolvedValue({ users: [admin, chef, waiter, customer] } as never);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<AllAccountsPanel />);
     await screen.findByText('Cora Customer');
 
@@ -362,7 +362,7 @@ describe('AllAccountsPanel', () => {
       .mockResolvedValueOnce({ users: [admin, customer] } as never)
       .mockResolvedValueOnce({ users: [admin, { ...customer, role: 'waiter' }] } as never);
     vi.mocked(authApi.updateUser).mockResolvedValue({ user: { ...customer, role: 'waiter' } } as never);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<AllAccountsPanel onChanged={onChanged} />);
     await screen.findByText('Cora Customer');
 
@@ -398,7 +398,7 @@ describe('ApplicationsPanel', () => {
     const onChanged = vi.fn();
     const newUser: User = { id: 'usr_jane', name: 'Jane Applicant', email: 'jane@example.com', role: 'waiter', active: true };
     vi.mocked(staffApi.approve).mockResolvedValue({ user: newUser, tempPassword: 'Temp-1234' } as never);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ApplicationsPanel applications={[makeApplication()]} loading={false} onChanged={onChanged} />);
 
     // Act
@@ -416,7 +416,7 @@ describe('ApplicationsPanel', () => {
     // Arrange
     auth.user = manager;
     vi.mocked(staffApi.approve).mockResolvedValue({ user: { ...chef, id: 'usr_jane' }, tempPassword: 'x' } as never);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ApplicationsPanel applications={[makeApplication()]} loading={false} onChanged={vi.fn()} />);
 
     // Act
@@ -449,7 +449,7 @@ describe('ApplicationsPanel', () => {
     auth.user = manager;
     const onChanged = vi.fn();
     vi.mocked(staffApi.reject).mockResolvedValue({ application: makeApplication({ status: 'rejected' }) } as never);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ApplicationsPanel applications={[makeApplication()]} loading={false} onChanged={onChanged} />);
 
     // Act — open the confirm step, then cancel
@@ -521,7 +521,7 @@ describe('ApplicationsPanel', () => {
 describe('CareersForm', () => {
   it('does not submit while the required name and email are blank', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<CareersForm />);
 
     // Act
@@ -538,7 +538,7 @@ describe('CareersForm', () => {
     vi.mocked(staffApi.apply).mockResolvedValue({
       application: makeApplication({ name: 'Jane Applicant', desiredRole: 'chef' }),
     } as never);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<CareersForm />);
 
     // Act
@@ -563,7 +563,7 @@ describe('CareersForm', () => {
 
   it('counts experience characters against the limit', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<CareersForm />);
 
     // Act
@@ -576,7 +576,7 @@ describe('CareersForm', () => {
   it('shows a server error inline and keeps the form filled', async () => {
     // Arrange
     vi.mocked(staffApi.apply).mockRejectedValue(new Error('You already have a pending application.'));
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<CareersForm />);
     await user.type(screen.getByLabelText('Full name'), 'Jane Applicant');
     await user.type(screen.getByLabelText('Email'), 'jane@example.com');
@@ -752,7 +752,7 @@ describe('PerformancePanel', () => {
     // Arrange
     pinNow();
     vi.mocked(staffApi.performance).mockResolvedValue({ from: '2026-09-08', to: '2026-10-07', staff } as never);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<PerformancePanel />);
     await screen.findByText('Will Waiter');
 
@@ -807,7 +807,7 @@ describe('ShiftPlanner', () => {
     // Arrange
     pinNow();
     vi.mocked(staffApi.shifts).mockResolvedValue({ shifts: [] } as never);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ShiftPlanner roster={roster} />);
     const slot = await screen.findByRole('button', { name: `Add shift for Carlos Chef on ${formatDate('2026-10-09')}` });
 
@@ -824,7 +824,7 @@ describe('ShiftPlanner', () => {
     // Arrange
     pinNow();
     vi.mocked(staffApi.shifts).mockResolvedValue({ shifts: [makeShift()] } as never);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ShiftPlanner roster={roster} />);
     const [chip] = await screen.findAllByRole('button', { name: /edit will waiter's shift/i });
 
@@ -839,7 +839,7 @@ describe('ShiftPlanner', () => {
     // Arrange
     pinNow();
     vi.mocked(staffApi.shifts).mockResolvedValue({ shifts: [] } as never);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ShiftPlanner roster={roster} />);
     await screen.findByText(/0 shifts/);
 
@@ -859,7 +859,7 @@ describe('ShiftPlanner', () => {
     // Arrange
     pinNow();
     vi.mocked(staffApi.shifts).mockResolvedValue({ shifts: [] } as never);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ShiftPlanner roster={roster} />);
     await screen.findByText(/0 shifts/);
 

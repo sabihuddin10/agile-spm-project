@@ -22,7 +22,7 @@ function makeInvoice(overrides: Partial<Invoice> = {}): Invoice {
 describe('RefundDialog', () => {
   it('requires a reason of at least 3 characters', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<RefundDialog invoice={makeInvoice()} onClose={vi.fn()} onUpdated={vi.fn()} />);
 
     // Act
@@ -36,7 +36,7 @@ describe('RefundDialog', () => {
 
   it('rejects an amount above what remains refundable', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<RefundDialog invoice={makeInvoice({ total: 50, refundedAmount: 40 })} onClose={vi.fn()} onUpdated={vi.fn()} />);
 
     // Act
@@ -54,7 +54,7 @@ describe('RefundDialog', () => {
     const onClose = vi.fn();
     const refunded = makeInvoice({ paymentStatus: 'refunded', refundedAmount: 50 });
     vi.mocked(billingApi.refund).mockResolvedValue({ invoice: refunded });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<RefundDialog invoice={makeInvoice()} onClose={onClose} onUpdated={vi.fn()} />);
 
     // Act
@@ -70,7 +70,7 @@ describe('RefundDialog', () => {
     // Arrange
     const updated = makeInvoice({ refundedAmount: 15 });
     vi.mocked(billingApi.refund).mockResolvedValue({ invoice: updated });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<RefundDialog invoice={makeInvoice()} onClose={vi.fn()} onUpdated={vi.fn()} />);
 
     // Act

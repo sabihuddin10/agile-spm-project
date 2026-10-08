@@ -153,7 +153,7 @@ describe('QtyStepper', () => {
     // Arrange
     const onIncrement = vi.fn();
     const onDecrement = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<QtyStepper value={2} onIncrement={onIncrement} onDecrement={onDecrement} itemName="Pizza" />);
 
     // Act
@@ -231,7 +231,7 @@ describe('OrderPlaced', () => {
   it('calls onDone from both the "Done" button and the tracking link', async () => {
     // Arrange
     const onDone = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<OrderPlaced order={makeOrder()} onDone={onDone} />);
 
     // Act
@@ -271,7 +271,7 @@ describe('cart-lines', () => {
     it('calls onQty with the line key and delta when the stepper is used', async () => {
       // Arrange
       const onQty = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<CartLines lines={[makeLine({ key: 'line_1', qty: 2 })]} onQty={onQty} />);
 
       // Act
@@ -284,7 +284,7 @@ describe('cart-lines', () => {
     it('flags an unavailable line and removes it on request', async () => {
       // Arrange
       const onRemove = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<CartLines lines={[makeLine({ key: 'line_1' })]} onQty={vi.fn()} onRemove={onRemove} flagged={['line_1']} />);
       expect(screen.getByText(/No longer available/)).toBeInTheDocument();
 
@@ -320,7 +320,7 @@ describe('ItemOptionsModal', () => {
   it('adds the default selection and quantity 1 to the order by default', async () => {
     // Arrange
     const onAdd = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ItemOptionsModal item={makeItem()} conflicts={[]} onAdd={onAdd} onClose={vi.fn()} />);
 
     // Act
@@ -332,7 +332,7 @@ describe('ItemOptionsModal', () => {
 
   it('increases quantity and reflects it in the Add button total', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ItemOptionsModal item={makeItem()} conflicts={[]} onAdd={vi.fn()} onClose={vi.fn()} />);
 
     // Act
@@ -345,7 +345,7 @@ describe('ItemOptionsModal', () => {
   it('calls onClose when Cancel is clicked', async () => {
     // Arrange
     const onClose = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ItemOptionsModal item={makeItem()} conflicts={[]} onAdd={vi.fn()} onClose={onClose} />);
 
     // Act
@@ -378,7 +378,7 @@ describe('CheckoutForm', () => {
     // Arrange
     mockCart();
     mockLoads();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<CheckoutForm onBack={vi.fn()} onPlaced={vi.fn()} />);
     await screen.findByText(/Estimated total|Tax and charges/);
 
@@ -398,7 +398,7 @@ describe('CheckoutForm', () => {
     mockCart({ clear });
     const onPlaced = vi.fn();
     vi.mocked(orderApi.create).mockResolvedValue({ order: makeOrder() });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const listener = vi.fn();
     window.addEventListener(ORDER_PLACED_EVENT, listener);
     render(<CheckoutForm onBack={vi.fn()} onPlaced={onPlaced} />);
@@ -422,7 +422,7 @@ describe('CheckoutForm', () => {
     vi.mocked(orderApi.create).mockRejectedValue(
       new ApiError('Margherita Pizza is no longer available', 409, { error: 'Margherita Pizza is no longer available' }),
     );
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<CheckoutForm onBack={vi.fn()} onPlaced={vi.fn()} />);
     await screen.findByText(/Estimated total|Tax and charges/);
 
@@ -438,7 +438,7 @@ describe('CheckoutForm', () => {
     // Arrange
     mockCart({ subtotal: 100 });
     mockLoads();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<CheckoutForm onBack={vi.fn()} onPlaced={vi.fn()} />);
     await screen.findByText('Estimated total');
 
@@ -455,7 +455,7 @@ describe('CheckoutForm', () => {
     mockCart();
     mockLoads();
     const onBack = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<CheckoutForm onBack={onBack} onPlaced={vi.fn()} />);
     await screen.findByText(/Estimated total|Tax and charges/);
 
