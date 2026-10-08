@@ -14,7 +14,7 @@
 
 export const MODULES = [
   'health', 'auth', 'customers', 'menu', 'orders', 'billing', 'tables',
-  'reservations', 'inventory', 'staff', 'analytics', 'notifications', 'settings',
+  'reservations', 'inventory', 'staff', 'attendance', 'workforce', 'analytics', 'notifications', 'settings',
 ];
 
 export const MUTATING_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
@@ -79,7 +79,31 @@ const SHIFT = {
 const SETTINGS = {
   restaurantName: 'Restaurant name', address: 'Street address', taxRate: 0.1, serviceChargeRate: 0.05, pointValue: 0.1,
   kitchenDelayMinutes: 15, reservationDurationMinutes: 90, reservationGraceMinutes: 15, openingHour: 12, closingHour: 22,
+  lateGraceMinutes: 5, latePenalty: 5, autoBreakMinutes: 60, autoBreakAfterHours: 6,
 };
+const SESSION = {
+  id: 'att_40', userId: 'usr_12', date: '2026-10-09', clockIn: '2026-10-09T16:58:00.000Z', clockOut: null,
+  breaks: [{ start: '2026-10-09T19:30:00.000Z', end: '2026-10-09T20:00:00.000Z' }], autoBreakMinutes: 0, shiftId: 'shf_9',
+  late: false, lateMinutes: 0, paidMinutes: 182,
+};
+const MY_STATUS = { state: 'working', since: '2026-10-09T20:00:00.000Z', session: SESSION, todayShift: { start: '17:00', end: '23:00' } };
+const SUMMARY = {
+  scheduledMinutes: 2160, workedMinutes: 1990, breakMinutes: 150, paidMinutes: 1840, shifts: 6, shiftsWorked: 5, shiftsMissed: 1,
+  lateCount: 1, lateMinutes: 12, onTimeRate: 0.8, attendanceRate: 0.833,
+};
+const PAY = {
+  month: '2026-10', hourlyWage: 12, paidHours: 30.67, base: 368.04, tips: 64.5, bonuses: [{ id: 'adj_3', amount: 25, reason: 'Birthday', date: '2026-10-04' }],
+  bonusTotal: 25, latePenalties: [{ date: '2026-10-02', minutes: 12, amount: 5 }], latePenaltyTotal: 5, net: 452.54, estimated: true,
+};
+const POINT = { key: '2026-10-09', label: '9 Oct', scheduledMinutes: 360, paidMinutes: 182, breakMinutes: 30, lateCount: 0 };
+const ADJUSTMENT = { id: 'adj_3', userId: 'usr_12', amount: 25, reason: 'Birthday', date: '2026-10-04', createdBy: 'usr_1', createdAt: '2026-10-04T09:00:00.000Z' };
+const RANGE = { from: opt('YYYY-MM-DD', 'Default: first day of the month of "to"'), to: opt('YYYY-MM-DD', 'Default: today; at most a year after "from"') };
+const ANALYTICS = (pay) => ok({
+  user: { id: 'usr_12', name: 'Jamie Rivera', role: 'waiter' }, range: { from: '2026-10-01', to: '2026-10-09' }, summary: SUMMARY,
+  series: { day: [POINT], week: [{ ...POINT, key: '2026-W41', label: 'W41' }], month: [{ ...POINT, key: '2026-10', label: 'Oct 2026' }], hour: [{ ...POINT, key: '17', label: '17:00' }] },
+  sessions: [SESSION], shifts: [{ id: 'shf_9', date: '2026-10-09', start: '17:00', end: '23:00', status: 'completed' }], pay,
+});
+const CLOCK_ERRORS = ['409 invalid transition (already clocked in, not clocked in, already on a break, not on a break)'];
 const DELETED = (id) => ok({ deleted: true, id });
 const MODIFIER_GROUPS = opt('array', 'Modifier groups: [{ name, type: single|multi, options: [{ label, priceDelta }] }]');
 const PREFERENCES = opt('object', '{ dietary: string[], allergies: string[] }');
@@ -569,6 +593,76 @@ export const ROUTE_DOCS = {
     response: ok({ from: '2026-09-09', to: '2026-10-08', staff: [{ userId: 'usr_12', name: 'Jamie Rivera', role: 'waiter', active: true, ordersTaken: 120, ordersServed: 110, revenueHandled: 5400.5, tips: 380, itemsPrepared: 0, avgPrepMinutes: null, shiftsCompleted: 18, shiftsMissed: 1, hoursWorked: 108 }] }),
   },
 
+  /* ---- attendance */
+  'GET /api/attendance/me': {
+    summary: 'The caller\'s clock status: off / working / on break, since when, the current (or today\'s latest) session and today\'s shift.',
+    response: ok(MY_STATUS),
+  },
+  'POST /api/attendance/clock-in': {
+    summary: 'Clock in. Matched to today\'s shift; later than start + lateGraceMinutes is late.',
+    response: ok({ ...MY_STATUS, since: SESSION.clockIn, session: { ...SESSION, breaks: [] } }),
+    errors: CLOCK_ERRORS,
+  },
+  'POST /api/attendance/clock-out': {
+    summary: 'Clock out (an open break ends with it).',
+    response: ok({ ...MY_STATUS, state: 'off', since: '2026-10-09T23:02:00.000Z', session: { ...SESSION, clockOut: '2026-10-09T23:02:00.000Z' } }),
+    errors: CLOCK_ERRORS,
+  },
+  'POST /api/attendance/break/start': {
+    summary: 'Start an unpaid break.',
+    response: ok({ ...MY_STATUS, state: 'on_break', since: '2026-10-09T19:30:00.000Z' }),
+    errors: CLOCK_ERRORS,
+  },
+  'POST /api/attendance/break/end': {
+    summary: 'End the current break.',
+    response: ok(MY_STATUS),
+    errors: CLOCK_ERRORS,
+  },
+  'GET /api/attendance/presence': {
+    summary: 'Who is working, on a break or off right now, with today\'s shift.',
+    access: 'Waiters see waiters, chefs see chefs, managers see managers, waiters and chefs, the admin sees all staff.',
+    response: ok({ people: [{ userId: 'usr_12', name: 'Jamie Rivera', role: 'waiter', state: 'working', since: '2026-10-09T16:58:00.000Z', todayShift: { start: '17:00', end: '23:00' } }] }),
+  },
+
+  /* ---- workforce */
+  'GET /api/workforce/me': {
+    summary: 'The caller\'s attendance analytics (summary, day/week/month/hour series, sessions, shifts) and pay estimate for the month of "to".',
+    query: RANGE,
+    response: ANALYTICS(PAY),
+    errors: ['400 invalid date / "from" after "to" / range over a year'],
+  },
+  'GET /api/workforce/users/:id': {
+    summary: 'One staff member\'s attendance analytics, with pay when the caller may see it.',
+    access: 'Yourself or the admin: everything including pay. Managers: waiters and chefs only, with pay null. Others get 403.',
+    query: RANGE,
+    response: ANALYTICS(null),
+    errors: ['403 not allowed to see this person', '404 staff member not found', '400 invalid range'],
+  },
+  'GET /api/workforce/overview': {
+    summary: 'Month overview: one row per visible staff member (state, attendance summary, pay) and totals.',
+    access: 'Admin: all staff with pay and payroll. Managers: waiters and chefs, pay and payroll null.',
+    query: { month: opt('YYYY-MM', 'Default: this month') },
+    response: ok({ month: '2026-10', rows: [{ user: { id: 'usr_12', name: 'Jamie Rivera', role: 'waiter', active: true }, state: 'working', summary: SUMMARY, pay: PAY }], totals: { paidMinutes: 1840, lateCount: 1, payroll: 452.54 } }),
+    errors: ['400 month not YYYY-MM'],
+  },
+  'PUT /api/workforce/users/:id/wage': {
+    summary: 'Set a staff member\'s hourly wage.',
+    body: { hourlyWage: req('number', 'Above 0, at most 1000') },
+    response: ok({ hourlyWage: 13.5 }),
+    errors: ['400 invalid wage', '404 staff member not found'],
+  },
+  'POST /api/workforce/users/:id/adjustments': {
+    summary: 'Add a bonus (or, with a negative amount, a deduction) to a staff member\'s pay.',
+    body: { amount: req('number', 'Non-zero; negative for a deduction'), reason: req('string', 'Up to 200 characters'), date: opt('YYYY-MM-DD', 'Default: today') },
+    response: ok({ adjustment: ADJUSTMENT }, 201),
+    errors: ['400 invalid amount / missing reason / invalid date', '404 staff member not found'],
+  },
+  'DELETE /api/workforce/users/:id/adjustments/:adjId': {
+    summary: 'Remove a bonus or deduction.',
+    response: DELETED('adj_3'),
+    errors: ['404 staff member or adjustment not found'],
+  },
+
   /* ---- analytics */
   'GET /api/analytics/summary': {
     summary: 'Today\'s headline numbers for the staff overview.',
@@ -613,6 +707,8 @@ export const ROUTE_DOCS = {
       restaurantName: opt('string'), address: opt('string'), taxRate: opt('number', '0-0.5'), serviceChargeRate: opt('number', '0-0.5'),
       pointValue: opt('number', '0-1'), kitchenDelayMinutes: opt('number', '1-240'), reservationDurationMinutes: opt('number', '30-300'),
       reservationGraceMinutes: opt('number', '0-120'), openingHour: opt('number', '0-23'), closingHour: opt('number', '1-24'),
+      lateGraceMinutes: opt('number', '0-60'), latePenalty: opt('number', '0-1000, deducted per late arrival'),
+      autoBreakMinutes: opt('number', '0-180'), autoBreakAfterHours: opt('number', '1-16'),
     },
     response: ok({ settings: SETTINGS }),
   },
