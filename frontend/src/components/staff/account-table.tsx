@@ -3,21 +3,24 @@
 import { useMemo, useState } from 'react';
 import type { Role, User } from '@/types';
 import { authApi } from '@/lib/api';
-import { can } from '@/lib/permissions';
+import { can, canAdministerAccount, canManageAccount } from '@/lib/permissions';
 import { errorMessage } from '@/lib/format';
 import { useAuth } from '@/context/auth-context';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useToast } from '@/components/ui/toast';
 import { ConfirmDialog } from '@/components/staff/confirm-dialog';
+import { CredentialsModal } from '@/components/staff/credentials-modal';
+import { EditAccountModal } from '@/components/staff/edit-account-modal';
 import { ROLE_META, ROLE_ORDER, initials, roleRank } from '@/components/staff/role-meta';
 
 const article = (word: string) => (/^[aeiou]/i.test(word) ? 'an' : 'a');
 
 /**
- * List of user accounts with admin controls: change role (US9.2), suspend /
- * reactivate and remove (US9.4). Managers see roles and status read-only. The
- * signed-in admin cannot change, suspend or remove their own account.
+ * List of user accounts. Admins change roles (US9.2), suspend / reactivate and
+ * remove (US9.4) accounts below admin. Managers and admins edit details and
+ * reset passwords on staff strictly below their own rank (managers: waiters and
+ * chefs). Nobody manages their own account here — that is My account.
  */
 export function AccountTable({
   users,
@@ -38,6 +41,9 @@ export function AccountTable({
 
   const [busyId, setBusyId] = useState<string | null>(null);
   const [removing, setRemoving] = useState<User | null>(null);
+  const [editing, setEditing] = useState<User | null>(null);
+  const [resetting, setResetting] = useState<User | null>(null);
+  const [issued, setIssued] = useState<{ user: User; tempPassword: string } | null>(null);
   const [q, setQ] = useState('');
   const [roleFilter, setRoleFilter] = useState<Role | ''>('');
 
@@ -101,6 +107,26 @@ export function AccountTable({
     }
   }
 
+  async function confirmReset() {
+    if (!resetting) return;
+    setBusyId(resetting.id);
+    try {
+      const { user: updated, tempPassword } = await authApi.resetPassword(resetting.id);
+      setResetting(null);
+      setIssued({ user: updated, tempPassword });
+      await onChanged();
+    } catch (err) {
+      toast(errorMessage(err), 'error');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function detailsSaved() {
+    setEditing(null);
+    await onChanged();
+  }
+
   return (
     <div>
       {searchable ? (
@@ -136,7 +162,10 @@ export function AccountTable({
           {visible.map((u) => {
             const isSelf = u.id === me?.id;
             const busy = busyId === u.id;
-            const selfHint = isSelf ? 'You cannot change your own account here' : undefined;
+            const selfHint = isSelf ? 'Manage your own account from My account' : undefined;
+            // Admin controls show (disabled) on your own row, and not at all on another admin.
+            const showAdminControls = isSelf || canAdministerAccount(me, u);
+            const manageable = canManageAccount(me, u);
             return (
               <li
                 key={u.id}
@@ -161,7 +190,7 @@ export function AccountTable({
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 pl-12 sm:justify-end sm:pl-0">
-                  {canAssign ? (
+                  {canAssign && showAdminControls ? (
                     <select
                       className="input w-auto !py-1.5 text-xs"
                       aria-label={`Role for ${u.name}`}
@@ -182,7 +211,30 @@ export function AccountTable({
 
                   <Badge tone={u.active ? 'emerald' : 'red'}>{u.active ? 'Active' : 'Suspended'}</Badge>
 
-                  {canSuspend ? (
+                  {manageable ? (
+                    <>
+                      <button
+                        type="button"
+                        className="btn-secondary !px-3 !py-1.5 text-xs"
+                        onClick={() => setEditing(u)}
+                        disabled={busy}
+                        aria-label={`Edit details for ${u.name}`}
+                      >
+                        Edit details
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-secondary !px-3 !py-1.5 text-xs"
+                        onClick={() => setResetting(u)}
+                        disabled={busy}
+                        aria-label={`Reset password for ${u.name}`}
+                      >
+                        Reset password
+                      </button>
+                    </>
+                  ) : null}
+
+                  {canSuspend && showAdminControls ? (
                     <>
                       <button
                         type="button"
@@ -226,6 +278,33 @@ export function AccountTable({
           <p>Past orders and shifts stay in the records. To pause access temporarily, suspend the account instead.</p>
         </ConfirmDialog>
       ) : null}
+
+      {resetting ? (
+        <ConfirmDialog
+          title={`Reset ${resetting.name}'s password?`}
+          confirmLabel="Reset password"
+          danger={false}
+          busy={busyId === resetting.id}
+          onConfirm={confirmReset}
+          onCancel={() => setResetting(null)}
+        >
+          <p>
+            A temporary password is generated and shown to you once. {resetting.name} is signed out on every device and
+            asked to set their own password after signing in.
+          </p>
+        </ConfirmDialog>
+      ) : null}
+
+      {issued ? (
+        <CredentialsModal
+          variant="reset"
+          user={issued.user}
+          tempPassword={issued.tempPassword}
+          onClose={() => setIssued(null)}
+        />
+      ) : null}
+
+      {editing ? <EditAccountModal user={editing} onClose={() => setEditing(null)} onSaved={detailsSaved} /> : null}
     </div>
   );
 }

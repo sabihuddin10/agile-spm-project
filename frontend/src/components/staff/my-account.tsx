@@ -1,0 +1,71 @@
+'use client';
+
+import type { StaffRole } from '@/types';
+import { isStaff } from '@/lib/permissions';
+import { useAuth } from '@/context/auth-context';
+import { Badge } from '@/components/ui/badge';
+import { PageHeader } from '@/components/ui/page-header';
+import { AccountProfileForm } from '@/components/staff/account-profile-form';
+import { ChangePasswordForm } from '@/components/staff/change-password-form';
+import { RoleCapabilities } from '@/components/staff/role-capabilities';
+import { ROLE_META, initials } from '@/components/staff/role-meta';
+
+function memberSince(iso: string | undefined): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+/** My account — any staff member's own profile, password and role summary. */
+export function MyAccount() {
+  const { user } = useAuth();
+  if (!user || !isStaff(user.role)) return null;
+
+  const role = user.role as StaffRole;
+  const since = memberSince(user.createdAt);
+
+  return (
+    <>
+      <PageHeader title="My account" subtitle="Your details, your password and what your role gives you access to." />
+
+      {user.mustChangePassword ? (
+        <div role="alert" className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <p className="font-medium">You&apos;re signed in with a temporary password.</p>
+          <p className="mt-0.5">
+            Set your own password below before you carry on.{' '}
+            <a href="#change-password" className="font-medium underline underline-offset-2 hover:text-amber-900">
+              Go to password
+            </a>
+          </p>
+        </div>
+      ) : null}
+
+      <div className="card mb-5 flex flex-col gap-4 sm:flex-row sm:items-center">
+        <span
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-50 text-base font-bold text-brand-700"
+          aria-hidden="true"
+        >
+          {initials(user.name)}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-lg font-semibold text-stone-900">{user.name}</p>
+          <p className="truncate text-sm text-stone-500">{user.email}</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-xs text-stone-500">
+          <Badge tone={ROLE_META[role].tone}>{ROLE_META[role].label}</Badge>
+          <Badge tone={user.active ? 'emerald' : 'red'}>{user.active ? 'Active' : 'Suspended'}</Badge>
+          {since ? <span>Member since {since}</span> : null}
+        </div>
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-3 lg:items-start">
+        <div className="space-y-5 lg:col-span-2">
+          <AccountProfileForm key={user.id} user={user} />
+          <ChangePasswordForm id="change-password" />
+        </div>
+        <RoleCapabilities role={role} />
+      </div>
+    </>
+  );
+}

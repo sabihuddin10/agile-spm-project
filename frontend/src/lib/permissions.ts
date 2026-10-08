@@ -1,4 +1,4 @@
-import type { Role } from '@/types';
+import type { Role, StaffRole, User } from '@/types';
 
 /**
  * Single source of truth for which roles may open each staff section. Mirrors
@@ -20,6 +20,7 @@ export const SECTION_ROLES = {
   schedule: STAFF_ROLES,
   analytics: ['manager', 'admin'],
   settings: ['manager', 'admin'],
+  account: STAFF_ROLES,
 } satisfies Record<string, Role[]>;
 
 export type Section = keyof typeof SECTION_ROLES;
@@ -58,3 +59,38 @@ export const can = {
   suspendStaff: anyOf('admin'),
   editSettings: anyOf('manager', 'admin'),
 };
+
+/**
+ * Staff hierarchy for account management: admin > manager > chef = waiter.
+ * Customers sit outside it and manage their own account.
+ */
+export const ROLE_RANK: Record<StaffRole, number> = { admin: 3, manager: 2, chef: 1, waiter: 1 };
+
+type Account = Pick<User, 'id' | 'role'>;
+
+function rankOf(role: Role | null | undefined): number {
+  return role && role !== 'customer' ? ROLE_RANK[role] : 0;
+}
+
+/**
+ * Whether `actor` may edit `target`'s details or reset their password: the actor
+ * is a manager or admin, the target is another staff account, and the target's
+ * rank is strictly lower. Your own account is self-service (My account).
+ */
+export function canManageAccount(actor: Account | null | undefined, target: Account | null | undefined): boolean {
+  if (!actor || !target || actor.id === target.id) return false;
+  if (actor.role !== 'manager' && actor.role !== 'admin') return false;
+  if (!isStaff(target.role)) return false;
+  return rankOf(target.role) < rankOf(actor.role);
+}
+
+/**
+ * Whether `actor` may change `target`'s role, suspend or remove them: admin only,
+ * never themselves and never another admin. Customer accounts rank below every
+ * staff role, so an admin can still promote a customer.
+ */
+export function canAdministerAccount(actor: Account | null | undefined, target: Account | null | undefined): boolean {
+  if (!actor || !target || actor.id === target.id) return false;
+  if (!can.assignRoles(actor.role)) return false;
+  return rankOf(target.role) < rankOf(actor.role);
+}
