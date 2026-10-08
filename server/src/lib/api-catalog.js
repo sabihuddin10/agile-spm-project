@@ -138,8 +138,8 @@ export const ROUTE_DOCS = {
     errors: ['400 blank name / invalid email or phone / wrong or missing current password', '409 email already in use'],
   },
   'POST /api/auth/me/password': {
-    summary: 'Change your own password. Your other sessions are signed out; use the returned token for this one.',
-    body: { currentPassword: req('string'), newPassword: req('string', 'At least 6 characters, different from the current one') },
+    summary: 'Change your own password. Your other sessions are signed out; use the returned token for this one. Admins do not need their current password.',
+    body: { currentPassword: opt('string', 'Required for everyone except admins'), newPassword: req('string', 'At least 6 characters, different from the current one') },
     response: ok({ user: USER, token: '<jwt>' }),
     errors: ['400 wrong current password / too short / unchanged'],
   },
@@ -155,6 +155,13 @@ export const ROUTE_DOCS = {
     access: 'Handler checks rank: admin > manager > chef = waiter, strictly lower only, never yourself.',
     response: ok({ user: { ...USER, mustChangePassword: true }, tempPassword: '<generated>' }),
     errors: ['403 account is not below your rank', '404 user not found'],
+  },
+  'POST /api/auth/users/:id/password': {
+    summary: 'An admin sets a new password for a staff account below them, without the old one. Their sessions are signed out.',
+    access: 'Admin only, and only for accounts below admin rank (not other admins).',
+    body: { newPassword: req('string', 'At least 6 characters') },
+    response: ok({ user: USER }),
+    errors: ['400 password too short', '403 another admin', '404 user not found'],
   },
   'GET /api/auth/roles': {
     summary: 'The five stakeholder roles.',
