@@ -21,9 +21,13 @@ Tests are organized **module-wise**, mirroring the source directory structure
 | 4 | Frontend — high-risk business components | 2 | 10 | 0 | 12 |
 | 5 | Frontend — supporting/presentational components | 6 | 0 | 0 | 6 |
 | 6 | Frontend — app pages | 21 | 0 | 0 | 21 |
+| 7 | Backend — remaining route & persistence coverage | 0 | 0 | 5 | 5 |
+| 8 | Frontend — remaining component todos (closes Phase 4) | 0 | 0 | 6 | 6 |
 
-"Partial" (Phase 4) = the module has one file with a real test (`menu-item-card`,
-`profile-editor`) but other files in that same module folder are still `test.todo`.
+Phases 7 and 8 count **parts** (one branch each), not modules.
+
+"Partial" (Phase 4) = the module has some files with real tests but other files in that
+same module folder are still `test.todo`. Phase 8 finishes those files.
 
 (Phase 4/5 "modules" count by `components/<folder>`; several folders have more than
 one file, each file gets its own `describe`/`test.todo` block within that module's test file.)
@@ -57,12 +61,13 @@ One file per route module in `server/src/routes/`, named after the user stories 
 | Analytics | `test/routes/analytics.test.js` | US10.1–US10.6 | `[x]` |
 | Order pricing/splitting math | `test/lib/order-math.test.js` | US2.3, US5.2, US5.3 | `[x]` |
 | Snapshot persistence | `test/data/snapshot.test.js` | whole-store round-trip | `[x]` |
+| Request persistence (Neon) | `test/data/persist.test.js` | seed, save, read-only, 5xx rollback, reload newer version, failed save — against a fake pool | `[x]` |
 
-Nothing left in this phase.
+Nothing left in this phase. Endpoints these files don't reach yet are listed in Phase 7.
 
 ---
 
-## Phase 2 — Backend: lib & middleware unit tests — `[ ]` not started
+## Phase 2 — Backend: lib & middleware unit tests — `[x]` done
 
 These files currently have **no dedicated unit tests** — they're only exercised indirectly
 through the Phase 1 route tests. Isolated unit tests would pin down their edge cases
@@ -98,6 +103,8 @@ Pure logic and shared state — highest value-per-test, no rendering needed (exc
 
 Components with real business logic, money/stock correctness, or multi-step flows — prioritize these
 over presentational ones.
+
+The `[ ]` files left in this table (47 `test.todo` entries across 10 modules) are scheduled in **Phase 8**.
 
 | Module | Files (✅ = already has a real test) | Functionality to cover | Status |
 |---|---|---|---|
@@ -164,13 +171,98 @@ logic lives in the components they render.
 
 ---
 
+## Phase 7 — Backend: remaining route & persistence coverage — `[ ]` not started
+
+An endpoint-by-endpoint audit of `server/src/routes/` found these with no test reaching them.
+New cases go into the existing `test/routes/<module>.test.js` file for that module; the two
+modules without a file yet (notifications, settings) get one.
+
+### Part 1 — data privacy and public reads — branch `feat/route-privacy-tests`
+
+| Endpoint | Test file | Functionality to cover | Status |
+|---|---|---|---|
+| `GET /api/orders/mine` | `routes/orders.test.js` | a customer sees only orders linked to their own customer record, newest first, at most 50; staff get an empty list | `[ ]` |
+| `GET /api/reservations/mine` | `routes/reservations.test.js` | 401 without a token; a customer sees only their own bookings, newest first; staff get an empty list | `[ ]` |
+| `GET /api/tables/public` | `routes/tables.test.js` | works without a token; each table exposes only `id`, `number`, `seats`, `zone` (no status, holds or orders) | `[ ]` |
+| `GET /api/auth/me` | `routes/auth.test.js` | returns the signed-in user without the password hash; 401 without a token | `[ ]` |
+| `GET /api/auth/roles` | `routes/auth.test.js` | lists the five stakeholder roles | `[ ]` |
+| `GET /api/menu/items` | `routes/menu.test.js` | recipe ingredient lists are included for staff and **omitted** for customers and anonymous callers | `[ ]` |
+
+### Part 2 — destructive actions — branch `feat/route-destructive-tests`
+
+| Endpoint | Test file | Functionality to cover | Status |
+|---|---|---|---|
+| `DELETE /api/tables/:id` | `routes/tables.test.js` | manager deletes a free table; 409 when the table has an active order; 404 for an unknown id; waiter is refused | `[ ]` |
+| `DELETE /api/customers/:id` | `routes/customers.test.js` | staff delete a customer; 404 for an unknown id; a customer is refused. **Decide first:** deleting a customer with orders is currently allowed and leaves those orders pointing at a missing customer — pin the intended behaviour (block with 409, or allow) | `[ ]` |
+| `DELETE /api/billing/:id/split` | `routes/billing.test.js` | undoing a split restores the single-bill invoice; 409 once any share is paid or the bill is paid | `[ ]` |
+| `DELETE /api/staff/shifts/:id` | `routes/staff.test.js` | manager deletes a shift and it leaves the roster; 404 for an unknown id; waiter is refused | `[ ]` |
+
+### Part 3 — notifications & settings modules — branch `feat/notifications-settings-route-tests`
+
+| Module | File → target test | Functionality to cover | Status |
+|---|---|---|---|
+| Notifications | `src/routes/notifications.js` → `test/routes/notifications.test.js` | `GET` returns only the caller's notifications (max 30) with the right `unreadCount`; `POST /:id/read` marks one read and lowers the count; 404 for someone else's notification; `POST /read-all` clears the count for the caller only | `[ ]` |
+| Settings | `src/routes/settings.js` → `test/routes/settings.test.js` | `GET` is public and includes `timeSlots`; `PATCH` by manager/admin saves; waiter/customer refused; each numeric field rejected outside its range; blank `restaurantName`/`address` rejected; opening hour must be before closing hour; a rejected PATCH changes nothing | `[ ]` |
+
+### Part 4 — staff, menu & inventory gaps — branch `feat/staff-menu-inventory-route-tests`
+
+| Endpoint | Test file | Functionality to cover | Status |
+|---|---|---|---|
+| `GET /api/staff/applications` | `routes/staff.test.js` | manager-only, newest first, `?status=` filter, `decidedByName` filled once decided | `[ ]` |
+| `POST /api/staff/applications/:id/reject` | `routes/staff.test.js` | pending → rejected with `decidedBy`; 409 when already decided; 404 for an unknown id | `[ ]` |
+| `PATCH /api/staff/shifts/:id` | `routes/staff.test.js` | moves/re-times a shift without clashing with itself; rejects an invalid status; rejects an inverted time or a clash with another shift (same validation as create); 404 for an unknown id | `[ ]` |
+| `PATCH /api/menu/categories/:id` | `routes/menu.test.js` | rename, re-sort, toggle active; blank name 400; duplicate name (case-insensitive) 409 | `[ ]` |
+| `GET /api/inventory/purchase-orders` | `routes/inventory.test.js` | manager-only, newest first, includes a just-raised order | `[ ]` |
+
+### Part 5 — persistence wiring — branch `feat/persistence-wiring-tests`
+
+| Module | File → target test | Functionality to cover | Status |
+|---|---|---|---|
+| App wiring | `src/app.js` → `test/app.test.js` | persistence middleware is mounted when `DATABASE_URL` is set and skipped when it isn't (or `persistence: false`); `/api/health` never touches the database | `[ ]` |
+| DB helpers | `src/data/db.js` → `test/data/db.test.js` | `ensureTable` runs `CREATE TABLE` once and reuses the result; after a failure it retries on the next call (fake pool via `setPool`) | `[ ]` |
+
+Not in CI and needs a decision: `server/test-db/` (real Neon) only runs with a `DATABASE_URL`.
+Adding it to CI means storing a test-database URL as a GitHub secret.
+
+---
+
+## Phase 8 — Frontend: remaining component todos — `[ ]` not started
+
+Turns every remaining `test.todo` in `frontend/src/components/*/__tests__/` into real tests,
+in the same risk order Phase 4 used. Each module keeps its single existing test file.
+
+| Part | Branch | Module → files | Functionality to cover | Status |
+|---|---|---|---|---|
+| 1 | `feat/billing-remaining-component-tests` | billing → bill-list, bill-panel, receipt, split-dialog (4) | bill-list scope tabs and picking a bill; bill-panel assembles lines/tip/split/pay for one invoice; receipt shows a paid invoice's lines, totals and payment; split-dialog even vs by-items split, rejects groups that don't cover every item | `[ ]` |
+| 2 | `feat/orders-remaining-component-tests` | orders → customer-lookup, edit-items-modal, kitchen-ticket, new-order-modal, order-card, order-editor, ready-ticket (7) | new-order builds a valid payload (table/type, items, modifiers); edit-items blocked once the order is no longer editable; kitchen ticket shows items, timers, allergy and rush flags; order-card status actions; customer-lookup finds or creates the customer | `[ ]` |
+| 3 | `feat/inventory-menu-remaining-component-tests` | inventory → ingredient-form, movements, purchase-orders, recipes-panel, reorder-form, stock-table (6); menu → cart-drawer, menu-item-form, menu-item-list, public-menu (4) | ingredient-form validation; reorder-form suggests the documented quantity and raises a PO; receiving a PO; stock-table health badges and filters; cart-drawer totals and line removal; menu-item-form price/required-field/modifier validation; menu-item-list search and availability toggle | `[ ]` |
+| 4 | `feat/floor-guest-remaining-component-tests` | tables → floor-legend, table-form, table-tile (3); reservations → new-booking-form, reservation-card (2); customers → customer-detail, customer-form (2); account → active-order-card, my-orders, my-reservations (3) | table-form rejects a duplicate number; table-tile status colour/label and active orders; booking form validation; reservation-card status actions; customer-form email/required validation; my-orders / my-reservations show only the signed-in customer's records | `[ ]` |
+| 5 | `feat/staff-remaining-component-tests` | staff → account-table, all-accounts-panel, applications-panel, careers-form, my-schedule, performance-panel, shift-planner, team-panel (8) | approve/reject an application; role change and suspend in account-table; careers-form validation and submit; shift-planner opens ShiftForm for a slot; my-schedule lists own upcoming shifts; team-panel groups by role | `[ ]` |
+| 6 | `feat/analytics-remaining-component-tests` | analytics → analytics-card, analytics-dashboard, peak-hours-chart, reservation-stats, revenue-trend-chart, table-utilization, top-dishes, chart-setup (8) | top-dishes ranks by qty/revenue; table-utilization and reservation-stats figures; charts render from dashboard data (Chart.js mocked); dashboard composes the cards. `chart-setup` is a side-effect module — replace its todo with a one-line import smoke test or remove it with a note | `[ ]` |
+
+When Phase 8 is done, every Phase 4 row becomes `[x]` and the frontend has no `test.todo` left.
+
+---
+
+## Branch & merge workflow (every part of every phase)
+
+The same flow used for Phases 2–6 (see `git log --merges development`):
+
+1. Branch from an up-to-date `development`: `git switch development && git pull && git switch -c <branch>`.
+2. Write the tests (AAA comments), tick the boxes in this file in the same commit.
+3. Commit as `Add <area> tests (Phase N, part M)` — the wording past parts used.
+4. Run the full CI gate locally (`CLAUDE.md` → *CI — Definition of Done*). The frontend tests need
+   Node 22, the version CI uses; on Node 20 they fail to start.
+5. Merge the branch into `development` (`Merge branch '<branch>' into development`) and push.
+6. Once CI on `development` is green, merge `development` into `main` and push.
+
 ## Suggested execution order
 
-1. **Phase 2** (backend lib/middleware) — pure functions, fast to write, de-risks the logic every route test already depends on indirectly.
-2. **Phase 3** (frontend lib/context) — same reasoning on the frontend; `permissions.ts` and `cart-context.tsx` gate/compute things many components rely on.
-3. **Phase 4** (high-risk components) — billing → orders → inventory → menu (remaining files) → reservations/tables → customers/staff → analytics → auth/booking → account (remaining files). Money, stock, and order-lifecycle correctness first.
-4. **Phase 5** (supporting components) — lower risk, fill in after Phase 4.
-5. **Phase 6** (app pages) — thin wrappers, do last; add the two missing root scaffolds (`app/page.tsx`, `app/layout.tsx`) first.
+Phases 0–6 are done. Next:
+
+1. **Phase 7, parts 1–2** — privacy and destructive endpoints carry the most risk per test.
+2. **Phase 7, parts 3–5** — the two modules with no test file, then the smaller gaps and persistence wiring.
+3. **Phase 8, parts 1–6** — billing → orders → inventory/menu → floor/guest → staff → analytics.
 
 ## Keeping this plan current
 
