@@ -22,7 +22,7 @@ Tests are organized **module-wise**, mirroring the source directory structure
 | 5 | Frontend — supporting/presentational components | 6 | 0 | 0 | 6 |
 | 6 | Frontend — app pages | 21 | 0 | 0 | 21 |
 | 7 | Backend — remaining route & persistence coverage | 5 | 0 | 0 | 5 |
-| 8 | Frontend — remaining component todos (closes Phase 4) | 0 | 0 | 6 | 6 |
+| 8 | Frontend — remaining component todos (closes Phase 4) | 1 | 0 | 5 | 6 |
 
 Phases 7 and 8 count **parts** (one branch each), not modules.
 
@@ -226,7 +226,7 @@ Adding it to CI means storing a test-database URL as a GitHub secret.
 
 ---
 
-## Phase 8 — Frontend: remaining component todos — `[ ]` not started
+## Phase 8 — Frontend: remaining component todos — `[ ]` in progress
 
 Turns every remaining `test.todo` in `frontend/src/components/*/__tests__/` into real tests,
 in the same risk order Phase 4 used. Each module keeps its single existing test file.
