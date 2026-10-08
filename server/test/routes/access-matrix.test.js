@@ -35,7 +35,11 @@ const MATRIX = [
   ['GET', '/notifications', SIGNED_IN],
   ['POST', '/notifications/read-all', SIGNED_IN],
 
-  // Accounts
+  // Accounts — self-service, then rank-limited management (rank is checked in the handler)
+  ['PATCH', '/auth/me', STAFF, {}],
+  ['POST', '/auth/me/password', SIGNED_IN, {}],
+  ['PATCH', '/auth/users/usr_nope/profile', MANAGEMENT, {}],
+  ['POST', '/auth/users/usr_nope/reset-password', MANAGEMENT, {}],
   ['GET', '/auth/users', MANAGEMENT],
   ['PATCH', '/auth/users/usr_nope', ADMIN, {}],
   ['DELETE', '/auth/users/usr_nope', ADMIN],

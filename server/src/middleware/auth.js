@@ -9,6 +9,8 @@ function userFromRequest(req) {
   if (!payload) return { error: 'Invalid or expired token.' };
   const user = findUserById(payload.sub);
   if (!user || !user.active) return { error: 'User not found or deactivated.' };
+  // A password change or reset bumps the version, signing out older sessions.
+  if ((payload.tv ?? 0) !== (user.tokenVersion ?? 0)) return { error: 'Your session has ended. Please sign in again.' };
   return { user };
 }
 
