@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Customer } from '@/types';
 import { customerApi } from '@/lib/api';
 import { errorMessage } from '@/lib/format';
+import { can } from '@/lib/permissions';
+import { useAuth } from '@/context/auth-context';
 import { StaffLayout } from '@/components/layout/staff-layout';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card } from '@/components/ui/card';
@@ -23,11 +25,13 @@ import { CustomerDetail } from '@/components/customers/customer-detail';
 const SEARCH_DEBOUNCE_MS = 300;
 
 /**
- * Customer ledger (US1.1–US1.5): add/edit/delete customers, search and filter
+ * Customer ledger (US1.1–US1.5): add/edit customers (delete is manager/admin only), search and filter
  * (re-queried on every change, search debounced), order history and preferences.
  */
 export default function CustomersPage() {
   const toast = useToast();
+  const { user } = useAuth();
+  const canDelete = can.deleteCustomers(user?.role);
   const [customers, setCustomers] = useState<Customer[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<CustomerFilterValues>(EMPTY_FILTERS);
@@ -106,7 +110,7 @@ export default function CustomersPage() {
 
   async function remove() {
     if (!selected) return;
-    if (!window.confirm(`Delete ${selected.name}? Their past orders are kept, but the profile cannot be restored.`)) return;
+    if (!window.confirm(`Delete ${selected.name}? The profile cannot be restored. Customers with order history can't be deleted.`)) return;
     setDeleting(true);
     try {
       await customerApi.remove(selected.id);
@@ -170,7 +174,7 @@ export default function CustomersPage() {
               <CustomerDetail
                 customer={selected}
                 onEdit={openEdit}
-                onDelete={remove}
+                onDelete={canDelete ? remove : undefined}
                 onClose={() => setSelected(null)}
                 deleting={deleting}
               />

@@ -492,10 +492,34 @@ describe('ReorderForm', () => {
     await user.click(screen.getByRole('button', { name: 'Submit to supplier' }));
 
     // Assert
-    expect(confirm).toHaveBeenCalledWith('Send this order (1 lines, $20.00) to 1 supplier?');
+    expect(confirm).toHaveBeenCalledWith('Send this order (1 line, $20.00) to 1 supplier?');
     expect(inventoryApi.createPurchaseOrder).toHaveBeenCalledWith([{ inventoryId: 'inv_1', qty: 10 }], 'Deliver by Friday');
     await waitFor(() => expect(onSubmitted).toHaveBeenCalledWith(po));
     expect(toastFn).toHaveBeenCalledWith('PO-0009 sent to suppliers · $20.00.', 'success');
+  });
+
+  it('pluralises lines and suppliers in the confirm when there are several', async () => {
+    // Arrange
+    vi.mocked(inventoryApi.reorder).mockResolvedValue({
+      lines: [makeReorderLine(), makeReorderLine({ inventoryId: 'inv_2', name: 'Basil', supplier: 'Herb Farm' })],
+      estimatedTotal: 32,
+    });
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const user = userEvent.setup();
+    render(
+      <ReorderForm
+        inventory={[makeItem({ stock: 2 }), makeItem({ id: 'inv_2', name: 'Basil', stock: 2 })]}
+        onSubmitted={vi.fn()}
+      />,
+    );
+    await screen.findByLabelText('Order quantity for Basil');
+
+    // Act
+    await user.click(screen.getByRole('button', { name: 'Submit to supplier' }));
+
+    // Assert
+    expect(confirm).toHaveBeenCalledWith(expect.stringMatching(/^Send this order \(2 lines, \$[\d.]+\) to 2 suppliers\?$/));
+    expect(inventoryApi.createPurchaseOrder).not.toHaveBeenCalled();
   });
 
   it('refuses to submit a line with a zero quantity', async () => {

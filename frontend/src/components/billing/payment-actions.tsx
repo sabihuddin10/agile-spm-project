@@ -75,7 +75,7 @@ export function PayActions({ invoice, onUpdated, onConflict }: ActionProps) {
 /**
  * A settled bill: payment details, refund details and net total (US5.5), "Mark
  * unpaid" with a confirm step for payments recorded by mistake (US5.4), and the
- * manager-only Refund entry point.
+ * manager-only Refund entry point. Reversing a payment is manager/admin only too.
  */
 export function PaidActions({
   invoice,
@@ -88,7 +88,7 @@ export function PaidActions({
   const [confirming, setConfirming] = useState(false);
 
   const remainingC = toCents(invoice.total) - toCents(invoice.refundedAmount);
-  const canUnpay = invoice.paymentStatus === 'paid' && !invoice.refund;
+  const canUnpay = can.reversePayment(role) && invoice.paymentStatus === 'paid' && !invoice.refund;
   const canRefund = can.refund(role) && invoice.paymentStatus === 'paid' && remainingC > 0;
 
   async function unpay() {
@@ -161,7 +161,7 @@ export function PaidActions({
       ) : null}
 
       {invoice.paymentStatus === 'paid' && !can.refund(role) ? (
-        <p className="text-xs text-stone-400">Refunds are handled by a manager.</p>
+        <p className="text-xs text-stone-400">Refunds and payment reversals are handled by a manager.</p>
       ) : null}
     </section>
   );

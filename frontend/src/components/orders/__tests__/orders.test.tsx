@@ -797,7 +797,7 @@ describe('OrderCard', () => {
     expect(screen.queryByRole('button', { name: 'Edit items' })).not.toBeInTheDocument();
     const prepaid = screen.getByRole('article', { name: 'Order #43' });
     expect(within(prepaid).getByText('Paid · Card')).toBeInTheDocument();
-    expect(within(prepaid).getByText(/prepaid online — cancel to change/i)).toBeInTheDocument();
+    expect(within(prepaid).getByText(/prepaid online — ask a manager to cancel/i)).toBeInTheDocument();
   });
 
   it('serves a ready dish and marks a ready order as served', async () => {
@@ -822,7 +822,7 @@ describe('OrderCard', () => {
     // Arrange
     const user = userEvent.setup();
     vi.mocked(orderApi.setStatus).mockResolvedValue({ order: makeOrder({ status: 'cancelled' }) });
-    renderCard({ order: makeOrder({ paymentStatus: 'paid', paymentMethod: 'card' }) });
+    renderCard({ order: makeOrder({ paymentStatus: 'paid', paymentMethod: 'card' }), role: 'manager' });
 
     // Act
     await user.click(screen.getByRole('button', { name: 'Cancel order' }));
@@ -833,6 +833,38 @@ describe('OrderCard', () => {
     // Assert
     expect(prompt).toHaveTextContent('The payment will be refunded.');
     expect(orderApi.setStatus).toHaveBeenCalledWith('ord_1', 'cancelled');
+  });
+
+  it('offers a waiter Cancel on an unpaid order but not on a paid one', () => {
+    // Arrange
+    const unpaid = makeOrder();
+    const paid = makeOrder({ id: 'ord_2', number: 43, paymentStatus: 'paid', paymentMethod: 'card' });
+
+    // Act
+    renderCard({ order: unpaid, role: 'waiter' });
+    renderCard({ order: paid, role: 'waiter' });
+
+    // Assert
+    const unpaidCard = screen.getByRole('article', { name: 'Order #42' });
+    const paidCard = screen.getByRole('article', { name: 'Order #43' });
+    expect(within(unpaidCard).getByRole('button', { name: 'Cancel order' })).toBeInTheDocument();
+    expect(within(paidCard).queryByRole('button', { name: 'Cancel order' })).not.toBeInTheDocument();
+  });
+
+  it('offers a manager or admin Cancel on a paid order, with the prepaid hint', () => {
+    // Arrange
+    const paid = makeOrder({ paymentStatus: 'paid', paymentMethod: 'card' });
+
+    // Act
+    renderCard({ order: paid, role: 'manager' });
+    renderCard({ order: { ...paid, id: 'ord_2', number: 43 }, role: 'admin' });
+
+    // Assert
+    for (const name of ['Order #42', 'Order #43']) {
+      const card = screen.getByRole('article', { name });
+      expect(within(card).getByRole('button', { name: 'Cancel order' })).toBeInTheDocument();
+      expect(within(card).getByText(/prepaid online — cancel to change/i)).toBeInTheDocument();
+    }
   });
 
   it('lets floor staff assign a table to a dine-in order without one', async () => {
