@@ -21,6 +21,8 @@ export const SECTION_ROLES = {
   analytics: ['manager', 'admin'],
   settings: ['manager', 'admin'],
   account: STAFF_ROLES,
+  mywork: STAFF_ROLES,
+  workforce: ['manager', 'admin'],
 } satisfies Record<string, Role[]>;
 
 export type Section = keyof typeof SECTION_ROLES;
@@ -58,6 +60,9 @@ export const can = {
   assignRoles: anyOf('admin'),
   suspendStaff: anyOf('admin'),
   editSettings: anyOf('manager', 'admin'),
+  // Workforce: managers see attendance and hours of waiters and chefs; only admins see or change money.
+  viewWorkforce: anyOf('manager', 'admin'),
+  managePay: anyOf('admin'),
 };
 
 /**

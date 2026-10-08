@@ -396,6 +396,23 @@ describe('StaffShell', () => {
     }
   });
 
+  it('shows "My work" to every staff role and "Workforce" only to managers and admins', () => {
+    for (const role of ['waiter', 'chef', 'manager', 'admin'] as const) {
+      // Arrange
+      vi.mocked(useAuth).mockReturnValue({ user: makeUser({ role }), logout: vi.fn() } as unknown as ReturnType<typeof useAuth>);
+
+      // Act
+      const { unmount } = render(<StaffShell>content</StaffShell>);
+
+      // Assert
+      expect(screen.getByRole('link', { name: 'My work' })).toHaveAttribute('href', '/staff/my-work');
+      const hub = screen.queryByRole('link', { name: 'Workforce' });
+      if (role === 'manager' || role === 'admin') expect(hub).toHaveAttribute('href', '/staff/workforce');
+      else expect(hub).not.toBeInTheDocument();
+      unmount();
+    }
+  });
+
   it('shows a temporary-password banner linking to My account', () => {
     // Arrange
     pathname.value = '/staff/orders';

@@ -185,6 +185,20 @@ describe('QuickLinks', () => {
     expect(screen.getByRole('link', { name: /Settings/ })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Staff management/ })).toBeInTheDocument();
   });
+
+  it('links every role to My work and only managers and admins to the Workforce hub', () => {
+    for (const role of ['waiter', 'chef', 'manager', 'admin'] as const) {
+      // Arrange / Act
+      const { unmount } = render(<QuickLinks role={role} />);
+
+      // Assert
+      expect(screen.getByRole('link', { name: /My work/ })).toHaveAttribute('href', '/staff/my-work');
+      const hub = screen.queryByRole('link', { name: /Workforce/ });
+      if (role === 'manager' || role === 'admin') expect(hub).toHaveAttribute('href', '/staff/workforce');
+      else expect(hub).not.toBeInTheDocument();
+      unmount();
+    }
+  });
 });
 
 describe('role-widgets', () => {

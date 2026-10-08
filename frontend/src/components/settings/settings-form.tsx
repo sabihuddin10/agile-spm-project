@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { Settings } from '@/types';
+import type { AttendanceSettings, Settings } from '@/types';
 import { settingsApi } from '@/lib/api';
+import { workforceApi } from '@/lib/workforce-api';
+import { DEFAULT_ATTENDANCE_SETTINGS } from '@/lib/workforce-mock';
 import { can } from '@/lib/permissions';
 import { errorMessage, money } from '@/lib/format';
 import { useAuth } from '@/context/auth-context';
@@ -22,13 +24,17 @@ interface FormState {
   reservationGraceMinutes: string;
   openingHour: string;
   closingHour: string;
+  lateGraceMinutes: string;
+  latePenalty: string;
+  autoBreakMinutes: string;
+  autoBreakAfterHours: string;
 }
 
 type FieldKey = keyof FormState;
 type Errors = Partial<Record<FieldKey, string>>;
 
 /** How each server setting maps onto the form, for humanising server validation messages. */
-const SERVER_FIELDS: Record<keyof Settings, { field: FieldKey; label: string; unit?: 'percent' | 'money' | 'minutes' | 'hour' }> = {
+const SERVER_FIELDS: Record<keyof Settings, { field: FieldKey; label: string; unit?: 'percent' | 'money' | 'minutes' | 'hour' | 'hours' }> = {
   restaurantName: { field: 'restaurantName', label: 'Restaurant name' },
   address: { field: 'address', label: 'Address' },
   taxRate: { field: 'taxPercent', label: 'Tax rate', unit: 'percent' },
@@ -39,6 +45,10 @@ const SERVER_FIELDS: Record<keyof Settings, { field: FieldKey; label: string; un
   reservationGraceMinutes: { field: 'reservationGraceMinutes', label: 'Grace period', unit: 'minutes' },
   openingHour: { field: 'openingHour', label: 'Opening hour', unit: 'hour' },
   closingHour: { field: 'closingHour', label: 'Closing hour', unit: 'hour' },
+  lateGraceMinutes: { field: 'lateGraceMinutes', label: 'Late after', unit: 'minutes' },
+  latePenalty: { field: 'latePenalty', label: 'Late deduction', unit: 'money' },
+  autoBreakMinutes: { field: 'autoBreakMinutes', label: 'Automatic break', unit: 'minutes' },
+  autoBreakAfterHours: { field: 'autoBreakAfterHours', label: 'Automatic break after', unit: 'hours' },
 };
 
 const NUMERIC_FIELDS: FieldKey[] = [
@@ -50,13 +60,29 @@ const NUMERIC_FIELDS: FieldKey[] = [
   'reservationGraceMinutes',
   'openingHour',
   'closingHour',
+  'lateGraceMinutes',
+  'latePenalty',
+  'autoBreakMinutes',
+  'autoBreakAfterHours',
 ];
+
+const ATTENDANCE_FIELDS = ['lateGraceMinutes', 'latePenalty', 'autoBreakMinutes', 'autoBreakAfterHours'] as const;
 
 const round = (n: number, dp: number) => Math.round(n * 10 ** dp) / 10 ** dp;
 const hourLabel = (h: number) => (h === 24 ? '24:00 (midnight)' : `${String(h).padStart(2, '0')}:00`);
 
-function toForm(s: Settings): FormState {
+function attendanceForm(a: AttendanceSettings): Pick<FormState, (typeof ATTENDANCE_FIELDS)[number]> {
   return {
+    lateGraceMinutes: String(a.lateGraceMinutes),
+    latePenalty: String(a.latePenalty),
+    autoBreakMinutes: String(a.autoBreakMinutes),
+    autoBreakAfterHours: String(a.autoBreakAfterHours),
+  };
+}
+
+function toForm(s: Settings, a: AttendanceSettings): FormState {
+  return {
+    ...attendanceForm(a),
     restaurantName: s.restaurantName,
     address: s.address,
     taxPercent: String(round(s.taxRate * 100, 2)),
@@ -85,6 +111,19 @@ function toPayload(f: FormState): Partial<Settings> {
   };
 }
 
+function toAttendance(f: FormState): AttendanceSettings {
+  return {
+    lateGraceMinutes: Number(f.lateGraceMinutes),
+    latePenalty: Number(f.latePenalty),
+    autoBreakMinutes: Number(f.autoBreakMinutes),
+    autoBreakAfterHours: Number(f.autoBreakAfterHours),
+  };
+}
+
+const isAttendanceField = (k: FieldKey) => (ATTENDANCE_FIELDS as readonly string[]).includes(k);
+const attendanceChanged = (a: FormState, b: FormState) => ATTENDANCE_FIELDS.some((k) => a[k] !== b[k]);
+const coreChanged = (a: FormState, b: FormState) => (Object.keys(a) as FieldKey[]).some((k) => !isAttendanceField(k) && a[k] !== b[k]);
+
 /** Turn "taxRate must be between 0 and 0.5." into a field error with friendly units. */
 function mapServerError(message: string): { field: FieldKey | null; message: string } {
   const range = /^(\w+) must be between ([\d.]+) and ([\d.]+)\.$/.exec(message);
@@ -96,6 +135,7 @@ function mapServerError(message: string): { field: FieldKey | null; message: str
       if (meta.unit === 'money') return money(n);
       if (meta.unit === 'minutes') return `${n} min`;
       if (meta.unit === 'hour') return hourLabel(n);
+      if (meta.unit === 'hours') return `${n} h`;
       return v;
     };
     return { field: meta.field, message: `${meta.label} must be between ${fmt(range[2])} and ${fmt(range[3])}.` };
@@ -165,6 +205,7 @@ export function SettingsForm() {
   const editable = can.editSettings(user?.role);
 
   const [saved, setSaved] = useState<FormState | null>(null);
+  const [attendanceSaved, setAttendanceSaved] = useState<AttendanceSettings>(DEFAULT_ATTENDANCE_SETTINGS);
   const [form, setForm] = useState<FormState | null>(null);
   const [timeSlots, setTimeSlots] = useState<string[]>([]);
   const [errors, setErrors] = useState<Errors>({});
@@ -173,8 +214,12 @@ export function SettingsForm() {
 
   const load = useCallback(async () => {
     try {
-      const res = await settingsApi.get();
-      const next = toForm(res.settings);
+      const [res, attendance] = await Promise.all([
+        settingsApi.get(),
+        workforceApi.getSettings().catch(() => DEFAULT_ATTENDANCE_SETTINGS),
+      ]);
+      setAttendanceSaved(attendance);
+      const next = toForm(res.settings, attendance);
       setSaved(next);
       setForm(next);
       setTimeSlots(res.timeSlots);
@@ -253,8 +298,19 @@ export function SettingsForm() {
 
     setSaving(true);
     try {
-      const res = await settingsApi.update(toPayload(values));
-      const next = toForm(res.settings);
+      // Attendance & pay settings and the restaurant settings are saved separately, only when changed.
+      const base = saved ?? values;
+      let next: FormState = base;
+      let attendance = attendanceSaved;
+      if (attendanceChanged(values, base)) {
+        attendance = await workforceApi.updateSettings(toAttendance(values));
+        setAttendanceSaved(attendance);
+        next = { ...next, ...attendanceForm(attendance) };
+      }
+      if (coreChanged(values, base)) {
+        const res = await settingsApi.update(toPayload(values));
+        next = toForm(res.settings, attendance);
+      }
       setSaved(next);
       setForm(next);
       setErrors({});
@@ -395,6 +451,48 @@ export function SettingsForm() {
               Bookable time slots: <span className="text-stone-700">{timeSlots.join(', ')}</span>
             </p>
           ) : null}
+        </Card>
+
+        <Card>
+          <CardHeader title="Attendance & pay" subtitle="How check-ins, breaks and lateness affect staff hours and pay." />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field
+              id="setting-lateGraceMinutes"
+              label="Late after"
+              suffix="min"
+              error={errors.lateGraceMinutes}
+              hint="0–60 min. A check-in later than this after the shift start is marked late."
+            >
+              {input('lateGraceMinutes', { type: 'number', inputMode: 'numeric', min: 0, max: 60, step: 1, padRight: true })}
+            </Field>
+            <Field
+              id="setting-latePenalty"
+              label="Late deduction"
+              prefix="$"
+              error={errors.latePenalty}
+              hint="$0–$100. Taken off pay for each late session."
+            >
+              {input('latePenalty', { type: 'number', inputMode: 'decimal', min: 0, max: 100, step: 0.5, padLeft: true })}
+            </Field>
+            <Field
+              id="setting-autoBreakAfterHours"
+              label="Automatic break after"
+              suffix="h"
+              error={errors.autoBreakAfterHours}
+              hint="1–12 h. Sessions longer than this with no break recorded get an automatic unpaid break."
+            >
+              {input('autoBreakAfterHours', { type: 'number', inputMode: 'decimal', min: 1, max: 12, step: 0.5, padRight: true })}
+            </Field>
+            <Field
+              id="setting-autoBreakMinutes"
+              label="Automatic break"
+              suffix="min"
+              error={errors.autoBreakMinutes}
+              hint="0–120 min. Deducted from those sessions. Recorded breaks are always unpaid."
+            >
+              {input('autoBreakMinutes', { type: 'number', inputMode: 'numeric', min: 0, max: 120, step: 5, padRight: true })}
+            </Field>
+          </div>
         </Card>
       </fieldset>
 
