@@ -110,3 +110,24 @@ test('US2.5 unavailable items cannot be ordered; chefs may only toggle availabil
   // Assert
   assert.equal(ok.status, 201);
 });
+
+test('/menu/items includes recipes for staff only, never for customers or guests', async () => {
+  // Arrange
+  const [customer, chef] = await Promise.all([api.login('customer'), api.login('chef')]);
+
+  // Act
+  const [guestView, customerView, chefView] = await Promise.all([
+    api.call('GET', '/menu/items'),
+    api.call('GET', '/menu/items', { token: customer }),
+    api.call('GET', '/menu/items', { token: chef }),
+  ]);
+
+  // Assert
+  for (const view of [guestView, customerView]) {
+    assert.equal(view.status, 200);
+    assert.ok(view.body.items.length > 0);
+    assert.ok(view.body.items.every((i) => !('recipe' in i)), 'recipes stay hidden');
+  }
+  assert.ok(chefView.body.items.every((i) => Array.isArray(i.recipe)));
+  assert.ok(chefView.body.items.some((i) => i.recipe.length > 0 && i.recipe[0].name), 'recipe lines name the ingredient');
+});

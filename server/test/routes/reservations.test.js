@@ -98,3 +98,33 @@ test('US7.4 no-shows only after the grace period; cancellations release the tabl
   assert.equal(cancelled.body.reservation.status, 'cancelled');
   assert.equal((await api.call('GET', '/tables', { token: waiter })).body.tables.find((t) => t.id === onTime.tableId).status, 'free');
 });
+
+test("a customer's /reservations/mine lists only their own bookings, newest first", async () => {
+  // Arrange
+  const customer = await api.login('customer');
+  const me = (await api.call('GET', '/customers/me', { token: customer })).body.customer;
+  const all = (await api.call('GET', '/reservations', { token: manager })).body.reservations;
+
+  // Act
+  const res = await api.call('GET', '/reservations/mine', { token: customer });
+
+  // Assert
+  assert.equal(res.status, 200);
+  const mine = res.body.reservations;
+  assert.ok(mine.length > 0, 'the seeded customer has a booking');
+  assert.ok(mine.every((r) => r.customerId === me.id), 'no other guest\'s bookings leak');
+  assert.ok(all.some((r) => r.customerId !== me.id), 'other guests do have bookings');
+  const keys = mine.map((r) => r.date + r.time);
+  assert.deepEqual(keys, [...keys].sort().reverse());
+});
+
+test('/reservations/mine is empty for staff and 401 without a login', async () => {
+  // Act
+  const staff = await api.call('GET', '/reservations/mine', { token: waiter });
+  const anonymous = await api.call('GET', '/reservations/mine');
+
+  // Assert
+  assert.equal(staff.status, 200);
+  assert.deepEqual(staff.body.reservations, []);
+  assert.equal(anonymous.status, 401);
+});

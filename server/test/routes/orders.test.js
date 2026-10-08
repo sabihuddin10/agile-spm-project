@@ -187,3 +187,33 @@ test('US4.5 orders can be rushed and moved within the queue', async () => {
   // Act / Assert — a waiter cannot reorder the kitchen queue
   assert.equal((await api.call('POST', `/orders/${a.id}/kitchen`, { token: waiter, body: { action: 'up' } })).status, 403);
 });
+
+test("a customer's /orders/mine lists only their own orders, newest first", async () => {
+  // Arrange
+  const me = (await api.call('GET', '/customers/me', { token: customer })).body.customer;
+  const all = (await api.call('GET', '/orders?scope=all', { token: waiter })).body.orders;
+
+  // Act
+  const res = await api.call('GET', '/orders/mine', { token: customer });
+
+  // Assert
+  assert.equal(res.status, 200);
+  const mine = res.body.orders;
+  assert.ok(mine.length > 0, 'the seeded customer has orders');
+  assert.ok(mine.length <= 50);
+  assert.ok(mine.every((o) => o.customerId === me.id), 'no other customer\'s orders leak');
+  assert.ok(all.some((o) => o.customerId && o.customerId !== me.id), 'other customers do have orders');
+  const times = mine.map((o) => o.createdAt);
+  assert.deepEqual(times, [...times].sort().reverse());
+});
+
+test('/orders/mine is empty for staff and requires a login', async () => {
+  // Act
+  const staff = await api.call('GET', '/orders/mine', { token: waiter });
+  const anonymous = await api.call('GET', '/orders/mine');
+
+  // Assert
+  assert.equal(staff.status, 200);
+  assert.deepEqual(staff.body.orders, []);
+  assert.equal(anonymous.status, 401);
+});
