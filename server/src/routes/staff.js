@@ -91,7 +91,7 @@ router.post('/applications/:id/approve', managerRoles, (req, res) => {
   if (findUserByEmail(application.email)) return res.status(409).json({ error: 'An account with that email already exists.' });
 
   const tempPassword = crypto.randomBytes(6).toString('base64url');
-  const user = createUser({ name: application.name, email: application.email, password: tempPassword, role });
+  const user = createUser({ name: application.name, email: application.email, password: tempPassword, role, mustChangePassword: true });
   Object.assign(application, { status: 'approved', decidedAt: iso(), decidedBy: req.user.id, userId: user.id, approvedRole: role });
   return res.json({ application, user: sanitizeUser(user), tempPassword });
 });
