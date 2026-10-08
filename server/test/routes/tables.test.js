@@ -64,3 +64,57 @@ test('US6.4 a table frees itself when its order closes, unless held', async () =
   // Assert — a held table stays occupied
   assert.equal((await tableByNumber(api.call, waiter, 5)).status, 'occupied');
 });
+
+test('DELETE /tables/:id a manager removes a free table from the floor plan', async () => {
+  // Arrange
+  const created = await api.call('POST', '/tables', { token: manager, body: { number: 31, seats: 2, zone: 'Patio' } });
+  const id = created.body.table.id;
+
+  // Act
+  const res = await api.call('DELETE', `/tables/${id}`, { token: manager });
+
+  // Assert
+  assert.equal(res.status, 200);
+  assert.deepEqual(res.body, { deleted: true, id });
+  const { body } = await api.call('GET', '/tables', { token: manager });
+  assert.ok(!body.tables.some((t) => t.id === id));
+});
+
+test('DELETE /tables/:id is refused with 409 while the table has an active order', async () => {
+  // Arrange
+  const soda = await menuItem(api.call, 'Soda');
+  const created = await api.call('POST', '/tables', { token: manager, body: { number: 32, seats: 4, zone: 'Patio' } });
+  const id = created.body.table.id;
+  const order = await api.call('POST', '/orders', { token: waiter, body: { type: 'dine-in', tableId: id, items: [{ menuItemId: soda.id, qty: 1 }] } });
+  assert.equal(order.status, 201);
+
+  // Act
+  const res = await api.call('DELETE', `/tables/${id}`, { token: manager });
+
+  // Assert
+  assert.equal(res.status, 409);
+  assert.equal(res.body.error, 'This table has active orders.');
+  assert.ok(await tableByNumber(api.call, manager, 32), 'the table is still on the floor plan');
+});
+
+test('DELETE /tables/:id returns 404 for an unknown table', async () => {
+  // Act
+  const res = await api.call('DELETE', '/tables/tbl_does_not_exist', { token: manager });
+
+  // Assert
+  assert.equal(res.status, 404);
+  assert.equal(res.body.error, 'Table not found.');
+});
+
+test('DELETE /tables/:id is refused for a waiter', async () => {
+  // Arrange
+  const created = await api.call('POST', '/tables', { token: manager, body: { number: 33, seats: 2, zone: 'Patio' } });
+  const id = created.body.table.id;
+
+  // Act
+  const res = await api.call('DELETE', `/tables/${id}`, { token: waiter });
+
+  // Assert
+  assert.equal(res.status, 403);
+  assert.ok(await tableByNumber(api.call, manager, 33), 'the table is still on the floor plan');
+});
