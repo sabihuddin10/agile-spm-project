@@ -12,6 +12,7 @@ import { useToast } from '@/components/ui/toast';
 import { ConfirmDialog } from '@/components/staff/confirm-dialog';
 import { CredentialsModal } from '@/components/staff/credentials-modal';
 import { EditAccountModal } from '@/components/staff/edit-account-modal';
+import { SetPasswordModal } from '@/components/staff/set-password-modal';
 import { ROLE_META, ROLE_ORDER, initials, roleRank } from '@/components/staff/role-meta';
 
 const article = (word: string) => (/^[aeiou]/i.test(word) ? 'an' : 'a');
@@ -38,11 +39,13 @@ export function AccountTable({
   const toast = useToast();
   const canAssign = can.assignRoles(me?.role);
   const canSuspend = can.suspendStaff(me?.role);
+  const canSetPasswords = can.setPasswords(me?.role);
 
   const [busyId, setBusyId] = useState<string | null>(null);
   const [removing, setRemoving] = useState<User | null>(null);
   const [editing, setEditing] = useState<User | null>(null);
   const [resetting, setResetting] = useState<User | null>(null);
+  const [settingPassword, setSettingPassword] = useState<User | null>(null);
   const [issued, setIssued] = useState<{ user: User; tempPassword: string } | null>(null);
   const [q, setQ] = useState('');
   const [roleFilter, setRoleFilter] = useState<Role | ''>('');
@@ -231,6 +234,17 @@ export function AccountTable({
                       >
                         Reset password
                       </button>
+                      {canSetPasswords ? (
+                        <button
+                          type="button"
+                          className="btn-secondary !px-3 !py-1.5 text-xs"
+                          onClick={() => setSettingPassword(u)}
+                          disabled={busy}
+                          aria-label={`Set password for ${u.name}`}
+                        >
+                          Set password
+                        </button>
+                      ) : null}
                     </>
                   ) : null}
 
@@ -305,6 +319,17 @@ export function AccountTable({
       ) : null}
 
       {editing ? <EditAccountModal user={editing} onClose={() => setEditing(null)} onSaved={detailsSaved} /> : null}
+
+      {settingPassword ? (
+        <SetPasswordModal
+          user={settingPassword}
+          onClose={() => setSettingPassword(null)}
+          onSaved={async () => {
+            setSettingPassword(null);
+            await onChanged();
+          }}
+        />
+      ) : null}
     </div>
   );
 }

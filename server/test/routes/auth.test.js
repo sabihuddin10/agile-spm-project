@@ -224,3 +224,50 @@ test('an admin manages managers, but not another admin — not their details, ro
   for (const res of [editAdmin, demoteAdmin, suspendAdmin, removeAdmin]) assert.equal(res.status, 403);
   assert.equal(customer.status, 200, 'customer accounts stay manageable by an admin');
 });
+
+test('an admin changes their own password without the current one; other roles still need it', async () => {
+  // Arrange
+  const admin = await api.login('admin');
+  const waiter = await hire('waiter');
+  const waiterToken = await api.login(waiter.email, waiter.password);
+
+  // Act
+  const adminChange = await api.call('POST', '/auth/me/password', { token: admin, body: { newPassword: 'admin-new-1' } });
+  const waiterNoCurrent = await api.call('POST', '/auth/me/password', { token: waiterToken, body: { newPassword: 'waiter-new-1' } });
+  const adminSame = await api.call('POST', '/auth/me/password', { token: adminChange.body.token, body: { newPassword: 'admin-new-1' } });
+
+  // Assert
+  assert.equal(adminChange.status, 200);
+  assert.equal((await api.call('POST', '/auth/login', { body: { email: 'admin@rest.test', password: 'admin-new-1' } })).status, 200);
+  assert.equal(waiterNoCurrent.status, 400);
+  assert.equal(adminSame.status, 400, 'the new password must still differ from the current one');
+
+  // Restore the demo password for the other tests in this file
+  const restored = await api.call('POST', '/auth/me/password', { token: adminChange.body.token, body: { newPassword: 'password' } });
+  assert.equal(restored.status, 200);
+});
+
+test('an admin types a new password for a staff member below them; nobody else can, and not for another admin', async () => {
+  // Arrange
+  const admin = await api.login('admin');
+  const manager = await api.login('manager');
+  const chef = await hire('chef');
+  const chefToken = await api.login(chef.email, chef.password);
+  const otherAdmin = await hire('waiter');
+  await api.call('PATCH', `/auth/users/${otherAdmin.id}`, { token: admin, body: { role: 'admin' } });
+
+  // Act
+  const short = await api.call('POST', `/auth/users/${chef.id}/password`, { token: admin, body: { newPassword: '123' } });
+  const set = await api.call('POST', `/auth/users/${chef.id}/password`, { token: admin, body: { newPassword: 'chef-pass-9' } });
+  const byManager = await api.call('POST', `/auth/users/${chef.id}/password`, { token: manager, body: { newPassword: 'nope-nope' } });
+  const onAdmin = await api.call('POST', `/auth/users/${otherAdmin.id}/password`, { token: admin, body: { newPassword: 'nope-nope' } });
+
+  // Assert
+  assert.equal(short.status, 400);
+  assert.equal(set.status, 200);
+  assert.equal(set.body.user.mustChangePassword, false, 'the admin chose it, so no forced change');
+  assert.equal((await api.call('GET', '/auth/me', { token: chefToken })).status, 401, 'the chef is signed out');
+  assert.equal((await api.call('POST', '/auth/login', { body: { email: chef.email, password: 'chef-pass-9' } })).status, 200);
+  assert.equal(byManager.status, 403);
+  assert.equal(onAdmin.status, 403);
+});
