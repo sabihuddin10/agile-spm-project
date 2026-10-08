@@ -124,7 +124,7 @@ describe('Modal', () => {
   it('closes when the close button is clicked', async () => {
     // Arrange
     const onClose = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(
       <Modal title="Confirm" onClose={onClose}>
         <p>Body</p>
@@ -141,7 +141,7 @@ describe('Modal', () => {
   it('closes when the Escape key is pressed', async () => {
     // Arrange
     const onClose = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(
       <Modal title="Confirm" onClose={onClose}>
         <p>Body</p>
@@ -158,7 +158,7 @@ describe('Modal', () => {
   it('closes when the backdrop is clicked but not when the panel itself is clicked', async () => {
     // Arrange
     const onClose = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(
       <Modal title="Confirm" onClose={onClose}>
         <p>Body text</p>
@@ -191,7 +191,7 @@ function ToastDemo() {
 describe('ToastProvider / useToast', () => {
   it('shows a toast message when triggered and allows dismissing it', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(
       <ToastProvider>
         <ToastDemo />
@@ -213,7 +213,7 @@ describe('ToastProvider / useToast', () => {
 
   it('shows multiple toasts with tone-specific styling', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(
       <ToastProvider>
         <ToastDemo />

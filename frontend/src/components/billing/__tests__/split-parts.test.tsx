@@ -61,7 +61,7 @@ describe('SplitParts', () => {
     const onUpdated = vi.fn();
     const updated = makeInvoice({ paymentStatus: 'paid' });
     vi.mocked(billingApi.paySplitPart).mockResolvedValue({ invoice: updated });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<SplitParts invoice={makeInvoice()} onUpdated={onUpdated} />);
 
     // Act

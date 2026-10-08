@@ -20,7 +20,7 @@ const inventory: InventoryItem[] = [
 describe('RecipeEditor', () => {
   it('rejects a zero-or-blank quantity on a chosen ingredient', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<RecipeEditor item={makeMenuItem()} inventory={inventory} onClose={vi.fn()} onSaved={vi.fn()} />);
     await user.click(screen.getByText(/add ingredient/i));
 
@@ -38,7 +38,7 @@ describe('RecipeEditor', () => {
     const onSaved = vi.fn();
     const updated = makeMenuItem({ recipe: [{ inventoryId: 'inv_flour', qty: 0.2, name: 'Flour' }] });
     vi.mocked(menuApi.setRecipe).mockResolvedValue({ item: updated });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<RecipeEditor item={makeMenuItem()} inventory={inventory} onClose={vi.fn()} onSaved={onSaved} />);
     await user.click(screen.getByText(/add ingredient/i));
 
@@ -54,7 +54,7 @@ describe('RecipeEditor', () => {
 
   it('shows the food cost per portion as ingredients are added', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<RecipeEditor item={makeMenuItem({ price: 6 })} inventory={inventory} onClose={vi.fn()} onSaved={vi.fn()} />);
     await user.click(screen.getByText(/add ingredient/i));
 
@@ -68,7 +68,7 @@ describe('RecipeEditor', () => {
 
   it('prevents choosing the same ingredient twice', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<RecipeEditor item={makeMenuItem()} inventory={inventory} onClose={vi.fn()} onSaved={vi.fn()} />);
     await user.click(screen.getByText(/add ingredient/i));
     await user.selectOptions(screen.getByLabelText('Ingredient'), 'inv_flour');

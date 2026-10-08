@@ -42,7 +42,7 @@ describe('ShiftForm — adding a shift', () => {
 
   it('warns when the end time is not after the start time', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ShiftForm roster={roster} onClose={vi.fn()} onSaved={vi.fn()} />);
 
     // Act
@@ -59,7 +59,7 @@ describe('ShiftForm — adding a shift', () => {
     const onSaved = vi.fn();
     const onClose = vi.fn();
     vi.mocked(staffApi.createShift).mockResolvedValue({ shift: makeShift() });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ShiftForm roster={roster} onClose={onClose} onSaved={onSaved} />);
 
     // Act
@@ -78,7 +78,7 @@ describe('ShiftForm — editing a shift', () => {
     // Arrange
     vi.mocked(staffApi.removeShift).mockResolvedValue({ deleted: true });
     const onSaved = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ShiftForm shift={makeShift()} roster={roster} onClose={vi.fn()} onSaved={onSaved} />);
 
     // Act
@@ -97,7 +97,7 @@ describe('ShiftForm — editing a shift', () => {
   it('saves status changes', async () => {
     // Arrange
     vi.mocked(staffApi.updateShift).mockResolvedValue({ shift: makeShift({ status: 'completed' }) });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ShiftForm shift={makeShift()} roster={roster} onClose={vi.fn()} onSaved={vi.fn()} />);
 
     // Act

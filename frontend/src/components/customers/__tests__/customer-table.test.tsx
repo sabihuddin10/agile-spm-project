@@ -36,7 +36,7 @@ describe('CustomerTable', () => {
     // Arrange
     const onSelect = vi.fn();
     const customer = makeCustomer();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<CustomerTable customers={[customer]} onSelect={onSelect} selectedId={null} />);
 
     // Act
@@ -59,7 +59,7 @@ describe('CustomerFilters', () => {
   it('updates the search term', async () => {
     // Arrange
     const onChange = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<CustomerFilters value={EMPTY_FILTERS} onChange={onChange} />);
 
     // Act
@@ -72,7 +72,7 @@ describe('CustomerFilters', () => {
   it('shows Clear filters only once a filter is active, and clears them all', async () => {
     // Arrange
     const onChange = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { rerender } = render(<CustomerFilters value={EMPTY_FILTERS} onChange={onChange} />);
     expect(screen.queryByRole('button', { name: /clear filters/i })).not.toBeInTheDocument();
 

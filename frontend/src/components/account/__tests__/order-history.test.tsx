@@ -52,7 +52,7 @@ describe('OrderHistory', () => {
     // Arrange
     const onReceipt = vi.fn();
     const order = makeOrder();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<OrderHistory orders={[order]} onReceipt={onReceipt} receiptLoadingId={null} />);
 
     // Act
@@ -88,7 +88,7 @@ describe('OrderHistory', () => {
   it('paginates, showing more orders on request', async () => {
     // Arrange
     const orders = Array.from({ length: 10 }, (_, i) => makeOrder({ id: `o${i}`, number: i, createdAt: `2026-10-0${(i % 9) + 1}T12:00:00.000Z` }));
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<OrderHistory orders={orders} onReceipt={vi.fn()} receiptLoadingId={null} />);
     expect(screen.getByText(/show more \(2 older\)/i)).toBeInTheDocument();
 

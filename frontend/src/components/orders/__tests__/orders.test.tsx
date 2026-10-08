@@ -230,7 +230,7 @@ beforeEach(() => {
 describe('CustomerLookup', () => {
   it('does not search the ledger until at least two characters are typed', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<CustomerLookup value={null} onChange={vi.fn()} />);
 
     // Act
@@ -243,7 +243,7 @@ describe('CustomerLookup', () => {
 
   it('debounces the search and picks a matching customer for the order', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onChange = vi.fn();
     const ann = makeCustomer({ preferences: { allergies: ['peanuts'], dietary: [] } });
     const bob = makeCustomer({ id: 'cust_2', name: 'Annabel Bo', email: '', phone: '555-0202' });
@@ -265,7 +265,7 @@ describe('CustomerLookup', () => {
 
   it('says so when no customer matches the query', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.mocked(customerApi.list).mockResolvedValue({ customers: [] } as unknown as Awaited<ReturnType<typeof customerApi.list>>);
     render(<CustomerLookup value={null} onChange={vi.fn()} />);
 
@@ -278,7 +278,7 @@ describe('CustomerLookup', () => {
 
   it('shows an error toast when the search fails', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.mocked(customerApi.list).mockRejectedValue(new Error('Ledger offline'));
     render(<CustomerLookup value={null} onChange={vi.fn()} />);
 
@@ -291,7 +291,7 @@ describe('CustomerLookup', () => {
 
   it('shows the chosen guest with their allergies and lets staff change the guest', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onChange = vi.fn();
     const ann = makeCustomer({ preferences: { allergies: ['peanuts'], dietary: ['vegan'] } });
     render(<CustomerLookup value={ann} onChange={onChange} />);
@@ -325,7 +325,7 @@ describe('CustomerLookup', () => {
 describe('EditItemsModal', () => {
   it('keeps Save disabled until a line is changed, then replaces the items', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onSaved = vi.fn();
     const order = makeOrder();
     const updated = makeOrder({ items: [makeItem({ qty: 3 })], subtotal: 42 });
@@ -349,7 +349,7 @@ describe('EditItemsModal', () => {
 
   it('refuses to save an order with no items left', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<EditItemsModal order={makeOrder()} onClose={vi.fn()} onSaved={vi.fn()} />);
 
     // Act
@@ -362,7 +362,7 @@ describe('EditItemsModal', () => {
 
   it('blocks saving while a line is for a dish that became unavailable', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const order = makeOrder({
       items: [makeItem(), makeItem({ id: 'oi_2', menuItemId: 'satay', name: 'Satay Skewers', qty: 1, modifiers: [], unitPrice: 12 })],
     });
@@ -378,7 +378,7 @@ describe('EditItemsModal', () => {
 
   it('shows the server refusal when the order is no longer editable', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onSaved = vi.fn();
     vi.mocked(orderApi.replaceItems).mockRejectedValue(new Error('Only placed orders can be edited.'));
     render(<EditItemsModal order={makeOrder()} onClose={vi.fn()} onSaved={onSaved} />);
@@ -394,7 +394,7 @@ describe('EditItemsModal', () => {
 
   it('asks before discarding unsaved changes', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onClose = vi.fn();
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
     render(<EditItemsModal order={makeOrder()} onClose={onClose} onSaved={vi.fn()} />);
@@ -509,7 +509,7 @@ describe('KitchenTicket', () => {
 
   it('shows the rush flag and lets the kitchen take it back to normal', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.mocked(orderApi.kitchenAction).mockResolvedValue({ order: makeOrder() } as Awaited<ReturnType<typeof orderApi.kitchenAction>>);
     const { onChanged } = renderTicket({
       order: makeOrder({ status: 'confirmed', confirmedAt: minutesAgo(2), priority: 'rush' }),
@@ -528,7 +528,7 @@ describe('KitchenTicket', () => {
 
   it('lets a chef start a queued dish and start the whole order', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.mocked(orderApi.setItemStatus).mockResolvedValue({ order: makeOrder() });
     vi.mocked(orderApi.setStatus).mockResolvedValue({ order: makeOrder() });
     renderTicket();
@@ -545,7 +545,7 @@ describe('KitchenTicket', () => {
 
   it('marks a dish in prep as ready', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.mocked(orderApi.setItemStatus).mockResolvedValue({ order: makeOrder() });
     renderTicket({
       order: makeOrder({ status: 'preparing', confirmedAt: minutesAgo(5), items: [makeItem({ status: 'preparing', preparedByName: 'Chef Kim' })] }),
@@ -594,7 +594,7 @@ describe('KitchenTicket', () => {
 describe('NewOrderModal', () => {
   it('builds a dine-in order with a table, modifiers, quantities and notes and sends it to the kitchen', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onCreated = vi.fn();
     const created = makeOrder({ number: 77 });
     vi.mocked(orderApi.create).mockResolvedValue({ order: created });
@@ -638,7 +638,7 @@ describe('NewOrderModal', () => {
 
   it('holds a takeaway order as a pickup order without a table', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.mocked(orderApi.create).mockResolvedValue({ order: makeOrder({ number: 8 }) });
     render(<NewOrderModal onClose={vi.fn()} onCreated={vi.fn()} />);
 
@@ -675,7 +675,7 @@ describe('NewOrderModal', () => {
 
   it('attaches the looked-up guest and flags dishes clashing with their allergies', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const guest = makeCustomer({ preferences: { allergies: ['gluten'], dietary: [] } });
     vi.mocked(customerApi.list).mockResolvedValue({ customers: [guest] } as Awaited<ReturnType<typeof customerApi.list>>);
     vi.mocked(orderApi.create).mockResolvedValue({ order: makeOrder() });
@@ -694,7 +694,7 @@ describe('NewOrderModal', () => {
 
   it('warns when the chosen table is already occupied', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<NewOrderModal onClose={vi.fn()} onCreated={vi.fn()} />);
     await screen.findByRole('option', { name: /table 9/i });
 
@@ -709,7 +709,7 @@ describe('NewOrderModal', () => {
 
   it('keeps the modal open and reports the error when placing fails', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onCreated = vi.fn();
     vi.mocked(orderApi.create).mockRejectedValue(new Error('Kitchen is closed.'));
     render(<NewOrderModal onClose={vi.fn()} onCreated={onCreated} />);
@@ -771,7 +771,7 @@ describe('OrderCard', () => {
 
   it('offers Edit items and Confirm on a placed, unpaid order', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const confirmed = makeOrder({ status: 'confirmed' });
     vi.mocked(orderApi.setStatus).mockResolvedValue({ order: confirmed });
     const order = makeOrder();
@@ -802,7 +802,7 @@ describe('OrderCard', () => {
 
   it('serves a ready dish and marks a ready order as served', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.mocked(orderApi.setItemStatus).mockResolvedValue({ order: makeOrder() });
     vi.mocked(orderApi.setStatus).mockResolvedValue({ order: makeOrder({ status: 'served' }) });
     renderCard({ order: makeOrder({ status: 'ready', items: [makeItem({ status: 'ready', readyAt: minutesAgo(3) })] }) });
@@ -820,7 +820,7 @@ describe('OrderCard', () => {
 
   it('cancels only after a second confirmation and warns about the refund', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.mocked(orderApi.setStatus).mockResolvedValue({ order: makeOrder({ status: 'cancelled' }) });
     renderCard({ order: makeOrder({ paymentStatus: 'paid', paymentMethod: 'card' }), role: 'manager' });
 
@@ -869,7 +869,7 @@ describe('OrderCard', () => {
 
   it('lets floor staff assign a table to a dine-in order without one', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.mocked(orderApi.assignTable).mockResolvedValue({ order: makeOrder({ tableNumber: 3 }) });
     renderCard({ order: makeOrder({ tableId: null, tableNumber: null, status: 'confirmed' }) });
 
@@ -962,7 +962,7 @@ describe('OrderLineEditor', () => {
 
   it('adds a plain dish and merges repeat picks into one line', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<Harness />);
     expect(screen.getByText(/nothing added yet/i)).toBeInTheDocument();
 
@@ -979,7 +979,7 @@ describe('OrderLineEditor', () => {
 
   it('opens the modifier picker with defaults pre-selected for a dish with options', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<Harness />);
 
     // Act
@@ -993,7 +993,7 @@ describe('OrderLineEditor', () => {
 
   it('edits quantity and options of an existing line and removes it', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<Harness initial={[{ key: 'l1', menuItemId: 'pizza', qty: 1, modifiers: [{ group: 'Size', label: 'Regular' }] }]} />);
 
     // Act
@@ -1010,7 +1010,7 @@ describe('OrderLineEditor', () => {
 
   it('filters the menu by search text and by category', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<Harness />);
 
     // Act
@@ -1086,7 +1086,7 @@ describe('ReadyTicket', () => {
 
   it('lets floor staff mark the order served', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.mocked(orderApi.setStatus).mockResolvedValue({ order: makeOrder({ status: 'served' }) });
     const { onChanged } = renderReady();
 
@@ -1101,7 +1101,7 @@ describe('ReadyTicket', () => {
 
   it('reports a failure to mark served', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.mocked(orderApi.setStatus).mockRejectedValue(new Error('Already served.'));
     const { onChanged } = renderReady();
 

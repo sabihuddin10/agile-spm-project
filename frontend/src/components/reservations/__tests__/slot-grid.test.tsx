@@ -49,7 +49,7 @@ describe('SlotGrid', () => {
   it('selects an available slot', async () => {
     // Arrange
     const onChange = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<SlotGrid date="2026-10-10" slots={[{ time: '19:00', available: true }]} value="" onChange={onChange} loading={false} />);
 
     // Act

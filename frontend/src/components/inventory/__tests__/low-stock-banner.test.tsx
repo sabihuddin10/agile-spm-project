@@ -20,7 +20,7 @@ describe('LowStockBanner', () => {
   it('names the low ingredients and lets a manager open the reorder form', async () => {
     // Arrange
     const onOpenReorder = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<LowStockBanner items={[makeItem()]} nearCount={2} canReorder onOpenReorder={onOpenReorder} />);
 
     // Assert

@@ -35,7 +35,7 @@ describe('ModifierPicker', () => {
   it('a single-choice group replaces the previous selection in that group', async () => {
     // Arrange
     const onChange = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ModifierPicker item={makeItem()} value={[{ group: 'Size', label: 'Regular' }]} onChange={onChange} />);
 
     // Act
@@ -48,7 +48,7 @@ describe('ModifierPicker', () => {
   it('a multi-choice group toggles independently of other selections', async () => {
     // Arrange
     const onChange = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ModifierPicker item={makeItem()} value={[{ group: 'Size', label: 'Regular' }]} onChange={onChange} />);
 
     // Act — add an extra
@@ -60,7 +60,7 @@ describe('ModifierPicker', () => {
   it('a second click on a checked multi-choice option removes it', async () => {
     // Arrange
     const onChange = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(
       <ModifierPicker
         item={makeItem()}

@@ -39,7 +39,7 @@ describe('MenuItemCard', () => {
     // Arrange
     const onAdd = vi.fn();
     const item = makeItem();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<MenuItemCard item={item} onAdd={onAdd} canOrder />);
 
     // Act
@@ -79,7 +79,7 @@ describe('MenuItemCard', () => {
       modifiers: [{ id: 'mod_1', name: 'Size', type: 'single', options: [{ label: 'Regular', priceDelta: 0 }, { label: 'Large', priceDelta: 2 }] }],
     });
     const onAdd = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<MenuItemCard item={item} onAdd={onAdd} canOrder />);
 
     // Act

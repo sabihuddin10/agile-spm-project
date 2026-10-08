@@ -95,7 +95,7 @@ describe('CustomersPage', () => {
   it('selects a customer and shows their detail panel', async () => {
     // Arrange
     vi.mocked(customerApi.list).mockResolvedValue({ customers: [makeCustomer({ name: 'Jordan Guest' })] });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<CustomersPage />);
     await screen.findByTestId('customer-table');
 
@@ -109,7 +109,7 @@ describe('CustomersPage', () => {
   it('adds a new customer and reloads the ledger', async () => {
     // Arrange
     vi.mocked(customerApi.list).mockResolvedValue({ customers: [] });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<CustomersPage />);
     await screen.findByText('No customers match');
 
@@ -126,7 +126,7 @@ describe('CustomersPage', () => {
   it('edits the selected customer via the detail panel', async () => {
     // Arrange
     vi.mocked(customerApi.list).mockResolvedValue({ customers: [makeCustomer({ name: 'Jordan Guest' })] });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<CustomersPage />);
     await user.click(await screen.findByRole('button', { name: 'Jordan Guest' }));
 
@@ -140,7 +140,7 @@ describe('CustomersPage', () => {
   it('deletes the selected customer after confirmation', async () => {
     // Arrange
     vi.mocked(customerApi.list).mockResolvedValue({ customers: [makeCustomer({ name: 'Jordan Guest' })] });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<CustomersPage />);
     await user.click(await screen.findByRole('button', { name: 'Jordan Guest' }));
 
@@ -156,7 +156,7 @@ describe('CustomersPage', () => {
     // Arrange
     auth.user = { role: 'waiter' };
     vi.mocked(customerApi.list).mockResolvedValue({ customers: [makeCustomer({ name: 'Jordan Guest' })] });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<CustomersPage />);
 
     // Act
@@ -172,7 +172,7 @@ describe('CustomersPage', () => {
     const reason = "This customer has order history and can't be deleted.";
     vi.mocked(customerApi.list).mockResolvedValue({ customers: [makeCustomer({ name: 'Jordan Guest' })] });
     vi.mocked(customerApi.remove).mockRejectedValue(new ApiError(reason, 409, { error: reason }));
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<CustomersPage />);
     await user.click(await screen.findByRole('button', { name: 'Jordan Guest' }));
 
