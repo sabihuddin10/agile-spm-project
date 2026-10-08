@@ -73,3 +73,47 @@ test('US1.5 allergies travel with active orders for waiter and chef', async () =
     assert.deepEqual(emmaOrder.customer.preferences.allergies, ['peanuts']);
   }
 });
+
+test('DELETE /customers/:id staff remove a customer from the ledger', async () => {
+  // Arrange
+  const token = await api.login('waiter');
+  const created = await api.call('POST', '/customers', { token, body: { name: 'Delete Me Walkin' } });
+  const id = created.body.customer.id;
+
+  // Act
+  const res = await api.call('DELETE', `/customers/${id}`, { token });
+
+  // Assert
+  assert.equal(res.status, 200);
+  assert.deepEqual(res.body, { deleted: true, id });
+  assert.equal((await api.call('GET', `/customers/${id}`, { token })).status, 404);
+  const list = await api.call('GET', `/customers?q=${encodeURIComponent('Delete Me Walkin')}`, { token });
+  assert.deepEqual(list.body.customers, []);
+});
+
+test('DELETE /customers/:id returns 404 for an unknown customer', async () => {
+  // Arrange
+  const token = await api.login('manager');
+
+  // Act
+  const res = await api.call('DELETE', '/customers/cus_does_not_exist', { token });
+
+  // Assert
+  assert.equal(res.status, 404);
+  assert.equal(res.body.error, 'Customer not found.');
+});
+
+test('DELETE /customers/:id is refused for a customer', async () => {
+  // Arrange
+  const manager = await api.login('manager');
+  const created = await api.call('POST', '/customers', { token: manager, body: { name: 'Keep Me Walkin' } });
+  const id = created.body.customer.id;
+  const customer = await api.login('customer');
+
+  // Act
+  const res = await api.call('DELETE', `/customers/${id}`, { token: customer });
+
+  // Assert
+  assert.equal(res.status, 403);
+  assert.equal((await api.call('GET', `/customers/${id}`, { token: manager })).status, 200, 'the customer is still on the ledger');
+});

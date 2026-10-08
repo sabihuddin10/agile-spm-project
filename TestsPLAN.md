@@ -21,7 +21,7 @@ Tests are organized **module-wise**, mirroring the source directory structure
 | 4 | Frontend — high-risk business components | 2 | 10 | 0 | 12 |
 | 5 | Frontend — supporting/presentational components | 6 | 0 | 0 | 6 |
 | 6 | Frontend — app pages | 21 | 0 | 0 | 21 |
-| 7 | Backend — remaining route & persistence coverage | 1 | 0 | 4 | 5 |
+| 7 | Backend — remaining route & persistence coverage | 5 | 0 | 0 | 5 |
 | 8 | Frontend — remaining component todos (closes Phase 4) | 0 | 0 | 6 | 6 |
 
 Phases 7 and 8 count **parts** (one branch each), not modules.
@@ -171,7 +171,7 @@ logic lives in the components they render.
 
 ---
 
-## Phase 7 — Backend: remaining route & persistence coverage — `[ ]` in progress
+## Phase 7 — Backend: remaining route & persistence coverage — `[x]` done
 
 An endpoint-by-endpoint audit of `server/src/routes/` found these with no test reaching them.
 New cases go into the existing `test/routes/<module>.test.js` file for that module; the two
@@ -188,38 +188,38 @@ modules without a file yet (notifications, settings) get one.
 | `GET /api/auth/roles` | `routes/auth.test.js` | lists the five stakeholder roles | `[x]` |
 | `GET /api/menu/items` | `routes/menu.test.js` | recipe ingredient lists are included for staff and **omitted** for customers and anonymous callers | `[x]` |
 
-### Part 2 — destructive actions — branch `feat/route-destructive-tests`
+### Part 2 — destructive actions — branch `feat/route-destructive-tests` — `[x]` done
 
 | Endpoint | Test file | Functionality to cover | Status |
 |---|---|---|---|
-| `DELETE /api/tables/:id` | `routes/tables.test.js` | manager deletes a free table; 409 when the table has an active order; 404 for an unknown id; waiter is refused | `[ ]` |
-| `DELETE /api/customers/:id` | `routes/customers.test.js` | staff delete a customer; 404 for an unknown id; a customer is refused. **Decide first:** deleting a customer with orders is currently allowed and leaves those orders pointing at a missing customer — pin the intended behaviour (block with 409, or allow) | `[ ]` |
-| `DELETE /api/billing/:id/split` | `routes/billing.test.js` | undoing a split restores the single-bill invoice; 409 once any share is paid or the bill is paid | `[ ]` |
-| `DELETE /api/staff/shifts/:id` | `routes/staff.test.js` | manager deletes a shift and it leaves the roster; 404 for an unknown id; waiter is refused | `[ ]` |
+| `DELETE /api/tables/:id` | `routes/tables.test.js` | manager deletes a free table; 409 when the table has an active order; 404 for an unknown id; waiter is refused | `[x]` |
+| `DELETE /api/customers/:id` | `routes/customers.test.js` | staff delete a customer; 404 for an unknown id; a customer is refused. **Open decision (tests pin current behaviour only):** deleting a customer with orders is currently allowed and leaves those orders pointing at a missing customer — pin the intended behaviour (block with 409, or allow) | `[x]` |
+| `DELETE /api/billing/:id/split` | `routes/billing.test.js` | undoing a split restores the single-bill invoice; 409 once any share is paid or the bill is paid | `[x]` |
+| `DELETE /api/staff/shifts/:id` | `routes/staff.test.js` | manager deletes a shift and it leaves the roster; 404 for an unknown id; waiter is refused | `[x]` |
 
-### Part 3 — notifications & settings modules — branch `feat/notifications-settings-route-tests`
+### Part 3 — notifications & settings modules — branch `feat/notifications-settings-route-tests` — `[x]` done
 
 | Module | File → target test | Functionality to cover | Status |
 |---|---|---|---|
-| Notifications | `src/routes/notifications.js` → `test/routes/notifications.test.js` | `GET` returns only the caller's notifications (max 30) with the right `unreadCount`; `POST /:id/read` marks one read and lowers the count; 404 for someone else's notification; `POST /read-all` clears the count for the caller only | `[ ]` |
-| Settings | `src/routes/settings.js` → `test/routes/settings.test.js` | `GET` is public and includes `timeSlots`; `PATCH` by manager/admin saves; waiter/customer refused; each numeric field rejected outside its range; blank `restaurantName`/`address` rejected; opening hour must be before closing hour; a rejected PATCH changes nothing | `[ ]` |
+| Notifications | `src/routes/notifications.js` → `test/routes/notifications.test.js` | `GET` returns only the caller's notifications (max 30) with the right `unreadCount`; `POST /:id/read` marks one read and lowers the count; 404 for someone else's notification; `POST /read-all` clears the count for the caller only | `[x]` |
+| Settings | `src/routes/settings.js` → `test/routes/settings.test.js` | `GET` is public and includes `timeSlots`; `PATCH` by manager/admin saves; waiter/customer refused; each numeric field rejected outside its range; blank `restaurantName`/`address` rejected; opening hour must be before closing hour; a rejected PATCH changes nothing | `[x]` |
 
-### Part 4 — staff, menu & inventory gaps — branch `feat/staff-menu-inventory-route-tests`
+### Part 4 — staff, menu & inventory gaps — branch `feat/staff-menu-inventory-route-tests` — `[x]` done
 
 | Endpoint | Test file | Functionality to cover | Status |
 |---|---|---|---|
-| `GET /api/staff/applications` | `routes/staff.test.js` | manager-only, newest first, `?status=` filter, `decidedByName` filled once decided | `[ ]` |
-| `POST /api/staff/applications/:id/reject` | `routes/staff.test.js` | pending → rejected with `decidedBy`; 409 when already decided; 404 for an unknown id | `[ ]` |
-| `PATCH /api/staff/shifts/:id` | `routes/staff.test.js` | moves/re-times a shift without clashing with itself; rejects an invalid status; rejects an inverted time or a clash with another shift (same validation as create); 404 for an unknown id | `[ ]` |
-| `PATCH /api/menu/categories/:id` | `routes/menu.test.js` | rename, re-sort, toggle active; blank name 400; duplicate name (case-insensitive) 409 | `[ ]` |
-| `GET /api/inventory/purchase-orders` | `routes/inventory.test.js` | manager-only, newest first, includes a just-raised order | `[ ]` |
+| `GET /api/staff/applications` | `routes/staff.test.js` | manager-only, newest first, `?status=` filter, `decidedByName` filled once decided | `[x]` |
+| `POST /api/staff/applications/:id/reject` | `routes/staff.test.js` | pending → rejected with `decidedBy`; 409 when already decided; 404 for an unknown id | `[x]` |
+| `PATCH /api/staff/shifts/:id` | `routes/staff.test.js` | moves/re-times a shift without clashing with itself; rejects an invalid status; rejects an inverted time or a clash with another shift (same validation as create); 404 for an unknown id | `[x]` |
+| `PATCH /api/menu/categories/:id` | `routes/menu.test.js` | rename, re-sort, toggle active; blank name 400; duplicate name (case-insensitive) 409 | `[x]` |
+| `GET /api/inventory/purchase-orders` | `routes/inventory.test.js` | manager-only, newest first, includes a just-raised order | `[x]` |
 
-### Part 5 — persistence wiring — branch `feat/persistence-wiring-tests`
+### Part 5 — persistence wiring — branch `feat/persistence-wiring-tests` — `[x]` done
 
 | Module | File → target test | Functionality to cover | Status |
 |---|---|---|---|
-| App wiring | `src/app.js` → `test/app.test.js` | persistence middleware is mounted when `DATABASE_URL` is set and skipped when it isn't (or `persistence: false`); `/api/health` never touches the database | `[ ]` |
-| DB helpers | `src/data/db.js` → `test/data/db.test.js` | `ensureTable` runs `CREATE TABLE` once and reuses the result; after a failure it retries on the next call (fake pool via `setPool`) | `[ ]` |
+| App wiring | `src/app.js` → `test/app.test.js` | persistence middleware is mounted when `DATABASE_URL` is set and skipped when it isn't (or `persistence: false`); `/api/health` never touches the database | `[x]` |
+| DB helpers | `src/data/db.js` → `test/data/db.test.js` | `ensureTable` runs `CREATE TABLE` once and reuses the result; after a failure it retries on the next call (fake pool via `setPool`) | `[x]` |
 
 Not in CI and needs a decision: `server/test-db/` (real Neon) only runs with a `DATABASE_URL`.
 Adding it to CI means storing a test-database URL as a GitHub secret.
