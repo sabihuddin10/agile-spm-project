@@ -240,7 +240,7 @@ router.post('/:id/pay', billingRoles, (req, res) => {
 });
 
 /** POST /api/billing/:id/unpay — reverse a payment recorded in error (US5.4). */
-router.post('/:id/unpay', billingRoles, (req, res) => {
+router.post('/:id/unpay', managerRoles, (req, res) => {
   const order = loadOrder(req, res);
   if (!order) return;
   if (order.paymentStatus !== 'paid' || order.refund) {

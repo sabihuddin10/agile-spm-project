@@ -143,3 +143,16 @@ test('a rejected PATCH changes nothing, even its valid fields', async () => {
   assert.equal(res.status, 400);
   assert.deepEqual(await current(), snapshot);
 });
+
+test('null, blank and boolean values are rejected instead of silently becoming 0', async () => {
+  // Arrange
+  const before = await current();
+
+  // Act
+  const numeric = await Promise.all([null, '', '   ', false, true].map((value) => patch(manager, { taxRate: value })));
+  const text = await Promise.all([null, 42, false].map((value) => patch(manager, { restaurantName: value })));
+
+  // Assert
+  for (const res of [...numeric, ...text]) assert.equal(res.status, 400);
+  assert.deepEqual(await current(), before);
+});

@@ -1,10 +1,14 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SlotGrid } from '@/components/reservations/slot-grid';
 import { localDateISO } from '@/lib/format';
 
 describe('SlotGrid', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('prompts for a date when none is chosen yet', () => {
     // Arrange / Act
     render(<SlotGrid date="" slots={[]} value="" onChange={vi.fn()} loading={false} />);
@@ -64,7 +68,9 @@ describe('SlotGrid', () => {
   });
 
   it('marks a past time on today\'s date instead of "full"', () => {
-    // Arrange
+    // Arrange — pin the clock to midday so 'an hour ago' is still today
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 9, 12, 30));
     const today = localDateISO();
     const past = new Date();
     past.setHours(past.getHours() - 1);

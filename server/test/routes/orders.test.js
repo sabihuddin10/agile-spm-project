@@ -217,3 +217,42 @@ test('/orders/mine is empty for staff and requires a login', async () => {
   assert.deepEqual(staff.body.orders, []);
   assert.equal(anonymous.status, 401);
 });
+
+test('cancelling a paid order refunds it, so a waiter may only cancel unpaid orders', async () => {
+  // Arrange — a prepaid online order the waiter has confirmed (paid but still open),
+  // and an unpaid dine-in order
+  const pizza = await menuItem(api.call, 'Margherita Pizza');
+  const prepaid = await api.call('POST', '/orders', { token: customer, body: { type: 'online', fulfillment: 'pickup', paymentMethod: 'card', items: [{ menuItemId: pizza.id, qty: 1 }] } });
+  const paidId = prepaid.body.order.id;
+  await api.call('POST', `/orders/${paidId}/status`, { token: waiter, body: { status: 'confirmed' } });
+  const unpaid = await api.call('POST', '/orders', { token: waiter, body: { type: 'dine-in', items: [{ menuItemId: pizza.id, qty: 1 }] } });
+  const unpaidId = unpaid.body.order.id;
+  const manager = await api.login('manager');
+
+  // Act
+  const waiterOnPaid = await api.call('POST', `/orders/${paidId}/status`, { token: waiter, body: { status: 'cancelled', reason: 'Guest left' } });
+  const waiterOnUnpaid = await api.call('POST', `/orders/${unpaidId}/status`, { token: waiter, body: { status: 'cancelled', reason: 'Guest left' } });
+  const managerOnPaid = await api.call('POST', `/orders/${paidId}/status`, { token: manager, body: { status: 'cancelled', reason: 'Guest complaint' } });
+
+  // Assert
+  assert.equal(waiterOnPaid.status, 403);
+  assert.match(waiterOnPaid.body.error, /manager/);
+  assert.equal(waiterOnUnpaid.status, 200);
+  assert.equal(waiterOnUnpaid.body.order.status, 'cancelled');
+  assert.equal(managerOnPaid.status, 200);
+  assert.equal(managerOnPaid.body.order.paymentStatus, 'refunded');
+});
+
+test("a customer may still cancel their own prepaid order before the kitchen takes it", async () => {
+  // Arrange — an online card order is paid when placed
+  const pizza = await menuItem(api.call, 'Margherita Pizza');
+  const placed = await api.call('POST', '/orders', { token: customer, body: { type: 'online', fulfillment: 'pickup', paymentMethod: 'card', items: [{ menuItemId: pizza.id, qty: 1 }] } });
+  assert.equal(placed.body.order.paymentStatus, 'paid');
+
+  // Act
+  const res = await api.call('POST', `/orders/${placed.body.order.id}/status`, { token: customer, body: { status: 'cancelled' } });
+
+  // Assert
+  assert.equal(res.status, 200);
+  assert.equal(res.body.order.paymentStatus, 'refunded');
+});

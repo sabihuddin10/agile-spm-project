@@ -306,6 +306,7 @@ describe('BillPanel', () => {
 
     // Assert — waiter
     expect(screen.queryByRole('button', { name: /refund…/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /mark unpaid/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Settings' })).not.toBeInTheDocument();
     expect(screen.getByText(/settings by a manager/i)).toBeInTheDocument();
   });
@@ -535,7 +536,7 @@ describe('SplitDialog', () => {
 
     // Assert
     expect(screen.getByText('Give items to at least two guests.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Split between 1 guests' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Split between 1 guest' })).toBeDisabled();
   });
 
   it('previews proportional shares for a valid by-items split and submits the groups', async () => {

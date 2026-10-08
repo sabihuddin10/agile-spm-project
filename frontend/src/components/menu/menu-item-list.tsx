@@ -16,6 +16,8 @@ export interface MenuItemPermissions {
   manage: boolean;
   /** Mark out of stock / back in stock (US2.5). */
   toggle: boolean;
+  /** See recipe status — waiters never receive item.recipe (chef/manager/admin). */
+  viewRecipes: boolean;
   /** Edit the bill of materials (US8.2). */
   recipes: boolean;
 }
@@ -118,7 +120,7 @@ function MenuItemCard({
   busy: boolean;
 } & Handlers) {
   // Recipe status matters to the kitchen and managers, not to waiters.
-  const recipe = permissions.toggle || permissions.recipes ? item.recipe : undefined;
+  const recipe = permissions.viewRecipes ? item.recipe : undefined;
   const hasActions = permissions.toggle || permissions.manage || permissions.recipes;
 
   return (

@@ -72,6 +72,27 @@ describe('PaidActions', () => {
     expect(screen.getByRole('button', { name: /refund…/i })).toBeInTheDocument();
   });
 
+  it('offers "Mark unpaid" to a manager or admin but not to a waiter', () => {
+    // Arrange
+    const invoice = makeInvoice({ paymentStatus: 'paid' });
+
+    // Act
+    const { rerender } = render(<PaidActions invoice={invoice} role="waiter" onUpdated={vi.fn()} onRefund={vi.fn()} />);
+    // Assert
+    expect(screen.queryByRole('button', { name: /mark unpaid/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/payment reversals are handled by a manager/i)).toBeInTheDocument();
+
+    // Act
+    rerender(<PaidActions invoice={invoice} role="manager" onUpdated={vi.fn()} onRefund={vi.fn()} />);
+    // Assert
+    expect(screen.getByRole('button', { name: /mark unpaid/i })).toBeInTheDocument();
+
+    // Act
+    rerender(<PaidActions invoice={invoice} role="admin" onUpdated={vi.fn()} onRefund={vi.fn()} />);
+    // Assert
+    expect(screen.getByRole('button', { name: /mark unpaid/i })).toBeInTheDocument();
+  });
+
   it('requires a confirm step before marking a payment unpaid', async () => {
     // Arrange
     const onUpdated = vi.fn();

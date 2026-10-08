@@ -28,15 +28,20 @@ router.patch('/', requireRole('manager', 'admin'), (req, res) => {
 
   for (const [field, min, max] of NUMERIC) {
     if (body[field] === undefined) continue;
-    const value = Number(body[field]);
-    if (!(value >= min && value <= max)) {
+    // Only real numbers (or numeric strings): Number(null), Number('') and
+    // Number(false) are 0, which would silently zero a rate.
+    const raw = body[field];
+    const value = typeof raw === 'number' || (typeof raw === 'string' && raw.trim() !== '') ? Number(raw) : NaN;
+    if (!(Number.isFinite(value) && value >= min && value <= max)) {
       return res.status(400).json({ error: `${field} must be between ${min} and ${max}.` });
     }
     next[field] = value;
   }
   for (const field of ['restaurantName', 'address']) {
     if (body[field] === undefined) continue;
-    if (!String(body[field]).trim()) return res.status(400).json({ error: `${field} cannot be empty.` });
+    if (typeof body[field] !== 'string' || !body[field].trim()) {
+      return res.status(400).json({ error: `${field} cannot be empty.` });
+    }
     next[field] = String(body[field]).trim();
   }
   if (next.openingHour >= next.closingHour) {

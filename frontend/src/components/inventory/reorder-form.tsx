@@ -127,7 +127,7 @@ export function ReorderForm({
     const bad = lines.find((l) => !(toNumber(l.qty) > 0));
     if (bad) return toast(`Quantity for ${bad.name} must be greater than zero.`, 'error');
     const suppliers = groups.length;
-    if (!window.confirm(`Send this order (${lines.length} lines, ${money(total)}) to ${suppliers} supplier${suppliers === 1 ? '' : 's'}?`)) {
+    if (!window.confirm(`Send this order (${lines.length} line${lines.length === 1 ? '' : 's'}, ${money(total)}) to ${suppliers} supplier${suppliers === 1 ? '' : 's'}?`)) {
       return;
     }
     setSubmitting(true);

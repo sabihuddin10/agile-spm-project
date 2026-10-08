@@ -163,6 +163,18 @@ describe('CustomerDetail', () => {
     expect(screen.getByRole('button', { name: 'Deleting…' })).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'Close Sofia Ramirez' })).not.toBeInTheDocument();
   });
+
+  it('hides Delete when no onDelete handler is given (role may not delete)', () => {
+    // Arrange
+    const customer = makeCustomer();
+
+    // Act
+    render(<CustomerDetail customer={customer} onEdit={vi.fn()} />);
+
+    // Assert
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+  });
 });
 
 /* ----------------------------------------------------------- customer-form */

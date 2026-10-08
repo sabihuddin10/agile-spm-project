@@ -98,7 +98,7 @@ describe('CartDrawer', () => {
       { item: makeItem(), qty: 2 },
       { item: makeItem({ id: 'item_2', name: 'Calzone', price: 10, modifiers: [sizeGroup] }), qty: 1, modifiers: [{ group: 'Size', label: 'Large' }] },
     ]);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderDrawer();
 
     // Act
@@ -119,7 +119,7 @@ describe('CartDrawer', () => {
       { item: makeItem(), qty: 2 },
       { item: makeItem({ id: 'item_2', name: 'Tiramisu', price: 7.5 }), qty: 1 },
     ]);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderDrawer();
     await user.click(await screen.findByRole('button', { name: /view your order/i }));
 
@@ -141,7 +141,7 @@ describe('CartDrawer', () => {
     // Arrange
     signIn('customer');
     seedCart([{ item: makeItem(), qty: 1 }]);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderDrawer();
     await user.click(await screen.findByRole('button', { name: /view your order/i }));
 
@@ -157,7 +157,7 @@ describe('CartDrawer', () => {
     // Arrange
     signIn('customer');
     seedCart([{ item: makeItem(), qty: 1 }]);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderDrawer();
     await user.click(await screen.findByRole('button', { name: /view your order/i }));
 
@@ -179,7 +179,7 @@ describe('CartDrawer', () => {
     // Arrange
     signIn(null);
     seedCart([{ item: makeItem(), qty: 1 }]);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderDrawer();
 
     // Act
@@ -202,7 +202,7 @@ describe('MenuItemForm', () => {
 
   it('requires an item name', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { onSubmit } = renderForm();
 
     // Act — whitespace passes `required`, but not the form's own check
@@ -217,7 +217,7 @@ describe('MenuItemForm', () => {
 
   it('rejects a blank or negative price', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { onSubmit, form } = renderForm();
     await user.type(screen.getByLabelText('Item name *'), 'Focaccia');
 
@@ -238,7 +238,7 @@ describe('MenuItemForm', () => {
 
   it('requires a reason when the item is marked unavailable', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { onSubmit } = renderForm();
     await user.type(screen.getByLabelText('Item name *'), 'Focaccia');
     await user.type(screen.getByLabelText('Price (USD) *'), '6');
@@ -261,7 +261,7 @@ describe('MenuItemForm', () => {
 
   it('requires every modifier group to have a name', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { onSubmit } = renderForm();
     await user.type(screen.getByLabelText('Item name *'), 'Focaccia');
     await user.type(screen.getByLabelText('Price (USD) *'), '6');
@@ -278,7 +278,7 @@ describe('MenuItemForm', () => {
 
   it('rejects duplicate option labels within a group', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { onSubmit } = renderForm();
     await user.type(screen.getByLabelText('Item name *'), 'Focaccia');
     await user.type(screen.getByLabelText('Price (USD) *'), '6');
@@ -298,7 +298,7 @@ describe('MenuItemForm', () => {
 
   it('submits a new item with tags and a priced modifier group, previewing what customers see', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { onSubmit } = renderForm({ defaultCategoryId: 'cat_1' });
 
     // Act
@@ -345,7 +345,7 @@ describe('MenuItemForm', () => {
 
   it('pre-fills an existing item, keeping its modifier group id on save', async () => {
     // Arrange
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const initial = makeItem({ modifiers: [sizeGroup], dietaryTags: ['vegetarian'] });
     const { onSubmit } = renderForm({ initial });
 
@@ -363,8 +363,8 @@ describe('MenuItemForm', () => {
 });
 
 describe('MenuItemList', () => {
-  const all: MenuItemPermissions = { manage: true, toggle: true, recipes: true };
-  const none: MenuItemPermissions = { manage: false, toggle: false, recipes: false };
+  const all: MenuItemPermissions = { manage: true, toggle: true, viewRecipes: true, recipes: true };
+  const none: MenuItemPermissions = { manage: false, toggle: false, viewRecipes: false, recipes: false };
 
   function handlers() {
     return { onEdit: vi.fn(), onDelete: vi.fn(), onMarkOut: vi.fn(), onMarkIn: vi.fn(), onRecipe: vi.fn(), onAdd: vi.fn() };
@@ -405,7 +405,7 @@ describe('MenuItemList', () => {
   it('toggles availability through the mark-out and back-in actions', async () => {
     // Arrange
     const h = handlers();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<MenuItemList categories={[makeCategory({ items: [pizza, calzone] })]} permissions={all} {...h} />);
 
     // Act
@@ -451,6 +451,39 @@ describe('MenuItemList', () => {
     // Assert
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
     expect(screen.queryByText(/recipe:/i)).not.toBeInTheDocument();
+  });
+
+  it('renders a waiter view of items without `recipe` and shows no recipe warning', () => {
+    // Arrange — the server omits `recipe` for waiters
+    const { recipe: _omitted, ...pizzaNoRecipe } = pizza;
+    void _omitted;
+    const items = [pizzaNoRecipe as typeof pizza, { ...calzone, recipe: undefined } as unknown as typeof calzone];
+
+    // Act
+    render(<MenuItemList categories={[makeCategory({ items })]} permissions={none} {...handlers()} />);
+
+    // Assert
+    expect(screen.getByText('Margherita')).toBeInTheDocument();
+    expect(screen.getByText('Calzone')).toBeInTheDocument();
+    expect(screen.queryByText(/no recipe/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/recipe:/i)).not.toBeInTheDocument();
+  });
+
+  it('hides recipe status from a role that cannot view recipes even if the data is present', () => {
+    // Arrange
+    const waiter: MenuItemPermissions = { ...none, viewRecipes: false };
+    const chef: MenuItemPermissions = { ...none, toggle: true, viewRecipes: true };
+
+    // Act
+    const { rerender } = render(<MenuItemList categories={[makeCategory({ items: [pizza, calzone] })]} permissions={waiter} {...handlers()} />);
+    // Assert
+    expect(screen.queryByText(/no recipe/i)).not.toBeInTheDocument();
+
+    // Act
+    rerender(<MenuItemList categories={[makeCategory({ items: [pizza, calzone] })]} permissions={chef} {...handlers()} />);
+    // Assert
+    expect(screen.getByText(/1 ingredient/)).toBeInTheDocument();
+    expect(screen.getByText(/no recipe — stock won't auto-deduct/i)).toBeInTheDocument();
   });
 });
 
@@ -500,7 +533,7 @@ describe('PublicMenu', () => {
     // Arrange
     signIn(null);
     vi.mocked(menuApi.get).mockResolvedValue(menu);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderMenu();
     await screen.findByRole('heading', { name: 'Pizza' });
 
@@ -518,7 +551,7 @@ describe('PublicMenu', () => {
     signIn('customer');
     vi.mocked(menuApi.get).mockResolvedValue(menu);
     vi.mocked(customerApi.me).mockResolvedValue({ customer: { preferences: { allergies: ['dairy'] } } } as never);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderMenu();
     await screen.findByRole('heading', { name: 'Pizza' });
 

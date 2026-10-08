@@ -23,6 +23,7 @@ Tests are organized **module-wise**, mirroring the source directory structure
 | 6 | Frontend — app pages | 21 | 0 | 0 | 21 |
 | 7 | Backend — remaining route & persistence coverage | 5 | 0 | 0 | 5 |
 | 8 | Frontend — remaining component todos (closes Phase 4) | 6 | 0 | 0 | 6 |
+| 9 | Role access policy (server matrix + UI gates) | 2 | 0 | 0 | 2 |
 
 Phases 7 and 8 count **parts** (one branch each), not modules.
 
@@ -241,6 +242,18 @@ in the same risk order Phase 4 used. Each module keeps its single existing test 
 | 6 | `feat/analytics-remaining-component-tests` | analytics → analytics-card, analytics-dashboard, peak-hours-chart, reservation-stats, revenue-trend-chart, table-utilization, top-dishes, chart-setup (8) | top-dishes ranks by qty/revenue; table-utilization and reservation-stats figures; charts render from dashboard data (Chart.js mocked); dashboard composes the cards. `chart-setup` is a side-effect module — replace its todo with a one-line import smoke test or remove it with a note | `[x]` |
 
 When Phase 8 is done, every Phase 4 row becomes `[x]` and the frontend has no `test.todo` left.
+
+---
+
+## Phase 9 — Role access policy — `[x]` done
+
+The role policy is written down in `README.md` → *Roles and permissions*. These tests pin it so a
+loosened guard fails CI.
+
+| Part | Branch | Covers | Status |
+|---|---|---|---|
+| 1 | `feat/rbac-tightening` | `server/test/routes/access-matrix.test.js`: every role-guarded endpoint × guest + 5 roles (allowed → not 401/403, others → 401/403), plus a check that every guarded route in the catalogue is in the matrix; new cases for the tightened rules (unpay and paid-order cancel need a manager, customers with order history can't be deleted, waiters get no recipes, only floor staff look after tables); `test/middleware/rate-limit.test.js`; settings and category-sort validation | `[x]` |
+| 2 | `feat/rbac-ui-alignment` | `permissions.ts` predicates `reversePayment`, `cancelPaidOrders`, `deleteCustomers`, `viewRecipes` and the components they gate (waiter sees no unpay / paid-order cancel / customer delete / recipe status) | `[x]` |
 
 ---
 

@@ -34,6 +34,7 @@ export default function MenuPage() {
     () => ({
       manage: can.manageMenu(role),
       toggle: can.toggleAvailability(role),
+      viewRecipes: can.viewRecipes(role),
       recipes: can.editRecipes(role),
     }),
     [role],
