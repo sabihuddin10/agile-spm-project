@@ -122,3 +122,22 @@ test('US8.5 the reorder form suggests quantities and receiving restocks', async 
   assert.equal((await stockOf('Mozzarella')).stock, before + 11);
   assert.equal((await api.call('GET', '/inventory/reorder', { token: chef })).status, 403);
 });
+
+test('/inventory/purchase-orders is manager-only and lists the newest order first', async () => {
+  // Arrange
+  const basil = (await api.call('POST', '/inventory', { token: manager, body: { name: 'Thai Basil', category: 'Produce', unit: 'kg', stock: 1, reorderLevel: 1, costPerUnit: 10 } })).body.item;
+  const first = (await api.call('POST', '/inventory/purchase-orders', { token: manager, body: { lines: [{ inventoryId: basil.id, qty: 2 }] } })).body.purchaseOrder;
+  const second = (await api.call('POST', '/inventory/purchase-orders', { token: manager, body: { lines: [{ inventoryId: basil.id, qty: 3 }], notes: 'Rush' } })).body.purchaseOrder;
+
+  // Act
+  const list = await api.call('GET', '/inventory/purchase-orders', { token: manager });
+  const forbidden = await api.call('GET', '/inventory/purchase-orders', { token: waiter });
+
+  // Assert
+  assert.equal(list.status, 200);
+  assert.equal(forbidden.status, 403);
+  const ids = list.body.purchaseOrders.map((p) => p.id);
+  assert.deepEqual(ids.slice(0, 2), [second.id, first.id], 'the just-raised order comes first');
+  const top = list.body.purchaseOrders[0];
+  assert.deepEqual([top.status, top.total, top.notes, top.lines[0].name], ['sent', 30, 'Rush', 'Thai Basil']);
+});

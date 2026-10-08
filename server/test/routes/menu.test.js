@@ -110,3 +110,33 @@ test('US2.5 unavailable items cannot be ordered; chefs may only toggle availabil
   // Assert
   assert.equal(ok.status, 201);
 });
+
+test('a manager renames, re-sorts and toggles a category; blank or duplicate names are rejected', async () => {
+  // Arrange
+  const token = await api.login('manager');
+  const created = (await api.call('POST', '/menu/categories', { token, body: { name: 'Brunch' } })).body.category;
+
+  // Act
+  const edited = await api.call('PATCH', `/menu/categories/${created.id}`, { token, body: { name: '  Weekend Brunch  ', sort: 0, active: false } });
+  // Assert
+  assert.equal(edited.status, 200);
+  const c = edited.body.category;
+  assert.deepEqual([c.name, c.sort, c.active, c.itemCount], ['Weekend Brunch', 0, false, 0]);
+  const listed = (await api.call('GET', '/menu/categories')).body.categories;
+  assert.equal(listed[0].id, created.id, 'sort 0 puts it first');
+
+  // Act
+  const reactivated = await api.call('PATCH', `/menu/categories/${created.id}`, { token, body: { active: true } });
+  const ownNameRecased = await api.call('PATCH', `/menu/categories/${created.id}`, { token, body: { name: 'WEEKEND BRUNCH' } });
+  const blank = await api.call('PATCH', `/menu/categories/${created.id}`, { token, body: { name: '   ' } });
+  const duplicate = await api.call('PATCH', `/menu/categories/${created.id}`, { token, body: { name: 'desserts' } });
+  const unknown = await api.call('PATCH', '/menu/categories/cat_nope', { token, body: { name: 'Nope' } });
+  // Assert
+  assert.equal(reactivated.body.category.active, true);
+  assert.equal(ownNameRecased.status, 200, 'a category may change the case of its own name');
+  assert.equal(blank.status, 400);
+  assert.equal(duplicate.status, 409);
+  assert.equal(unknown.status, 404);
+  const after = (await api.call('GET', '/menu/categories')).body.categories.find((x) => x.id === created.id);
+  assert.equal(after.name, 'WEEKEND BRUNCH', 'rejected renames leave the name untouched');
+});

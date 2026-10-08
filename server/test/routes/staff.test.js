@@ -100,3 +100,89 @@ test('US9.5 performance shows per-staff activity', async () => {
   assert.ok(carlos.itemsPrepared > 0 && carlos.avgPrepMinutes > 0);
   assert.ok(will.shiftsCompleted > 0 && will.hoursWorked > 0);
 });
+
+test('/staff/applications is manager-only, newest first, filters by status and names the decider', async () => {
+  // Arrange
+  const waiter = await api.login('waiter');
+  const applied = await api.call('POST', '/staff/applications', { body: { name: 'Quinn Queue', email: 'quinn@example.com', desiredRole: 'chef' } });
+
+  // Act
+  const all = await api.call('GET', '/staff/applications', { token: manager });
+  const pending = await api.call('GET', '/staff/applications?status=pending', { token: manager });
+  const forbidden = await api.call('GET', '/staff/applications', { token: waiter });
+
+  // Assert
+  assert.equal(forbidden.status, 403);
+  assert.equal(all.status, 200);
+  const stamps = all.body.applications.map((a) => a.createdAt);
+  assert.deepEqual(stamps, stamps.slice().sort().reverse(), 'newest first');
+  assert.equal(all.body.applications[0].id, applied.body.application.id);
+  assert.ok(pending.body.applications.some((a) => a.id === applied.body.application.id));
+  assert.ok(pending.body.applications.every((a) => a.status === 'pending'));
+  const jake = all.body.applications.find((a) => a.email === 'jake@example.com');
+  assert.equal(jake.status, 'rejected');
+  assert.equal(jake.decidedByName, 'Maya Manager');
+  assert.equal(all.body.applications[0].decidedByName, null, 'undecided applications have no decider');
+});
+
+test('rejecting an application records the decider; deciding twice is 409 and unknown ids 404', async () => {
+  // Arrange
+  const applied = await api.call('POST', '/staff/applications', { body: { name: 'Reese Reject', email: 'reese@example.com', desiredRole: 'waiter' } });
+  const id = applied.body.application.id;
+
+  // Act
+  const rejected = await api.call('POST', `/staff/applications/${id}/reject`, { token: manager });
+  // Assert
+  assert.equal(rejected.status, 200);
+  assert.equal(rejected.body.application.status, 'rejected');
+  assert.equal(rejected.body.application.decidedBy, 'usr_manager');
+  assert.ok(rejected.body.application.decidedAt);
+
+  // Act
+  const again = await api.call('POST', `/staff/applications/${id}/reject`, { token: manager });
+  const approveAfter = await api.call('POST', `/staff/applications/${id}/approve`, { token: manager });
+  const unknown = await api.call('POST', '/staff/applications/app_nope/reject', { token: manager });
+  // Assert
+  assert.equal(again.status, 409);
+  assert.match(again.body.error, /already rejected/);
+  assert.equal(approveAfter.status, 409);
+  assert.equal(unknown.status, 404);
+});
+
+test('editing a shift re-times it without clashing with itself and applies the create validation', async () => {
+  // Arrange — two shifts for the same waiter on a far-future day
+  const date = inDays(400);
+  const create = (start, end) => api.call('POST', '/staff/shifts', { token: manager, body: { userId: 'usr_waiter', date, start, end } });
+  const morning = (await create('08:00', '12:00')).body.shift;
+  const evening = (await create('17:00', '22:00')).body.shift;
+
+  // Act — overlap the shift's own old slot and mark it completed
+  const retimed = await api.call('PATCH', `/staff/shifts/${morning.id}`, { token: manager, body: { start: '09:00', end: '14:00', status: 'completed', notes: 'Covered lunch' } });
+  // Assert
+  assert.equal(retimed.status, 200);
+  const s = retimed.body.shift;
+  assert.deepEqual([s.start, s.end, s.hours, s.status, s.notes], ['09:00', '14:00', 5, 'completed', 'Covered lunch']);
+
+  // Act — move it to the next day
+  const nextDay = inDays(401);
+  const moved = await api.call('PATCH', `/staff/shifts/${morning.id}`, { token: manager, body: { date: nextDay } });
+  // Assert
+  assert.equal(moved.status, 200);
+  assert.equal(moved.body.shift.date, nextDay);
+
+  // Act
+  const badStatus = await api.call('PATCH', `/staff/shifts/${evening.id}`, { token: manager, body: { status: 'cancelled' } });
+  const inverted = await api.call('PATCH', `/staff/shifts/${evening.id}`, { token: manager, body: { start: '22:00', end: '17:00' } });
+  const clash = await api.call('PATCH', `/staff/shifts/${evening.id}`, { token: manager, body: { date: nextDay, start: '13:00', end: '18:00' } });
+  const unknown = await api.call('PATCH', '/staff/shifts/shf_nope', { token: manager, body: { start: '10:00' } });
+  // Assert
+  assert.equal(badStatus.status, 400);
+  assert.match(badStatus.body.error, /Status must be/);
+  assert.equal(inverted.status, 400);
+  assert.match(inverted.body.error, /end after it starts/);
+  assert.equal(clash.status, 400);
+  assert.match(clash.body.error, /already has a shift 09:00–14:00/);
+  assert.equal(unknown.status, 404);
+  const rota = (await api.call('GET', `/staff/shifts?from=${date}&to=${date}&userId=usr_waiter`, { token: manager })).body.shifts;
+  assert.deepEqual(rota.map((x) => [x.id, x.start, x.end, x.status]), [[evening.id, '17:00', '22:00', 'scheduled']], 'rejected edits leave the shift untouched');
+});
