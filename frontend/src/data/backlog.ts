@@ -606,7 +606,7 @@ export const SPRINTS: SprintBacklog[] = [
     goal: 'Give every staff member an account page, and let seniors manage the accounts below them, never above.',
     priority: 'Must',
     lead: '#5',
-    status: 'planned',
+    status: 'done',
     stakeholders: ['Waiter', 'Chef', 'Manager', 'Admin'],
     stories: [
       {

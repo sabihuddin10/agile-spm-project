@@ -8,6 +8,10 @@ export interface User {
   role: Role;
   active: boolean;
   createdAt?: string;
+  /** Contact number ('' when not set). Optional so sessions stored before it existed still parse. */
+  phone?: string;
+  /** Set while the account is on a temporary password (new hire or a reset) until they choose their own. */
+  mustChangePassword?: boolean;
 }
 
 /* -------------------------------------------------------------- customers */

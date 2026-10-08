@@ -1,5 +1,38 @@
 import { describe, expect, it } from 'vitest';
-import { formatHours, hoursBetween, initials, mondayOf, parseISODate, roleRank, timeToMinutes } from '@/components/staff/role-meta';
+import {
+  ROLE_CAPABILITIES,
+  formatHours,
+  hoursBetween,
+  initials,
+  mondayOf,
+  parseISODate,
+  roleRank,
+  timeToMinutes,
+} from '@/components/staff/role-meta';
+
+describe('ROLE_CAPABILITIES', () => {
+  it('describes every staff role with at least one can and cannot entry', () => {
+    // Arrange / Act
+    const roles = Object.keys(ROLE_CAPABILITIES).sort();
+
+    // Assert
+    expect(roles).toEqual(['admin', 'chef', 'manager', 'waiter']);
+    for (const { can, cannot } of Object.values(ROLE_CAPABILITIES)) {
+      expect(can.length).toBeGreaterThan(0);
+      expect(cannot.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('matches the README on the account-management limits', () => {
+    // Arrange / Act
+    const manager = ROLE_CAPABILITIES.manager;
+
+    // Assert
+    expect(manager.cannot).toContain('Change roles, suspend or delete accounts');
+    expect(manager.cannot).toContain('Approve managers');
+    expect(ROLE_CAPABILITIES.admin.can[0]).toBe('Everything');
+  });
+});
 
 describe('roleRank', () => {
   it('orders roles admin first, customer last', () => {

@@ -14,6 +14,12 @@ interface AuthContextValue {
   logout: () => void;
   /** Re-fetch the signed-in user (e.g. after an admin changes their role). */
   refreshUser: () => Promise<void>;
+  /**
+   * Replace the signed-in user (and, when given, the session token) after a
+   * self-service change. Changing your password revokes every other session and
+   * issues a new token, which must be stored here to stay signed in.
+   */
+  updateSession: (user: User, token?: string) => void;
   hasRole: (...roles: Role[]) => boolean;
 }
 
@@ -80,6 +86,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return u;
   }, []);
 
+  const updateSession = useCallback((u: User, t?: string) => {
+    const next = t ?? getStoredToken();
+    setUser(u);
+    if (!next) return;
+    setToken(next);
+    storeAuth(next, u);
+  }, []);
+
   const logout = useCallback(() => {
     clearAuth();
     setUser(null);
@@ -89,8 +103,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const hasRole = useCallback((...roles: Role[]) => Boolean(user && roles.includes(user.role)), [user]);
 
   const value = useMemo(
-    () => ({ user, token, loading, login, register, logout, refreshUser, hasRole }),
-    [user, token, loading, login, register, logout, refreshUser, hasRole],
+    () => ({ user, token, loading, login, register, logout, refreshUser, updateSession, hasRole }),
+    [user, token, loading, login, register, logout, refreshUser, updateSession, hasRole],
   );
 
   // Zone guards: signed-out users leave protected zones; signed-in users skip

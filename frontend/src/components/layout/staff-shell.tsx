@@ -40,6 +40,7 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
   {
     title: 'Me',
     items: [
+      { href: '/staff/account', label: 'My account', icon: 'user', section: 'account' },
       { href: '/staff/schedule', label: 'My schedule', icon: 'clock', section: 'schedule' },
       { href: '/staff/settings', label: 'Settings', icon: 'cog', section: 'settings' },
     ],
@@ -49,6 +50,7 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
 const ICONS: Record<string, string> = {
   grid: 'M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z',
   users: 'M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z',
+  user: 'M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z',
   shield: 'M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z',
   book: 'M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25',
   receipt: 'M9 14.25l6 0M9 9.75L12 9.75M19.5 21l-1.5-1.5-1.5 1.5L15 19.5l-1.5 1.5-1.5-1.5L10.5 21l-1.5-1.5-1.5 1.5L6 19.5 4.5 21V5.25A2.25 2.25 0 016.75 3h10.5a2.25 2.25 0 012.25 2.25V21z',
@@ -200,7 +202,20 @@ export function StaffShell({ children }: { children: React.ReactNode }) {
 
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-stone-200 bg-white lg:flex">{sidebar}</aside>
 
-      <main className="px-4 py-6 sm:px-6 lg:ml-64 lg:px-8 lg:py-8">{children}</main>
+      <main className="px-4 py-6 sm:px-6 lg:ml-64 lg:px-8 lg:py-8">
+        {user.mustChangePassword && !pathname.startsWith('/staff/account') ? (
+          <div
+            role="status"
+            className="mb-5 flex flex-col gap-1 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+          >
+            <p>You&apos;re using a temporary password. Set your own to keep your account secure.</p>
+            <Link href="/staff/account" className="shrink-0 font-medium underline underline-offset-2 hover:text-amber-900">
+              Set your own password
+            </Link>
+          </div>
+        ) : null}
+        {children}
+      </main>
     </div>
   );
 }

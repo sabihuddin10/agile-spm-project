@@ -158,4 +158,40 @@ describe('AuthProvider', () => {
     expect(result.current.user).toBe(null);
     expect(result.current.token).toBe(null);
   });
+
+  it('updateSession stores a new token and user (after a password change)', async () => {
+    // Arrange
+    vi.mocked(getStoredToken).mockReturnValue('tok_old');
+    vi.mocked(getStoredUser).mockReturnValue(makeUser({ mustChangePassword: true }));
+    vi.mocked(authApi.me).mockResolvedValue({ user: makeUser({ mustChangePassword: true }) });
+    const { result } = renderAuth();
+    await waitFor(() => expect(storeAuth).toHaveBeenCalled()); // initial re-validation settled
+    const updated = makeUser({ mustChangePassword: false });
+
+    // Act
+    act(() => result.current.updateSession(updated, 'tok_new'));
+
+    // Assert
+    expect(result.current.user).toEqual(updated);
+    expect(result.current.token).toBe('tok_new');
+    expect(storeAuth).toHaveBeenLastCalledWith('tok_new', updated);
+  });
+
+  it('updateSession keeps the stored token when only the user changed', async () => {
+    // Arrange
+    vi.mocked(getStoredToken).mockReturnValue('tok_1');
+    vi.mocked(getStoredUser).mockReturnValue(makeUser());
+    vi.mocked(authApi.me).mockResolvedValue({ user: makeUser() });
+    const { result } = renderAuth();
+    await waitFor(() => expect(storeAuth).toHaveBeenCalled()); // initial re-validation settled
+    const renamed = makeUser({ name: 'Casey Renamed' });
+
+    // Act
+    act(() => result.current.updateSession(renamed));
+
+    // Assert
+    expect(result.current.user).toEqual(renamed);
+    expect(result.current.token).toBe('tok_1');
+    expect(storeAuth).toHaveBeenLastCalledWith('tok_1', renamed);
+  });
 });

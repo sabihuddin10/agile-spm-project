@@ -382,6 +382,62 @@ describe('StaffShell', () => {
     expect(screen.queryByRole('link', { name: 'Staff management' })).not.toBeInTheDocument();
   });
 
+  it('shows a "My account" link for every staff role', () => {
+    for (const role of ['waiter', 'chef', 'manager', 'admin'] as const) {
+      // Arrange
+      vi.mocked(useAuth).mockReturnValue({ user: makeUser({ role }), logout: vi.fn() } as unknown as ReturnType<typeof useAuth>);
+
+      // Act
+      const { unmount } = render(<StaffShell>content</StaffShell>);
+
+      // Assert
+      expect(screen.getByRole('link', { name: 'My account' })).toHaveAttribute('href', '/staff/account');
+      unmount();
+    }
+  });
+
+  it('shows a temporary-password banner linking to My account', () => {
+    // Arrange
+    pathname.value = '/staff/orders';
+    vi.mocked(useAuth).mockReturnValue({
+      user: makeUser({ mustChangePassword: true }),
+      logout: vi.fn(),
+    } as unknown as ReturnType<typeof useAuth>);
+
+    // Act
+    render(<StaffShell>content</StaffShell>);
+
+    // Assert
+    expect(screen.getByText(/You're using a temporary password/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Set your own password' })).toHaveAttribute('href', '/staff/account');
+  });
+
+  it('hides the temporary-password banner on the account page itself', () => {
+    // Arrange
+    pathname.value = '/staff/account';
+    vi.mocked(useAuth).mockReturnValue({
+      user: makeUser({ mustChangePassword: true }),
+      logout: vi.fn(),
+    } as unknown as ReturnType<typeof useAuth>);
+
+    // Act
+    render(<StaffShell>content</StaffShell>);
+
+    // Assert
+    expect(screen.queryByText(/You're using a temporary password/)).not.toBeInTheDocument();
+  });
+
+  it('shows no banner once the user has their own password', () => {
+    // Arrange
+    vi.mocked(useAuth).mockReturnValue({ user: makeUser(), logout: vi.fn() } as unknown as ReturnType<typeof useAuth>);
+
+    // Act
+    render(<StaffShell>content</StaffShell>);
+
+    // Assert
+    expect(screen.queryByText(/You're using a temporary password/)).not.toBeInTheDocument();
+  });
+
   it('signs out and routes to login', async () => {
     // Arrange
     const logout = vi.fn();
