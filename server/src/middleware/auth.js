@@ -36,7 +36,7 @@ export function optionalAuth(req, res, next) {
  * `authenticate` or `optionalAuth`.
  */
 export function requireRole(...allowedRoles) {
-  return (req, res, next) => {
+  const guard = (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({ error: 'Authentication required.' });
     }
@@ -45,6 +45,9 @@ export function requireRole(...allowedRoles) {
     }
     return next();
   };
+  // Read by the API catalogue (lib/api-catalog.js) so documented roles come from the code.
+  guard.allowedRoles = Object.freeze([...allowedRoles]);
+  return guard;
 }
 
 /** Admin-only guard. */

@@ -90,6 +90,21 @@ cd frontend && vercel deploy --prod    # web
 
 For local persistence put `DATABASE_URL=...` in `server/.env` (gitignored; `.vercelignore` keeps it out of uploads). Optional `STATE_KEY` picks the `app_state` row (default `main`).
 
+## API reference and status page (`/api/health`)
+
+`GET /api/health` is content-negotiated:
+
+- **In a browser** (`Accept: text/html`) it serves a live status page: every endpoint grouped by module, with its method, path, required roles, query/body fields, an example response shape and its live health. Probe results refresh every 15 s, with latency per endpoint, an up/down summary and a database indicator.
+- **Anything else** (curl, `fetch`, uptime monitors) gets the JSON it always returned — `{ status: 'ok', service, time }` — plus `uptimeSeconds`, `persistence` and `endpoints`. Force either form with `?format=json` or `?format=html`.
+
+| Endpoint                    | Returns |
+|-----------------------------|---------|
+| `GET /api/health`           | Status page (browser) or status JSON |
+| `GET /api/health/endpoints` | The endpoint catalogue as JSON |
+| `GET /api/health/check`     | Live probe results (cached for 5 s) |
+
+The catalogue is read from the Express routers at runtime, so a new route shows up automatically. Its roles come from the `requireRole` guards, and its description from `server/src/lib/api-catalog.js`. A route with no entry there is listed as **undocumented**, and `test/lib/api-catalog.test.js` fails until you add one. Probes only send `GET` requests, with no token, over a loopback connection to the API itself. A 401/403 counts as "up, auth required". `POST`/`PUT`/`PATCH`/`DELETE` routes are never called. The health routes are mounted before the persistence middleware, so they never open a database transaction.
+
 ## What each module delivers
 
 | Sprint | Module | Highlights |
