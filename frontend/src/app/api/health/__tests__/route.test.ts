@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 import { GET } from '../route';
 import snapshot from '@/lib/api-health/catalog.json';
