@@ -665,7 +665,7 @@ export const SPRINTS: SprintBacklog[] = [
     goal: 'Let staff check in and out every day, record unpaid breaks, see their own hours, lateness and estimated pay, and see where colleagues at their level are right now.',
     priority: 'Should',
     lead: '#5',
-    status: 'planned',
+    status: 'done',
     stakeholders: ['Waiter', 'Chef', 'Manager', 'Admin'],
     stories: [
       {
@@ -718,7 +718,7 @@ export const SPRINTS: SprintBacklog[] = [
     goal: 'Turn paid hours, tips and bonuses into an estimated monthly pay for each person, and give the admin one hub that shows everything about everyone.',
     priority: 'Should',
     lead: '#1',
-    status: 'planned',
+    status: 'done',
     stakeholders: ['Waiter', 'Chef', 'Manager', 'Admin'],
     stories: [
       {
