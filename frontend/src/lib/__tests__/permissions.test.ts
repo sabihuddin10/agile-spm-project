@@ -68,6 +68,8 @@ describe('can.*', () => {
     ['suspendStaff', ['admin']],
     ['setPasswords', ['admin']],
     ['editSettings', ['manager', 'admin']],
+    ['viewWorkforce', ['manager', 'admin']],
+    ['managePay', ['admin']],
   ];
 
   for (const [action, allowed] of cases) {
@@ -86,6 +88,21 @@ describe('account section', () => {
     // Arrange / Act / Assert
     for (const role of STAFF_ROLES) expect(canAccess(role, 'account')).toBe(true);
     expect(canAccess('customer', 'account')).toBe(false);
+  });
+});
+
+describe('workforce sections', () => {
+  it('opens My work to every staff role and the Workforce hub to managers and admins only', () => {
+    // Arrange
+    const roles: Role[] = ['customer', 'waiter', 'chef', 'manager', 'admin'];
+
+    // Act
+    const mywork = roles.filter((r) => canAccess(r, 'mywork'));
+    const workforce = roles.filter((r) => canAccess(r, 'workforce'));
+
+    // Assert
+    expect(mywork).toEqual(['waiter', 'chef', 'manager', 'admin']);
+    expect(workforce).toEqual(['manager', 'admin']);
   });
 });
 
