@@ -66,6 +66,7 @@ describe('can.*', () => {
     ['scheduleShifts', ['manager', 'admin']],
     ['assignRoles', ['admin']],
     ['suspendStaff', ['admin']],
+    ['setPasswords', ['admin']],
     ['editSettings', ['manager', 'admin']],
     ['viewWorkforce', ['manager', 'admin']],
     ['managePay', ['admin']],

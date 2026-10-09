@@ -117,16 +117,20 @@ router.patch('/me', authenticate, requireRole('waiter', 'chef', 'manager', 'admi
   return res.json({ user: sanitizeUser(req.user) });
 });
 
-/** POST /api/auth/me/password — change your own password; other sessions are signed out. */
+/**
+ * POST /api/auth/me/password — change your own password; other sessions are
+ * signed out. Everyone confirms their current password except an admin, who
+ * sets a new one directly.
+ */
 router.post('/me/password', authenticate, (req, res) => {
   const { currentPassword, newPassword } = req.body || {};
-  if (!passwordMatches(req.user, currentPassword)) {
+  if (req.user.role !== 'admin' && !passwordMatches(req.user, currentPassword)) {
     return res.status(400).json({ error: 'Your current password is incorrect.' });
   }
   if (typeof newPassword !== 'string' || newPassword.length < 6) {
     return res.status(400).json({ error: 'New password must be at least 6 characters.' });
   }
-  if (newPassword === currentPassword) {
+  if (passwordMatches(req.user, newPassword)) {
     return res.status(400).json({ error: 'Choose a password different from your current one.' });
   }
   req.user.passwordHash = bcrypt.hashSync(newPassword, 10);
@@ -173,6 +177,23 @@ router.post('/users/:id/reset-password', authenticate, requireRole('manager', 'a
   target.mustChangePassword = true;
   target.tokenVersion = (target.tokenVersion ?? 0) + 1;
   return res.json({ user: sanitizeUser(target), tempPassword });
+});
+
+/**
+ * POST /api/auth/users/:id/password — an admin types a new password for a staff
+ * account below them (no old password needed). Their sessions are signed out.
+ */
+router.post('/users/:id/password', authenticate, requireRole('admin'), (req, res) => {
+  const target = managedTarget(req, res);
+  if (!target) return undefined;
+  const { newPassword } = req.body || {};
+  if (typeof newPassword !== 'string' || newPassword.length < 6) {
+    return res.status(400).json({ error: 'New password must be at least 6 characters.' });
+  }
+  target.passwordHash = bcrypt.hashSync(newPassword, 10);
+  target.mustChangePassword = false;
+  target.tokenVersion = (target.tokenVersion ?? 0) + 1;
+  return res.json({ user: sanitizeUser(target) });
 });
 
 /** GET /api/auth/roles — list the five stakeholder roles. */

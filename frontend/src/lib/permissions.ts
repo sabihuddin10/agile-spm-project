@@ -59,6 +59,8 @@ export const can = {
   scheduleShifts: anyOf('manager', 'admin'),
   assignRoles: anyOf('admin'),
   suspendStaff: anyOf('admin'),
+  /** Type a new password for someone else, without their old one. */
+  setPasswords: anyOf('admin'),
   editSettings: anyOf('manager', 'admin'),
   // Workforce: managers see attendance and hours of waiters and chefs; only admins see or change money.
   viewWorkforce: anyOf('manager', 'admin'),
