@@ -4,7 +4,7 @@ import { requireRole } from '../middleware/auth.js';
 import { availability, canAccommodate, suggestAlternatives, syncTableHolds, releaseHold, isLate } from '../lib/reservations.js';
 import { occupyTable } from '../lib/orders.js';
 import { notify } from '../lib/notify.js';
-import { combine, isValidDate, isValidTime, localDate, iso } from '../lib/time.js';
+import { addDays, combine, isValidDate, isValidTime, localDate, iso } from '../lib/time.js';
 
 const router = Router();
 const staffRoles = requireRole('waiter', 'manager', 'admin');
@@ -61,8 +61,10 @@ router.get('/', staffRoles, (req, res) => {
   syncTableHolds();
   const { status, scope = 'upcoming' } = req.query;
   const today = localDate();
+  // Just after midnight, last night's late guests still need seating or a no-show.
+  const yesterday = localDate(addDays(new Date(), -1));
   let result = [...reservations];
-  if (scope === 'upcoming') result = result.filter((r) => r.date >= today);
+  if (scope === 'upcoming') result = result.filter((r) => r.date >= today || (r.date === yesterday && isLate(r)));
   if (scope === 'past') result = result.filter((r) => r.date < today);
   if (status) result = result.filter((r) => r.status === status);
   result.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
