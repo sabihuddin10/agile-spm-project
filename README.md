@@ -101,6 +101,8 @@ Two Vercel projects, deployed with the Vercel CLI from their own folders:
 | `plate-and-flame-api` | `server/`   | `DATABASE_URL` (Neon pooled URL), `JWT_SECRET` |
 | `plate-and-flame-web` | `frontend/` | `API_URL` = the API's URL (used by the `/api/*` rewrite at build time) |
 
+Optional for the web app: `NEXT_PUBLIC_WORKFORCE_MOCK=true` runs My work and the Workforce hub on in-browser demo data instead of the API (the unit tests do this).
+
 ```bash
 cd server && vercel deploy --prod      # API
 cd frontend && vercel deploy --prod    # web
@@ -137,7 +139,7 @@ The catalogue is read from the Express routers at runtime, so a new route shows 
 | 8 | Inventory | Ingredient CRUD, recipes (bill of materials), auto-deduction on order close, stock movement log, low-stock alerts, supplier reorder form → purchase orders → receive |
 | 9 | Staff | Public job applications → approval creates accounts, role assignment, suspend/remove (immediate), shift rota + personal schedule, performance metrics |
 | 10 | Analytics | Revenue/order trends by day/week/month, top dishes by qty/revenue, table turnover & occupancy, peak hours, inventory health, no-show rate |
-| 13–14 | Attendance & payroll (API) | Clock in/out and breaks, lateness with a grace period, automatic unpaid break on long days, missed shifts, presence board, day/week/month/hour-of-day analytics, monthly pay estimate (hours × wage + tips + bonuses − late penalties), admin wages and bonuses |
+| 13–14 | Attendance & payroll — My work page and Workforce hub | Clock in/out and breaks, lateness with a grace period, automatic unpaid break on long days, missed shifts, presence board, day/week/month/hour-of-day analytics, monthly pay estimate (hours × wage + tips + bonuses − late penalties), admin wages and bonuses |
 
 ## Design decisions
 

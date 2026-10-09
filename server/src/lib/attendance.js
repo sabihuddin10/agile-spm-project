@@ -272,7 +272,11 @@ export function buildSeries(sessions, shifts, from, to, rules, now) {
   const month = new Map();
   for (const d of dates) {
     const w = isoWeekKey(d);
-    if (!week.has(w)) week.set(w, emptyPoint(w, `W${w.slice(-2)}`));
+    if (!week.has(w)) {
+      const dt = parseDate(d);
+      const monday = addDays(dt, -((dt.getDay() + 6) % 7));
+      week.set(w, emptyPoint(w, `w/c ${monday.getDate()} ${MONTHS[monday.getMonth()]}`));
+    }
     const m = monthKey(d);
     if (!month.has(m)) month.set(m, emptyPoint(m, monthLabel(m)));
   }

@@ -33,9 +33,9 @@ const NUMERIC = [
   ['openingHour', 0, 23],
   ['closingHour', 1, 24],
   ['lateGraceMinutes', 0, 60],
-  ['latePenalty', 0, 1000],
-  ['autoBreakMinutes', 0, 180],
-  ['autoBreakAfterHours', 1, 16],
+  ['latePenalty', 0, 100],
+  ['autoBreakMinutes', 0, 120],
+  ['autoBreakAfterHours', 1, 12],
 ];
 
 test('GET is public and includes the settings and time slots', async () => {
@@ -84,7 +84,7 @@ test('attendance and pay rules have defaults and accept their range edges', asyn
   // Arrange
   const edges = [
     { lateGraceMinutes: 0, latePenalty: 0, autoBreakMinutes: 0, autoBreakAfterHours: 1 },
-    { lateGraceMinutes: 60, latePenalty: 1000, autoBreakMinutes: 180, autoBreakAfterHours: 16 },
+    { lateGraceMinutes: 60, latePenalty: 100, autoBreakMinutes: 120, autoBreakAfterHours: 12 },
   ];
 
   // Act

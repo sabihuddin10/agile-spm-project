@@ -15,9 +15,9 @@ const NUMERIC = [
   ['openingHour', 0, 23],
   ['closingHour', 1, 24],
   ['lateGraceMinutes', 0, 60],
-  ['latePenalty', 0, 1000],
-  ['autoBreakMinutes', 0, 180],
-  ['autoBreakAfterHours', 1, 16],
+  ['latePenalty', 0, 100],
+  ['autoBreakMinutes', 0, 120],
+  ['autoBreakAfterHours', 1, 12],
 ];
 
 /** GET /api/settings — restaurant policy (public: the storefront needs tax & points). */

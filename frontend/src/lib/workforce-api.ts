@@ -14,11 +14,11 @@ import { createWorkforceMock, DEFAULT_ATTENDANCE_SETTINGS } from '@/lib/workforc
 /**
  * Attendance, presence, hours and pay. Pages and components call only this.
  *
- * Until the server implements /api/attendance/* and /api/workforce/*, calls go
- * to an in-browser demo (`workforce-mock.ts`). Set NEXT_PUBLIC_WORKFORCE_MOCK=false
- * to use the real API instead.
+ * Calls go to the server's /api/attendance/* and /api/workforce/*. Set
+ * NEXT_PUBLIC_WORKFORCE_MOCK=true to use the in-browser demo instead
+ * (`workforce-mock.ts`); the unit tests do.
  */
-export const WORKFORCE_MOCK = process.env.NEXT_PUBLIC_WORKFORCE_MOCK !== 'false';
+export const WORKFORCE_MOCK = process.env.NEXT_PUBLIC_WORKFORCE_MOCK === 'true';
 
 export const workforceMock = createWorkforceMock();
 

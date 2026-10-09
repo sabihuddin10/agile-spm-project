@@ -172,6 +172,27 @@ test('the manager overview lists waiters and chefs only, with no money', async (
   assert.ok(body.rows.every((r) => r.summary.shifts > 0));
 });
 
+test('the overview carries team series that add up to the rows', async () => {
+  // Arrange
+  const { month } = lastMonth();
+
+  // Act
+  const { body } = await get(`/workforce/overview?month=${month}`, tokens.manager);
+
+  // Assert
+  const total = (points, field) => points.reduce((s, p) => s + p[field], 0);
+  const rowsPaid = body.rows.reduce((s, r) => s + r.summary.paidMinutes, 0);
+  const rowsScheduled = body.rows.reduce((s, r) => s + r.summary.scheduledMinutes, 0);
+  assert.deepEqual(Object.keys(body.series).sort(), ['day', 'hour', 'week']);
+  assert.equal(body.series.day.length, Number(body.series.day.at(-1).key.slice(-2)), 'one point per day of the month');
+  assert.equal(body.series.hour.length, 24);
+  assert.equal(total(body.series.day, 'paidMinutes'), rowsPaid);
+  assert.equal(total(body.series.week, 'paidMinutes'), rowsPaid);
+  assert.equal(total(body.series.hour, 'paidMinutes'), rowsPaid);
+  assert.equal(total(body.series.day, 'scheduledMinutes'), rowsScheduled);
+  assert.ok(body.series.week[0].label.startsWith('w/c '), body.series.week[0].label);
+});
+
 test('the overview month is validated', async () => {
   // Act
   const results = await Promise.all(['2026-13', '2026-1', 'october', '2026-10-01'].map(async (m) => (await get(`/workforce/overview?month=${m}`, tokens.admin)).status));
@@ -199,7 +220,7 @@ test('the admin sets a wage and pay follows it; nobody else can', async () => {
 
 test('wages are validated', async () => {
   // Act
-  const results = await Promise.all([0, -3, 1000.01, '12', null, undefined].map(async (hourlyWage) => (
+  const results = await Promise.all([0, -3, 500.01, '12', null, undefined].map(async (hourlyWage) => (
     await api.call('PUT', '/workforce/users/usr_chef/wage', { token: tokens.admin, body: { hourlyWage } })
   ).status));
   const customer = await api.call('PUT', '/workforce/users/usr_customer/wage', { token: tokens.admin, body: { hourlyWage: 10 } });
@@ -207,7 +228,7 @@ test('wages are validated', async () => {
   // Assert
   assert.deepEqual(results, [400, 400, 400, 400, 400, 400]);
   assert.equal(customer.status, 404);
-  assert.equal((await api.call('PUT', '/workforce/users/usr_chef/wage', { token: tokens.admin, body: { hourlyWage: 1000 } })).status, 200);
+  assert.equal((await api.call('PUT', '/workforce/users/usr_chef/wage', { token: tokens.admin, body: { hourlyWage: 500 } })).status, 200);
   await api.call('PUT', '/workforce/users/usr_chef/wage', { token: tokens.admin, body: { hourlyWage: 15 } });
 });
 
@@ -262,7 +283,8 @@ test('adjustments are validated and admin only', async () => {
     (await send({ amount: 0 })).status,
     (await send({ amount: 0.001 })).status,
     (await send({ amount: '10' })).status,
-    (await send({ amount: 1e9 })).status,
+    (await send({ amount: 10000.01 })).status,
+    (await send({ amount: -10000.01 })).status,
     (await send({ reason: '' })).status,
     (await send({ reason: '   ' })).status,
     (await send({ reason: 'x'.repeat(201) })).status,
@@ -274,7 +296,8 @@ test('adjustments are validated and admin only', async () => {
   const wrongOwner = await api.call('DELETE', `/workforce/users/usr_waiter/adjustments/${otherPerson.body.adjustment.id}`, { token: tokens.admin });
 
   // Assert
-  assert.deepEqual(results, [400, 400, 400, 400, 400, 400, 400, 400, 403, 403]);
+  assert.deepEqual(results, [400, 400, 400, 400, 400, 400, 400, 400, 400, 403, 403]);
+  assert.equal((await send({ amount: -10000, reason: 'x'.repeat(200) })).status, 201, 'the limits themselves are allowed');
   assert.equal(wrongOwner.status, 404, 'an adjustment is removed only under its own person');
 });
 

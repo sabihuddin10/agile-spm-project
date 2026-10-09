@@ -85,7 +85,7 @@ export function AdjustmentForm({
           <input
             id="adj-reason"
             className={fieldClass(errors.reason)}
-            maxLength={80}
+            maxLength={200}
             placeholder="Eid bonus"
             value={reason}
             onChange={(e) => setReason(e.target.value)}

@@ -1,9 +1,8 @@
 /**
  * In-browser demo implementation of the workforce API contract (attendance,
- * presence, hours, pay). `workforceApi` delegates here while
- * NEXT_PUBLIC_WORKFORCE_MOCK is not 'false', so the My work page and the
- * Workforce hub can be clicked through before the server implements
- * /api/attendance/* and /api/workforce/*.
+ * presence, hours, pay). `workforceApi` delegates here only when
+ * NEXT_PUBLIC_WORKFORCE_MOCK is 'true' (the unit tests set it), so the My work
+ * page and the Workforce hub can be clicked through without a server.
  *
  * - History is generated from a seeded PRNG keyed on user + date, so it is
  *   stable across reloads (about 90 days back and two weeks ahead).
@@ -882,8 +881,11 @@ export function createWorkforceMock(options: WorkforceMockOptions = {}) {
       d.sessions.push({ id: newId('ses'), userId: me.id, date: d.today, clockIn: iso, clockOut: null, breaks: [], shiftId: shift?.id ?? null });
     } else if (action === 'clock-out') {
       if (!open) fail(409, 'You are not checked in.');
-      if (openBreak) fail(409, 'End your break before checking out.');
-      own(open).clockOut = iso;
+      // Like the server: an open break ends with the session.
+      const rec = own(open);
+      const b = rec.breaks.find((x) => x.end === null);
+      if (b) b.end = iso;
+      rec.clockOut = iso;
     } else if (action === 'break/start') {
       if (!open) fail(409, 'Check in before starting a break.');
       if (openBreak) fail(409, 'You are already on a break.');
@@ -1025,7 +1027,7 @@ export function createWorkforceMock(options: WorkforceMockOptions = {}) {
       if (!Number.isFinite(amount) || amount === 0 || Math.abs(amount) > 10000) fail(400, 'amount must be a non-zero number up to 10000.');
       const reason = typeof input.reason === 'string' ? input.reason.trim() : '';
       if (!reason) fail(400, 'reason cannot be empty.');
-      if (reason.length > 80) fail(400, 'reason must be 80 characters or fewer.');
+      if (reason.length > 200) fail(400, 'The reason can be at most 200 characters.');
       if (!isValidDate(input.date)) fail(400, 'date must be YYYY-MM-DD.');
       const adjustment: AdjustmentRecord = { id: newId('adj'), userId: id, amount: round2(amount), reason, date: input.date };
       d.adjustments.push(adjustment);

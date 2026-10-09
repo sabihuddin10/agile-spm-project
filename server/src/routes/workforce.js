@@ -15,7 +15,8 @@ const staffRoles = requireRole(...STAFF_ROLES);
 const adminOnly = requireRole('admin');
 
 const MAX_RANGE_DAYS = 366;
-const MAX_ADJUSTMENT = 100000;
+const MAX_ADJUSTMENT = 10000;
+const MAX_WAGE = 500;
 
 /** A real calendar date (rejects 2026-02-31, which Date would roll over). */
 const isStrictDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value)) && localDate(combine(value, '00:00')) === value;
@@ -118,8 +119,9 @@ router.get('/overview', requireRole('manager', 'admin'), (req, res) => {
   const { from, to } = monthRange(month);
   const at = now.getTime();
 
-  const rows = users
-    .filter((u) => roles.includes(u.role))
+  const visible = users.filter((u) => roles.includes(u.role));
+  const ids = new Set(visible.map((u) => u.id));
+  const rows = visible
     .map((u) => {
       const all = attendance.filter((s) => s.userId === u.id);
       const sessions = all.filter((s) => between(s.date, from, to));
@@ -137,7 +139,13 @@ router.get('/overview', requireRole('manager', 'admin'), (req, res) => {
     lateCount: rows.reduce((sum, r) => sum + r.summary.lateCount, 0),
     payroll: money ? round2(rows.reduce((sum, r) => sum + r.pay.net, 0)) : null,
   };
-  return res.json({ month, rows, totals });
+  // Team charts: the same buckets as one person's series, over everyone shown.
+  const team = buildSeries(
+    attendance.filter((s) => ids.has(s.userId) && between(s.date, from, to)),
+    shifts.filter((s) => ids.has(s.userId) && between(s.date, from, to)),
+    from, to, rules, at,
+  );
+  return res.json({ month, rows, totals, series: { day: team.day, week: team.week, hour: team.hour } });
 });
 
 /** PUT /api/workforce/users/:id/wage — set an hourly wage (admin). */
@@ -145,8 +153,8 @@ router.put('/users/:id/wage', adminOnly, (req, res) => {
   const target = staffTarget(req.params.id);
   if (!target) return res.status(404).json({ error: 'Staff member not found.' });
   const wage = req.body?.hourlyWage;
-  if (typeof wage !== 'number' || !Number.isFinite(wage) || wage <= 0 || wage > 1000) {
-    return res.status(400).json({ error: 'hourlyWage must be a number above 0 and at most 1000.' });
+  if (typeof wage !== 'number' || !Number.isFinite(wage) || wage <= 0 || wage > MAX_WAGE) {
+    return res.status(400).json({ error: `hourlyWage must be a number above 0 and at most ${MAX_WAGE}.` });
   }
   target.hourlyWage = round2(wage);
   return res.json({ hourlyWage: target.hourlyWage });

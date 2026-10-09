@@ -212,9 +212,9 @@ test('series bucket by day, ISO week and month across the range', () => {
   // Assert
   assert.deepEqual(series.day.map((p) => p.key), datesBetween('2026-09-29', '2026-10-05'));
   assert.equal(series.day.find((p) => p.key === '2026-09-30').paidMinutes, 240);
-  assert.deepEqual(series.week.map((p) => [p.key, p.scheduledMinutes, p.paidMinutes, p.lateCount]), [
-    ['2026-W40', 480, 240, 0],
-    ['2026-W41', 480, 180, 1],
+  assert.deepEqual(series.week.map((p) => [p.key, p.label, p.scheduledMinutes, p.paidMinutes, p.lateCount]), [
+    ['2026-W40', 'w/c 28 Sep', 480, 240, 0],
+    ['2026-W41', 'w/c 5 Oct', 480, 180, 1],
   ]);
   assert.deepEqual(series.month.map((p) => [p.key, p.label, p.paidMinutes]), [['2026-09', 'Sep 2026', 240], ['2026-10', 'Oct 2026', 180]]);
 });

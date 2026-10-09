@@ -368,8 +368,7 @@ describe('clock transitions', () => {
     await expectApiError(m.clockIn(me), 409);
     now = new Date(2026, 9, 9, 16, 0);
     expect((await m.startBreak(me)).state).toBe('on_break');
-    const err = await expectApiError(m.clockOut(me), 409);
-    expect(err.message).toMatch(/break/i);
+    await expectApiError(m.startBreak(me), 409);
     now = new Date(2026, 9, 9, 16, 30);
     expect((await m.endBreak(me)).state).toBe('working');
     now = new Date(2026, 9, 9, 18, 3);
@@ -377,6 +376,24 @@ describe('clock transitions', () => {
     expect(out.state).toBe('off');
     expect(out.session?.paidMinutes).toBe(4 * 60 - 30);
     await expectApiError(m.endBreak(me), 409);
+  });
+
+  it('checking out during a break ends the break too, like the server', async () => {
+    // Arrange
+    let now = new Date(NOW);
+    const m = mock(() => now);
+    const me = ACTORS.waiter;
+    await m.clockIn(me);
+    now = new Date(2026, 9, 9, 16, 0);
+    await m.startBreak(me);
+
+    // Act
+    now = new Date(2026, 9, 9, 16, 20);
+    const out = await m.clockOut(me);
+
+    // Assert
+    expect(out.state).toBe('off');
+    expect(out.session?.breaks.at(-1)?.end).toBe(now.toISOString());
   });
 
   it('marks a check-in after the grace period as late against today\'s shift', async () => {

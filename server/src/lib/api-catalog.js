@@ -100,7 +100,7 @@ const ADJUSTMENT = { id: 'adj_3', userId: 'usr_12', amount: 25, reason: 'Birthda
 const RANGE = { from: opt('YYYY-MM-DD', 'Default: first day of the month of "to"'), to: opt('YYYY-MM-DD', 'Default: today; at most a year after "from"') };
 const ANALYTICS = (pay) => ok({
   user: { id: 'usr_12', name: 'Jamie Rivera', role: 'waiter' }, range: { from: '2026-10-01', to: '2026-10-09' }, summary: SUMMARY,
-  series: { day: [POINT], week: [{ ...POINT, key: '2026-W41', label: 'W41' }], month: [{ ...POINT, key: '2026-10', label: 'Oct 2026' }], hour: [{ ...POINT, key: '17', label: '17:00' }] },
+  series: { day: [POINT], week: [{ ...POINT, key: '2026-W41', label: 'w/c 5 Oct' }], month: [{ ...POINT, key: '2026-10', label: 'Oct 2026' }], hour: [{ ...POINT, key: '17', label: '17:00' }] },
   sessions: [SESSION], shifts: [{ id: 'shf_9', date: '2026-10-09', start: '17:00', end: '23:00', status: 'completed' }], pay,
 });
 const CLOCK_ERRORS = ['409 invalid transition (already clocked in, not clocked in, already on a break, not on a break)'];
@@ -639,21 +639,21 @@ export const ROUTE_DOCS = {
     errors: ['403 not allowed to see this person', '404 staff member not found', '400 invalid range'],
   },
   'GET /api/workforce/overview': {
-    summary: 'Month overview: one row per visible staff member (state, attendance summary, pay) and totals.',
+    summary: 'Month overview: one row per visible staff member (state, attendance summary, pay), totals, and team series (day, week, hour) for the charts.',
     access: 'Admin: all staff with pay and payroll. Managers: waiters and chefs, pay and payroll null.',
     query: { month: opt('YYYY-MM', 'Default: this month') },
-    response: ok({ month: '2026-10', rows: [{ user: { id: 'usr_12', name: 'Jamie Rivera', role: 'waiter', active: true }, state: 'working', summary: SUMMARY, pay: PAY }], totals: { paidMinutes: 1840, lateCount: 1, payroll: 452.54 } }),
+    response: ok({ month: '2026-10', rows: [{ user: { id: 'usr_12', name: 'Jamie Rivera', role: 'waiter', active: true }, state: 'working', summary: SUMMARY, pay: PAY }], totals: { paidMinutes: 1840, lateCount: 1, payroll: 452.54 }, series: { day: [POINT], week: [{ ...POINT, key: '2026-W41', label: 'w/c 5 Oct' }], hour: [{ ...POINT, key: '17', label: '17:00' }] } }),
     errors: ['400 month not YYYY-MM'],
   },
   'PUT /api/workforce/users/:id/wage': {
     summary: 'Set a staff member\'s hourly wage.',
-    body: { hourlyWage: req('number', 'Above 0, at most 1000') },
+    body: { hourlyWage: req('number', 'Above 0, at most 500') },
     response: ok({ hourlyWage: 13.5 }),
     errors: ['400 invalid wage', '404 staff member not found'],
   },
   'POST /api/workforce/users/:id/adjustments': {
     summary: 'Add a bonus (or, with a negative amount, a deduction) to a staff member\'s pay.',
-    body: { amount: req('number', 'Non-zero; negative for a deduction'), reason: req('string', 'Up to 200 characters'), date: opt('YYYY-MM-DD', 'Default: today') },
+    body: { amount: req('number', 'Non-zero, at most 10000 either way; negative for a deduction'), reason: req('string', 'Up to 200 characters'), date: opt('YYYY-MM-DD', 'Default: today') },
     response: ok({ adjustment: ADJUSTMENT }, 201),
     errors: ['400 invalid amount / missing reason / invalid date', '404 staff member not found'],
   },
@@ -707,8 +707,8 @@ export const ROUTE_DOCS = {
       restaurantName: opt('string'), address: opt('string'), taxRate: opt('number', '0-0.5'), serviceChargeRate: opt('number', '0-0.5'),
       pointValue: opt('number', '0-1'), kitchenDelayMinutes: opt('number', '1-240'), reservationDurationMinutes: opt('number', '30-300'),
       reservationGraceMinutes: opt('number', '0-120'), openingHour: opt('number', '0-23'), closingHour: opt('number', '1-24'),
-      lateGraceMinutes: opt('number', '0-60'), latePenalty: opt('number', '0-1000, deducted per late arrival'),
-      autoBreakMinutes: opt('number', '0-180'), autoBreakAfterHours: opt('number', '1-16'),
+      lateGraceMinutes: opt('number', '0-60'), latePenalty: opt('number', '0-100, deducted per late arrival'),
+      autoBreakMinutes: opt('number', '0-120'), autoBreakAfterHours: opt('number', '1-12'),
     },
     response: ok({ settings: SETTINGS }),
   },
