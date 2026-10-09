@@ -187,3 +187,11 @@ test('null, blank and boolean values are rejected instead of silently becoming 0
   for (const res of [...numeric, ...text]) assert.equal(res.status, 400);
   assert.deepEqual(await current(), before);
 });
+
+test('restaurant name and address are limited to 200 characters', async () => {
+  // Act
+  const res = await api.call('PATCH', '/settings', { token: manager, body: { restaurantName: 'x'.repeat(201) } });
+
+  // Assert
+  assert.equal(res.status, 400);
+});

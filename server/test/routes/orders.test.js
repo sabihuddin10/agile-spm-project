@@ -256,3 +256,66 @@ test("a customer may still cancel their own prepaid order before the kitchen tak
   assert.equal(res.status, 200);
   assert.equal(res.body.order.paymentStatus, 'refunded');
 });
+
+test('a status of "__proto__" or "constructor" is an invalid status (400), not a server error', async () => {
+  // Arrange
+  const token = await api.login('waiter');
+  const fries = await menuItem(api.call, 'Fries');
+  const { body } = await api.call('POST', '/orders', { token, body: { type: 'dine-in', items: [{ menuItemId: fries.id, qty: 1 }] } });
+  const order = body.order;
+
+  for (const status of ['__proto__', 'constructor', 'toString', ['confirmed']]) {
+    // Act
+    const whole = await api.call('POST', `/orders/${order.id}/status`, { token, body: { status } });
+    const item = await api.call('PATCH', `/orders/${order.id}/items/${order.items[0].id}`, { token, body: { status } });
+
+    // Assert
+    assert.equal(whole.status, 400, `order status ${status}`);
+    assert.equal(item.status, 400, `item status ${status}`);
+  }
+});
+
+test('order lines are type-checked: quantity 1–99 whole numbers, modifiers a list, notes at most 500 characters', async () => {
+  // Arrange
+  const token = await api.login('waiter');
+  const fries = await menuItem(api.call, 'Fries');
+  const place = (item, extra = {}) => api.call('POST', '/orders', { token, body: { type: 'dine-in', items: [{ menuItemId: fries.id, ...item }], ...extra } });
+
+  // Act
+  const huge = await place({ qty: 1000000 });
+  const fraction = await place({ qty: 1.5 });
+  const text = await place({ qty: 'lots' });
+  const modifiers = await place({ qty: 1, modifiers: 'Large' });
+  const notes = await place({ qty: 1 }, { notes: 'x'.repeat(501) });
+  const tooManyLines = await api.call('POST', '/orders', { token, body: { type: 'dine-in', items: Array(51).fill({ menuItemId: fries.id, qty: 1 }) } });
+  const ok = await place({ qty: '2' });
+
+  // Assert
+  for (const res of [huge, fraction, text, modifiers, notes, tooManyLines]) assert.equal(res.status, 400);
+  assert.equal(ok.status, 201);
+  assert.equal(ok.body.order.items[0].qty, 2);
+});
+
+test('a customer cannot set the price, payment status or owner of their order', async () => {
+  // Arrange
+  const token = await api.login('customer');
+  const fries = await menuItem(api.call, 'Fries');
+
+  // Act
+  const res = await api.call('POST', '/orders', {
+    token,
+    body: {
+      type: 'online', fulfillment: 'pickup', paymentMethod: 'cash', customerId: 'cus_someone_else',
+      total: 0, paymentStatus: 'paid', status: 'served',
+      items: [{ menuItemId: fries.id, qty: 1, unitPrice: 0, name: 'Free fries' }],
+    },
+  });
+
+  // Assert
+  assert.equal(res.status, 201);
+  assert.equal(res.body.order.items[0].unitPrice, fries.price);
+  assert.equal(res.body.order.items[0].name, 'Fries');
+  assert.equal(res.body.order.paymentStatus, 'unpaid');
+  assert.equal(res.body.order.status, 'placed');
+  assert.notEqual(res.body.order.customerId, 'cus_someone_else');
+});

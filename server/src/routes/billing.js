@@ -4,6 +4,7 @@ import { requireRole } from '../middleware/auth.js';
 import { computeTotals, lineTotal, splitEvenCents, splitByItems, toCents, fromCents } from '../lib/order-math.js';
 import { markPaid, markUnpaid, tableNumber, userName } from '../lib/orders.js';
 import { localDate, iso } from '../lib/time.js';
+import { text, number } from '../lib/validate.js';
 
 const router = Router();
 
@@ -11,6 +12,7 @@ const billingRoles = requireRole('waiter', 'manager', 'admin');
 const managerRoles = requireRole('manager', 'admin');
 
 const PAYMENT_METHODS = ['card', 'cash'];
+const MAX_TIP = 10000;
 
 /** Itemized bill for an order (US5.1, US5.2). */
 function invoice(order) {
@@ -153,13 +155,12 @@ router.post('/:id/tip', billingRoles, (req, res) => {
   if (!order || !requireUnpaid(order, res) || !requireNoPaidShares(order, res)) return;
   const { amount, percent } = req.body || {};
   let tip;
-  if (percent !== undefined) {
-    const p = Number(percent);
-    if (!(p >= 0 && p <= 100)) return res.status(400).json({ error: 'Tip percent must be between 0 and 100.' });
+  if (percent !== undefined && percent !== null) {
+    const p = number(percent, 'Tip percent', { min: 0, max: 100, message: 'Tip percent must be between 0 and 100.' });
     tip = fromCents(Math.round(toCents(order.subtotal) * (p / 100)));
   } else {
-    tip = Number(amount);
-    if (!(tip >= 0)) return res.status(400).json({ error: 'Tip must be zero or more.' });
+    // A finite amount only: "Infinity" or 1e308 would break every total downstream.
+    tip = number(amount, 'Tip', { required: true, min: 0, max: MAX_TIP, message: `Tip must be between 0 and ${MAX_TIP}.` });
   }
   order.tip = tip;
   order.split = null; // totals changed — any split must be redone
@@ -261,8 +262,12 @@ router.post('/:id/refund', managerRoles, (req, res) => {
   if (!order) return;
   if (order.paymentStatus !== 'paid') return res.status(409).json({ error: 'Only paid bills can be refunded.' });
 
-  const reason = String(req.body?.reason || '').trim();
+  const reason = text(req.body?.reason, 'Reason', { max: 500, multiline: true }) ?? '';
   if (reason.length < 3) return res.status(400).json({ error: 'Please give a reason for the refund.' });
+  const rawAmount = req.body?.amount;
+  if (rawAmount !== undefined && rawAmount !== '' && rawAmount !== null) {
+    number(rawAmount, 'Refund amount', { min: 0, message: 'Refund amount must be a number.' });
+  }
 
   const remainingC = toCents(order.total) - toCents(order.refund?.amount ?? 0);
   const amountC = req.body?.amount === undefined || req.body?.amount === '' ? remainingC : toCents(req.body.amount);

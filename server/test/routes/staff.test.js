@@ -2,6 +2,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { startServer, localDate } from '../helpers.js';
+import { checkPassword } from '../../src/lib/password-policy.js';
 
 let api;
 let admin;
@@ -226,4 +227,33 @@ test('editing a shift re-times it without clashing with itself and applies the c
   assert.equal(unknown.status, 404);
   const rota = (await api.call('GET', `/staff/shifts?from=${date}&to=${date}&userId=usr_waiter`, { token: manager })).body.shifts;
   assert.deepEqual(rota.map((x) => [x.id, x.start, x.end, x.status]), [[evening.id, '17:00', '22:00', 'scheduled']], 'rejected edits leave the shift untouched');
+});
+
+test('job applications are type-checked: short name, valid phone, experience at most 1000 characters', async () => {
+  // Arrange
+  const apply = (extra) => api.call('POST', '/staff/applications', { body: { name: 'Type Check', email: `tc${Math.random().toString(36).slice(2)}@example.com`, desiredRole: 'waiter', ...extra } });
+
+  // Act
+  const longName = await apply({ name: 'x'.repeat(81) });
+  const controlName = await apply({ name: 'Bad\u0007Name' });
+  const badPhone = await apply({ phone: 'ring ring' });
+  const longExperience = await apply({ experience: 'x'.repeat(1001) });
+  const arrayRole = await apply({ desiredRole: ['waiter'] });
+  const sneakyRole = await apply({ desiredRole: 'manager' });
+
+  // Assert
+  for (const res of [longName, controlName, badPhone, longExperience, arrayRole, sneakyRole]) assert.equal(res.status, 400);
+});
+
+test('an approved hire gets a temporary password that satisfies the password policy', async () => {
+  // Arrange
+  const applied = await api.call('POST', '/staff/applications', { body: { name: 'Policy Hire', email: 'policy.hire@example.com', desiredRole: 'chef' } });
+
+  // Act
+  const approved = await api.call('POST', `/staff/applications/${applied.body.application.id}/approve`, { token: manager });
+
+  // Assert
+  assert.equal(approved.status, 200);
+  assert.deepEqual(checkPassword(approved.body.tempPassword), []);
+  assert.equal((await api.call('POST', '/auth/login', { body: { email: 'policy.hire@example.com', password: approved.body.tempPassword } })).status, 200);
 });

@@ -1,15 +1,17 @@
 import { Router } from 'express';
-import crypto from 'node:crypto';
+
 import { users, applications, shifts, orders, STAFF_ROLES, createUser, findUserByEmail, sanitizeUser, nextId } from '../data/store.js';
 import { requireRole } from '../middleware/auth.js';
 import { notify } from '../lib/notify.js';
 import { MINUTE, addDays, combine, isValidDate, isValidTime, localDate, iso } from '../lib/time.js';
 import { toCents, fromCents } from '../lib/order-math.js';
+import { generateTempPassword } from '../lib/password-policy.js';
+import { personName, email as readEmail, phone as readPhone, text, oneOf, id } from '../lib/validate.js';
 
 const router = Router();
 const managerRoles = requireRole('manager', 'admin');
 const staffRoles = requireRole(...STAFF_ROLES);
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 
 const nameOf = (userId) => users.find((u) => u.id === userId)?.name ?? 'Former staff';
 const shiftHours = (s) => (combine(s.date, s.end) - combine(s.date, s.start)) / (60 * MINUTE);
@@ -36,11 +38,13 @@ router.get('/roster', managerRoles, (req, res) => {
 
 /** POST /api/staff/applications — public "join our team" form (US9.1). */
 router.post('/applications', (req, res) => {
-  const { name, email, phone = '', desiredRole, experience = '' } = req.body || {};
-  const cleanEmail = String(email || '').toLowerCase().trim();
-  if (!String(name || '').trim() || !cleanEmail) return res.status(400).json({ error: 'Name and email are required.' });
-  if (!EMAIL_RE.test(cleanEmail)) return res.status(400).json({ error: 'Please enter a valid email address.' });
-  if (!['waiter', 'chef'].includes(desiredRole)) return res.status(400).json({ error: 'Choose the role you are applying for.' });
+  const body = req.body || {};
+  if (!body.name || !body.email) return res.status(400).json({ error: 'Name and email are required.' });
+  const name = personName(body.name);
+  const cleanEmail = readEmail(body.email);
+  const phone = readPhone(body.phone) ?? '';
+  const desiredRole = oneOf(body.desiredRole, 'Role', ['waiter', 'chef'], { required: true, message: 'Choose the role you are applying for.' });
+  const experience = text(body.experience, 'Experience', { max: 1000, multiline: true }) ?? '';
   if (findUserByEmail(cleanEmail)) return res.status(409).json({ error: 'An account with that email already exists.' });
   if (applications.some((a) => a.email === cleanEmail && a.status === 'pending')) {
     return res.status(409).json({ error: 'You already have an application under review.' });
@@ -48,11 +52,11 @@ router.post('/applications', (req, res) => {
 
   const application = {
     id: nextId('app'),
-    name: String(name).trim(),
+    name,
     email: cleanEmail,
-    phone: String(phone),
+    phone,
     desiredRole,
-    experience: String(experience).slice(0, 1000),
+    experience,
     status: 'pending',
     createdAt: iso(),
     decidedAt: null,
@@ -85,12 +89,12 @@ router.post('/applications/:id/approve', managerRoles, (req, res) => {
   if (!application) return res.status(404).json({ error: 'Application not found.' });
   if (application.status !== 'pending') return res.status(409).json({ error: `Application already ${application.status}.` });
 
-  const role = req.body?.role || application.desiredRole;
+  const role = oneOf(req.body?.role, 'Role', ['waiter', 'chef', 'manager', 'admin', 'customer'], { message: 'Invalid role.' }) || application.desiredRole;
   const allowed = req.user.role === 'admin' ? ['waiter', 'chef', 'manager'] : ['waiter', 'chef'];
   if (!allowed.includes(role)) return res.status(403).json({ error: `You cannot approve staff as ${role}.` });
   if (findUserByEmail(application.email)) return res.status(409).json({ error: 'An account with that email already exists.' });
 
-  const tempPassword = crypto.randomBytes(6).toString('base64url');
+  const tempPassword = generateTempPassword();
   const user = createUser({ name: application.name, email: application.email, password: tempPassword, role, mustChangePassword: true });
   Object.assign(application, { status: 'approved', decidedAt: iso(), decidedBy: req.user.id, userId: user.id, approvedRole: role });
   return res.json({ application, user: sanitizeUser(user), tempPassword });
@@ -139,10 +143,11 @@ function validateShift({ userId, date, start, end }, excludeId) {
 
 /** POST /api/staff/shifts — assign a shift (manager/admin). */
 router.post('/shifts', managerRoles, (req, res) => {
-  const { userId, date, start, end, notes = '' } = req.body || {};
+  const { userId, date, start, end } = req.body || {};
+  const notes = text(req.body?.notes, 'Notes', { max: 500, multiline: true }) ?? '';
   const error = validateShift({ userId, date, start, end });
   if (error) return res.status(400).json({ error });
-  const shift = { id: nextId('shf'), userId, date, start, end, notes: String(notes), status: 'scheduled', createdBy: req.user.id, createdAt: iso() };
+  const shift = { id: nextId('shf'), userId, date, start, end, notes, status: 'scheduled', createdBy: req.user.id, createdAt: iso() };
   shifts.push(shift);
   notify({ userId, type: 'shift', title: 'New shift', message: `You're on ${date}, ${start}–${end}.`, link: '/staff/schedule' });
   return res.status(201).json({ shift: serializeShift(shift) });
@@ -152,7 +157,9 @@ router.post('/shifts', managerRoles, (req, res) => {
 router.patch('/shifts/:id', managerRoles, (req, res) => {
   const shift = shifts.find((s) => s.id === req.params.id);
   if (!shift) return res.status(404).json({ error: 'Shift not found.' });
-  const { status, date, start, end, notes, userId } = req.body || {};
+  const { status, date, start, end, userId } = req.body || {};
+  id(userId, 'Staff member');
+  const notes = text(req.body?.notes, 'Notes', { max: 500, multiline: true });
   const next = { userId: userId ?? shift.userId, date: date ?? shift.date, start: start ?? shift.start, end: end ?? shift.end };
   const error = validateShift(next, shift.id);
   if (error) return res.status(400).json({ error });
@@ -161,7 +168,7 @@ router.patch('/shifts/:id', managerRoles, (req, res) => {
   }
   Object.assign(shift, next);
   if (status !== undefined) shift.status = status;
-  if (notes !== undefined) shift.notes = String(notes);
+  if (notes !== undefined) shift.notes = notes;
   return res.json({ shift: serializeShift(shift) });
 });
 

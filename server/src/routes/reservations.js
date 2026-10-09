@@ -5,10 +5,12 @@ import { availability, canAccommodate, suggestAlternatives, syncTableHolds, rele
 import { occupyTable } from '../lib/orders.js';
 import { notify } from '../lib/notify.js';
 import { combine, isValidDate, isValidTime, localDate, iso } from '../lib/time.js';
+import { personName, email as readEmail, phone as readPhone, text, id } from '../lib/validate.js';
 
 const router = Router();
 const staffRoles = requireRole('waiter', 'manager', 'admin');
 const MAX_PARTY = 12;
+const REQUESTS_MAX = 500;
 
 function serialize(r) {
   const c = r.customerId ? customers.find((x) => x.id === r.customerId) : null;
@@ -48,7 +50,7 @@ function cancel(r) {
 /** GET /api/reservations/availability?date=&partySize= — open time slots (public). */
 router.get('/availability', (req, res) => {
   const { date } = req.query;
-  const partySize = Number(req.query.partySize) || 2;
+  const partySize = Math.min(Math.max(Math.floor(Number(req.query.partySize)) || 2, 1), 100);
   if (!isValidDate(date)) return res.status(400).json({ error: 'A valid date is required.' });
   res.json({ date, partySize, slots: availability(date, partySize) });
 });
@@ -87,12 +89,16 @@ router.get('/mine', (req, res) => {
  * Fully booked slots are rejected with up to three alternative slots.
  */
 router.post('/', (req, res) => {
-  const { customerName, email, phone = '', partySize, date, time, specialRequests = '' } = req.body || {};
+  const body = req.body || {};
+  const { partySize, date, time } = body;
   const user = req.user && req.user.role === 'customer' ? req.user : null;
 
-  const name = String(customerName || user?.name || '').trim();
-  const contact = String(email || user?.email || '').trim();
-  const size = Number(partySize);
+  const name = personName(body.customerName || undefined, 'Name', { required: false }) || user?.name || '';
+  const rawContact = body.email || undefined;
+  const contact = rawContact === undefined ? user?.email || '' : readEmail(rawContact);
+  const phone = readPhone(body.phone) ?? '';
+  const specialRequests = text(body.specialRequests, 'Special requests', { max: REQUESTS_MAX, multiline: true }) ?? '';
+  const size = typeof partySize === 'number' || (typeof partySize === 'string' && partySize.trim()) ? Number(partySize) : NaN;
 
   if (!name || !contact || !partySize || !date || !time) {
     return res.status(400).json({ error: 'Name, email, party size, date and time are required.' });
@@ -116,13 +122,13 @@ router.post('/', (req, res) => {
     id: nextId('res'),
     customerName: name,
     email: contact,
-    phone: String(phone),
+    phone,
     partySize: size,
     date,
     time,
     tableId: null,
     status: 'requested',
-    specialRequests: String(specialRequests).slice(0, 500),
+    specialRequests,
     customerId: linked?.id ?? null,
     createdAt: iso(),
     confirmedAt: null,
@@ -153,13 +159,16 @@ router.post('/', (req, res) => {
 router.patch('/:id', staffRoles, (req, res) => {
   const r = reservations.find((x) => x.id === req.params.id);
   if (!r) return res.status(404).json({ error: 'Reservation not found.' });
-  const { status, tableId, partySize, date, time, specialRequests } = req.body || {};
+  const { status, partySize, date, time } = req.body || {};
+  const tableId = id(req.body?.tableId, 'Table', { nullable: true });
+  const specialRequests = text(req.body?.specialRequests, 'Special requests', { max: REQUESTS_MAX, multiline: true });
+  const sizeValue = typeof partySize === 'number' || (typeof partySize === 'string' && partySize.trim()) ? Number(partySize) : NaN;
 
   const next = {
     date: date ?? r.date,
     time: time ?? r.time,
-    partySize: partySize !== undefined ? Number(partySize) : r.partySize,
-    tableId: tableId !== undefined ? tableId || null : r.tableId,
+    partySize: partySize !== undefined ? sizeValue : r.partySize,
+    tableId: tableId !== undefined ? tableId : r.tableId,
   };
   if (!isValidDate(next.date) || !isValidTime(next.time)) return res.status(400).json({ error: 'Please choose a valid date and time.' });
   if (!(Number.isInteger(next.partySize) && next.partySize >= 1 && next.partySize <= MAX_PARTY)) {
@@ -195,7 +204,7 @@ router.patch('/:id', staffRoles, (req, res) => {
 
   if (r.tableId && r.tableId !== next.tableId) releaseHold(r);
   Object.assign(r, next);
-  if (specialRequests !== undefined) r.specialRequests = String(specialRequests);
+  if (specialRequests !== undefined) r.specialRequests = specialRequests;
 
   if (status !== undefined && status !== r.status) {
     if (status === 'confirmed') {

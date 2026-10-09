@@ -3,12 +3,14 @@ import { inventory, inventoryUnits, menuItems, stockMovements, purchaseOrders, n
 import { requireRole } from '../middleware/auth.js';
 import { adjustStock } from '../lib/orders.js';
 import { iso } from '../lib/time.js';
+import { text, number } from '../lib/validate.js';
 
 const router = Router();
 const kitchenRoles = requireRole('chef', 'manager', 'admin');
 const managerRoles = requireRole('manager', 'admin');
 
 const round2 = (n) => Math.round(n * 100) / 100;
+const MAX_AMOUNT = 1_000_000;
 
 /** Stock health: 'low' at/below reorder level, 'near' within 25% above it. */
 function health(item) {
@@ -33,15 +35,23 @@ function suggestedQty(item) {
   return item.unit === 'units' || item.unit === 'dozen' || item.unit === 'boxes' ? Math.ceil(qty) : round2(Math.ceil(qty * 10) / 10);
 }
 
+/**
+ * Check an ingredient body; returns an error message or null. Text fields must
+ * be strings within their limits, and amounts finite numbers (no "Infinity").
+ */
 function validateFields(body, partial) {
   const { name, unit, stock, reorderLevel, costPerUnit } = body;
   if (!partial || name !== undefined) {
-    if (!String(name || '').trim()) return 'Ingredient name is required.';
+    if (typeof name !== 'string' || !name.trim()) return 'Ingredient name is required.';
+    text(name, 'Ingredient name', { max: 80 });
   }
+  text(body.category, 'Category', { max: 60 });
+  text(body.supplier, 'Supplier', { max: 120 });
   if (unit !== undefined && !inventoryUnits.includes(unit)) return `Unit must be one of: ${inventoryUnits.join(', ')}.`;
   for (const [label, value] of [['Stock', stock], ['Reorder level', reorderLevel], ['Cost per unit', costPerUnit]]) {
-    if (value !== undefined && !(Number(value) >= 0)) return `${label} must be zero or more.`;
+    if (value !== undefined) number(value, label, { min: 0, max: MAX_AMOUNT, message: `${label} must be zero or more (up to ${MAX_AMOUNT}).` });
   }
+  if (body.delta !== undefined) number(body.delta, 'delta', { min: -MAX_AMOUNT, max: MAX_AMOUNT, message: 'delta must be a number.' });
   return null;
 }
 
@@ -156,12 +166,14 @@ router.get('/purchase-orders', managerRoles, (req, res) => {
 /** POST /api/inventory/purchase-orders — submit a reorder form { lines: [{ inventoryId, qty }], notes }. */
 router.post('/purchase-orders', managerRoles, (req, res) => {
   const raw = Array.isArray(req.body?.lines) ? req.body.lines : [];
+  if (raw.length > 200) return res.status(400).json({ error: 'A reorder form can have at most 200 lines.' });
+  const notes = text(req.body?.notes, 'Notes', { max: 1000, multiline: true }) ?? '';
   const lines = [];
   for (const l of raw) {
     const item = inventory.find((i) => i.id === l?.inventoryId);
     if (!item) return res.status(400).json({ error: 'Unknown ingredient on reorder form.' });
-    const qty = Number(l.qty);
-    if (!(qty > 0)) return res.status(400).json({ error: `Quantity for ${item.name} must be greater than zero.` });
+    const qty = typeof l.qty === 'number' || (typeof l.qty === 'string' && l.qty.trim()) ? Number(l.qty) : NaN;
+    if (!(qty > 0 && qty <= MAX_AMOUNT)) return res.status(400).json({ error: `Quantity for ${item.name} must be greater than zero.` });
     lines.push({ inventoryId: item.id, name: item.name, unit: item.unit, supplier: item.supplier, qty, costPerUnit: item.costPerUnit, cost: round2(qty * item.costPerUnit) });
   }
   if (lines.length === 0) return res.status(400).json({ error: 'Add at least one ingredient to the reorder form.' });
@@ -171,7 +183,7 @@ router.post('/purchase-orders', managerRoles, (req, res) => {
     number: `PO-${String(purchaseOrders.length + 1).padStart(4, '0')}`,
     lines,
     total: round2(lines.reduce((s, l) => s + l.cost, 0)),
-    notes: String(req.body?.notes || ''),
+    notes,
     status: 'sent',
     createdAt: iso(),
     createdBy: req.user.id,

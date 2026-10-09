@@ -29,6 +29,7 @@ import {
 } from '../lib/orders.js';
 import { notify } from '../lib/notify.js';
 import { localDate, iso } from '../lib/time.js';
+import { text, number } from '../lib/validate.js';
 
 const router = Router();
 
@@ -41,13 +42,29 @@ const staffRoles = requireRole(...ALL_STAFF);
 const floorRoles = requireRole(...FLOOR);
 const kitchenRoles = requireRole(...KITCHEN);
 
+const MAX_LINES = 50;
+const MAX_QTY = 99;
+
 /** Validate requested lines and price them from the live menu (never trust client prices). */
 function buildLines(rawItems, status) {
   if (!Array.isArray(rawItems) || rawItems.length === 0) {
     return { error: 'An order must contain at least one item.', code: 400 };
   }
+  if (rawItems.length > MAX_LINES) return { error: `An order can have at most ${MAX_LINES} lines.`, code: 400 };
   const lines = [];
   for (const raw of rawItems) {
+    if (raw?.qty !== undefined) {
+      const qty = typeof raw.qty === 'number' || (typeof raw.qty === 'string' && raw.qty.trim()) ? Number(raw.qty) : NaN;
+      if (!(Number.isInteger(qty) && qty >= 1 && qty <= MAX_QTY)) {
+        return { error: `Quantity must be a whole number between 1 and ${MAX_QTY}.`, code: 400 };
+      }
+    }
+    if (raw?.modifiers !== undefined && raw.modifiers !== null && !Array.isArray(raw.modifiers)) {
+      return { error: 'Modifiers must be a list.', code: 400 };
+    }
+    if (Array.isArray(raw?.modifiers) && raw.modifiers.some((m) => m && (typeof m !== 'object' || typeof m.group !== 'string' || typeof m.label !== 'string'))) {
+      return { error: 'Each modifier must be { group, label }.', code: 400 };
+    }
     const menu = menuItems.find((m) => m.id === raw?.menuItemId);
     if (!menu) return { error: `Unknown menu item: ${raw?.menuItemId}`, code: 400 };
     if (!menu.available) {
@@ -107,6 +124,8 @@ router.post('/', (req, res) => {
 
   const built = buildLines(body.items, 'pending');
   if (built.error) return res.status(built.code).json({ error: built.error });
+  const notes = text(body.notes, 'Notes', { max: 500, multiline: true }) ?? '';
+  const pointsRequested = Math.floor(number(body.pointsUsed ?? undefined, 'Points', { min: 0, max: 1e7 }) ?? 0);
 
   // Table: required when a customer orders from their table; optional for staff.
   let tableId = null;
@@ -120,7 +139,7 @@ router.post('/', (req, res) => {
   let deliveryAddress = '';
   if (type === 'online') {
     fulfillment = body.fulfillment === 'delivery' ? 'delivery' : 'pickup';
-    deliveryAddress = String(body.deliveryAddress || '').trim();
+    deliveryAddress = text(body.deliveryAddress, 'Delivery address', { max: 300, multiline: true }) ?? '';
     if (fulfillment === 'delivery' && !deliveryAddress) {
       return res.status(400).json({ error: 'A delivery address is required.' });
     }
@@ -146,13 +165,13 @@ router.post('/', (req, res) => {
     source: isCustomer ? 'customer' : 'staff',
     waiterId: isCustomer ? null : user.id,
     items: built.lines,
-    notes: String(body.notes || '').slice(0, 500),
+    notes,
     paymentMethod: isCustomer ? (body.paymentMethod === 'cash' ? 'cash' : 'card') : null,
   });
 
   // Redeem Flame Points (customers only), capped at balance and subtotal.
   if (isCustomer && customer) {
-    const requested = Math.max(0, Math.floor(Number(body.pointsUsed) || 0));
+    const requested = pointsRequested;
     const maxBySubtotal = Math.floor(toCents(order.subtotal) / toCents(settings.pointValue));
     const redeemed = Math.min(requested, customer.loyaltyPoints, maxBySubtotal);
     if (redeemed > 0) {
@@ -290,8 +309,10 @@ router.post('/:id/status', (req, res) => {
   if (!order) return res.status(404).json({ error: 'Order not found.' });
 
   const { status, reason } = req.body || {};
-  const rule = TRANSITIONS[status];
+  // Object.hasOwn: "__proto__" or "constructor" must not resolve to an inherited property.
+  const rule = typeof status === 'string' && Object.hasOwn(TRANSITIONS, status) ? TRANSITIONS[status] : null;
   if (!rule) return res.status(400).json({ error: 'Invalid status.' });
+  const cancelReason = text(reason, 'Reason', { max: 300 });
 
   const customerCancel = status === 'cancelled' && order.status === 'placed' && isOwner(order, req.user);
   if (!customerCancel && !rule.roles.includes(req.user.role)) {
@@ -327,7 +348,7 @@ router.post('/:id/status', (req, res) => {
     });
     syncOrderStatus(order, req.user);
   } else if (status === 'cancelled') {
-    cancelOrder(order, req.user, String(reason || 'Order cancelled'));
+    cancelOrder(order, req.user, cancelReason || 'Order cancelled');
   }
 
   order.updatedAt = now;
@@ -348,7 +369,7 @@ router.patch('/:id/items/:itemId', staffRoles, (req, res) => {
   if (!item) return res.status(404).json({ error: 'Order item not found.' });
 
   const { status } = req.body || {};
-  const rule = ITEM_TRANSITIONS[status];
+  const rule = typeof status === 'string' && Object.hasOwn(ITEM_TRANSITIONS, status) ? ITEM_TRANSITIONS[status] : null;
   if (!rule) return res.status(400).json({ error: 'Invalid item status.' });
   if (!rule.roles.includes(req.user.role)) {
     return res.status(403).json({ error: 'You do not have permission to perform this action.' });
