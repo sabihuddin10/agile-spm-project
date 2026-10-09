@@ -14,6 +14,8 @@ import analyticsRoutes from './routes/analytics.js';
 import notificationRoutes from './routes/notifications.js';
 import settingsRoutes from './routes/settings.js';
 import staffRoutes from './routes/staff.js';
+import attendanceRoutes from './routes/attendance.js';
+import workforceRoutes from './routes/workforce.js';
 import healthRoutes from './routes/health.js';
 import { PROBE_HEADER } from './lib/health-probe.js';
 import { authenticate, optionalAuth } from './middleware/auth.js';
@@ -68,6 +70,8 @@ export function createApp({ logging = true, persistence = Boolean(process.env.DA
   app.use('/api/billing', authenticate, billingRoutes);
   app.use('/api/analytics', authenticate, analyticsRoutes);
   app.use('/api/notifications', authenticate, notificationRoutes);
+  app.use('/api/attendance', authenticate, attendanceRoutes);
+  app.use('/api/workforce', authenticate, workforceRoutes);
 
   app.use((req, res) => {
     res.status(404).json({ error: 'Not found' });

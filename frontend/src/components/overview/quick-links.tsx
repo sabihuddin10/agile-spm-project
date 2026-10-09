@@ -13,7 +13,9 @@ const SECTION_LINKS: { section: Section; href: string; label: string; descriptio
   { section: 'inventory', href: '/staff/inventory', label: 'Inventory', description: 'Stock levels, adjustments and purchase orders.' },
   { section: 'staff', href: '/staff/users', label: 'Staff management', description: 'Applications, rota, roles and performance.' },
   { section: 'analytics', href: '/staff/analytics', label: 'Analytics', description: 'Sales trends, top dishes, peak hours, no-shows.' },
+  { section: 'workforce', href: '/staff/workforce', label: 'Workforce', description: 'Who is in, hours, lateness and payroll.' },
   { section: 'schedule', href: '/staff/schedule', label: 'My schedule', description: 'Your upcoming and past shifts.' },
+  { section: 'mywork', href: '/staff/my-work', label: 'My work', description: 'Check in and out, your hours and pay.' },
   { section: 'settings', href: '/staff/settings', label: 'Settings', description: 'Restaurant details, tax, service charge, hours.' },
 ];
 

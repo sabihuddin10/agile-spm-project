@@ -112,6 +112,20 @@ const MATRIX = [
   ['DELETE', '/staff/shifts/shf_nope', MANAGEMENT],
   ['GET', '/staff/performance', MANAGEMENT],
 
+  // Attendance — every staff member sees their own clock; presence is scoped
+  // per role in the handler (attendance.test.js)
+  ['GET', '/attendance/me', STAFF],
+  ['GET', '/attendance/presence', STAFF],
+
+  // Workforce — whose records you see is checked per target in the handler
+  // (workforce.test.js); wages and bonuses are admin only
+  ['GET', '/workforce/me', STAFF],
+  ['GET', '/workforce/users/usr_nope', STAFF],
+  ['GET', '/workforce/overview', MANAGEMENT],
+  ['PUT', '/workforce/users/usr_nope/wage', ADMIN, {}],
+  ['POST', '/workforce/users/usr_nope/adjustments', ADMIN, {}],
+  ['DELETE', '/workforce/users/usr_nope/adjustments/adj_nope', ADMIN],
+
   // Analytics & settings
   ['GET', '/analytics/summary', MANAGEMENT],
   ['GET', '/analytics/dashboard', MANAGEMENT],
@@ -158,11 +172,18 @@ const HANDLER_CHECKED = [
   'POST /api/orders/:id/status', // per-transition roles, owner cancel, paid cancel needs a manager — orders.test.js
   'GET /api/reservations/mine', // a customer's own bookings — reservations.test.js
   'POST /api/reservations/:id/cancel', // the booking's owner or floor staff — reservations.test.js
+  // Clock transitions change the caller's own state (the seed has people clocked
+  // in), so the staff-only check (customers 403, guests 401) is in attendance.test.js
+  'POST /api/attendance/clock-in',
+  'POST /api/attendance/clock-out',
+  'POST /api/attendance/break/start',
+  'POST /api/attendance/break/end',
 ];
 
 /** '/orders/ord_nope/items/itm_nope' → '/api/orders/:id/items/:itemId', as the catalogue names routes. */
 const toRoute = (path) => `/api${path
   .replace(/\/items\/itm_nope$/, (m) => (path.startsWith('/orders/') ? '/items/:itemId' : m))
+  .replace(/\/adjustments\/adj_nope$/, '/adjustments/:adjId')
   .replace(/\/[a-z]+_nope/g, '/:id')
   .replace(/\/split\/0\//, '/split/:index/')}`;
 

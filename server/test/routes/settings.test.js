@@ -32,6 +32,10 @@ const NUMERIC = [
   ['reservationGraceMinutes', 0, 120],
   ['openingHour', 0, 23],
   ['closingHour', 1, 24],
+  ['lateGraceMinutes', 0, 60],
+  ['latePenalty', 0, 100],
+  ['autoBreakMinutes', 0, 120],
+  ['autoBreakAfterHours', 1, 12],
 ];
 
 test('GET is public and includes the settings and time slots', async () => {
@@ -72,6 +76,33 @@ test('an admin may PATCH too; numeric strings and range edges are accepted', asy
   assert.equal(saved.serviceChargeRate, 0.5);
   assert.equal(saved.openingHour, 0);
   assert.equal(saved.closingHour, 24);
+
+  await restore();
+});
+
+test('attendance and pay rules have defaults and accept their range edges', async () => {
+  // Arrange
+  const edges = [
+    { lateGraceMinutes: 0, latePenalty: 0, autoBreakMinutes: 0, autoBreakAfterHours: 1 },
+    { lateGraceMinutes: 60, latePenalty: 100, autoBreakMinutes: 120, autoBreakAfterHours: 12 },
+  ];
+
+  // Act
+  const results = [];
+  for (const body of edges) {
+    const res = await patch(manager, body);
+    results.push([res.status, await current()]);
+  }
+
+  // Assert
+  assert.deepEqual(
+    [original.lateGraceMinutes, original.latePenalty, original.autoBreakMinutes, original.autoBreakAfterHours],
+    [5, 5, 60, 6],
+  );
+  results.forEach(([status, saved], i) => {
+    assert.equal(status, 200);
+    for (const [field, value] of Object.entries(edges[i])) assert.equal(saved[field], value);
+  });
 
   await restore();
 });

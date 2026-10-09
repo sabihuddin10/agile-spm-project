@@ -86,6 +86,8 @@ Each role gets what its job needs. Reversing money, deleting history, and changi
 
 Accounts follow a rank, admin > manager > chef = waiter: you can manage only accounts strictly below yours, and your own account is self-service on **My account**. Email and password changes need your current password, except that an admin changes their own password without it and can type a new password for anyone below them. A manager's password reset issues a one-time temporary password, which the person must replace at next sign-in. Changing or resetting a password signs out that account's other sessions.
 
+Every staff member clocks their own attendance and sees their own hours and pay estimate (`/api/attendance`, `/api/workforce`); managers see waiters' and chefs' attendance but never wages or pay, only the admin sees and edits wages, bonuses and everyone's pay, and the "who's working now" board shows waiters to waiters, chefs to chefs, managers plus waiters and chefs to managers, and all staff to the admin.
+
 The server enforces this with `requireRole` guards, plus handler checks where a rule depends on the record (an order's owner, a paid order, a chef editing only availability). `server/test/routes/access-matrix.test.js` calls every guarded endpoint as a guest and as each role, and fails if a route is added without an entry. The UI hides the same actions through `frontend/src/lib/permissions.ts`. The public booking and job-application forms are rate limited per IP for guests: 5 bookings per 10 minutes and 3 applications per hour.
 
 ## Deployment
@@ -98,6 +100,8 @@ Two Vercel projects, deployed with the Vercel CLI from their own folders:
 |-----------------------|-------------|-----------------------------------------------|
 | `plate-and-flame-api` | `server/`   | `DATABASE_URL` (Neon pooled URL), `JWT_SECRET` |
 | `plate-and-flame-web` | `frontend/` | `API_URL` = the API's URL (used by the `/api/*` rewrite at build time) |
+
+Optional for the web app: `NEXT_PUBLIC_WORKFORCE_MOCK=true` runs My work and the Workforce hub on in-browser demo data instead of the API (the unit tests do this).
 
 ```bash
 cd server && vercel deploy --prod      # API
@@ -135,6 +139,7 @@ The catalogue is read from the Express routers at runtime, so a new route shows 
 | 8 | Inventory | Ingredient CRUD, recipes (bill of materials), auto-deduction on order close, stock movement log, low-stock alerts, supplier reorder form → purchase orders → receive |
 | 9 | Staff | Public job applications → approval creates accounts, role assignment, suspend/remove (immediate), shift rota + personal schedule, performance metrics |
 | 10 | Analytics | Revenue/order trends by day/week/month, top dishes by qty/revenue, table turnover & occupancy, peak hours, inventory health, no-show rate |
+| 13–14 | Attendance & payroll — My work page and Workforce hub | Clock in/out and breaks, lateness with a grace period, automatic unpaid break on long days, missed shifts, presence board, day/week/month/hour-of-day analytics, monthly pay estimate (hours × wage + tips + bonuses − late penalties), admin wages and bonuses |
 
 ## Design decisions
 
