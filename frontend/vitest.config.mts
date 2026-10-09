@@ -14,5 +14,7 @@ export default defineConfig({
     setupFiles: ['./vitest.setup.ts'],
     globals: true,
     css: true,
+    // The workforce pages run against the in-browser demo in tests.
+    env: { NEXT_PUBLIC_WORKFORCE_MOCK: 'true' },
   },
 });

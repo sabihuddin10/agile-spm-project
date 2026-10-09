@@ -4,13 +4,15 @@
  * All data lives in memory and is seeded on server start — no database is used,
  * and data resets every time the server restarts. Seed data is generated
  * relative to the current date so the demo always has a live "today" (active
- * orders, tonight's bookings), 60 days of closed history for analytics, and
- * upcoming shifts.
+ * orders, tonight's bookings), 60 days of closed history for analytics, 90
+ * days of shifts and attendance, and upcoming shifts.
  */
 import bcrypt from 'bcryptjs';
 import { priceSelection, computeTotals } from '../lib/order-math.js';
 import { MINUTE, localDate, localTime, addDays, iso } from '../lib/time.js';
 import { seedHistory } from './seed-history.js';
+import { seedAttendance } from './seed-attendance.js';
+import { DEFAULT_WAGES } from '../lib/payroll.js';
 
 export const ROLES = ['customer', 'waiter', 'chef', 'manager', 'admin'];
 export const STAFF_ROLES = ['waiter', 'chef', 'manager', 'admin'];
@@ -36,6 +38,11 @@ export const settings = {
   reservationGraceMinutes: 15,
   openingHour: 12,
   closingHour: 22,
+  // Attendance and pay (lib/attendance.js, lib/payroll.js)
+  lateGraceMinutes: 5, // a clock-in later than shift start + grace is late
+  latePenalty: 5, // deducted from pay for each late arrival
+  autoBreakMinutes: 60, // unpaid break applied when none was recorded…
+  autoBreakAfterHours: 6, // …on a session longer than this
 };
 
 export const TIME_SLOTS = [
@@ -64,6 +71,7 @@ export const users = seedUsers.map((u) => ({
   mustChangePassword: false,
   tokenVersion: 0,
   passwordHash: DEMO_PASSWORD_HASH,
+  ...(STAFF_ROLES.includes(u.role) ? { hourlyWage: DEFAULT_WAGES[u.role] } : {}),
   createdAt: iso(addDays(new Date(), -120)),
 }));
 
@@ -77,7 +85,8 @@ export function findUserById(id) {
 
 export function sanitizeUser(user) {
   if (!user) return null;
-  const { passwordHash, tokenVersion, ...safe } = user;
+  // hourlyWage is private: only the workforce endpoints show it (to the person and the admin).
+  const { passwordHash, tokenVersion, hourlyWage, ...safe } = user;
   return { phone: '', mustChangePassword: false, ...safe };
 }
 
@@ -92,6 +101,7 @@ export function createUser({ name, email, password, role = 'customer', mustChang
     active: true,
     mustChangePassword,
     tokenVersion: 0,
+    ...(STAFF_ROLES.includes(role) ? { hourlyWage: DEFAULT_WAGES[role] } : {}),
     createdAt: iso(),
   };
   users.push(user);
@@ -408,6 +418,16 @@ export const applications = [];
 /** Shift schedule (US9.3). status: scheduled | completed | missed */
 export const shifts = [];
 
+/**
+ * Attendance sessions: { id, userId, date, clockIn, clockOut|null,
+ * breaks: [{ start, end|null }], shiftId|null, late, lateMinutes }.
+ * `date` is the local date the session started (lib/attendance.js).
+ */
+export const attendance = [];
+
+/** Pay adjustments (bonuses, deductions): { id, userId, amount, reason, date, createdBy, createdAt }. */
+export const payAdjustments = [];
+
 /* ---------------------------------------------------------- notifications */
 
 /**
@@ -425,6 +445,8 @@ seedHistory({
   orders, reservations, shifts, tables, menuItems, customers,
   TIME_SLOTS, buildOrderItem, createOrderRecord, nextId,
 });
+
+seedAttendance({ attendance, payAdjustments, shifts, settings, nextId });
 
 seedLiveState();
 

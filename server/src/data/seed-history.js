@@ -1,6 +1,6 @@
 /**
- * Generates 60 days of closed order history, past reservations and staff
- * shifts so that analytics, customer order histories and staff performance
+ * Generates 60 days of closed order history, past reservations and 90 days of
+ * staff shifts so that analytics, customer order histories and staff performance
  * have realistic data from the first run. A seeded PRNG keeps the history
  * identical across restarts (relative to today).
  */
@@ -8,6 +8,7 @@ import { computeTotals } from '../lib/order-math.js';
 import { MINUTE, localDate, addDays, iso } from '../lib/time.js';
 
 const HISTORY_DAYS = 60;
+const SHIFT_HISTORY_DAYS = 90;
 
 const HOUR_WEIGHTS = [[12, 4], [13, 5], [14, 2], [15, 1], [16, 1], [17, 2], [18, 4], [19, 6], [20, 5], [21, 2]];
 
@@ -34,7 +35,7 @@ const GUEST_NAMES = [
 const REFUND_REASONS = ['Wrong dish served', 'Long wait — goodwill refund', 'Duplicate card charge'];
 
 /** Small deterministic PRNG (mulberry32). */
-function mulberry32(seed) {
+export function mulberry32(seed) {
   let a = seed;
   return () => {
     a += 0x6d2b79f5;
@@ -231,9 +232,10 @@ export function seedHistory({ orders, reservations, shifts, tables, menuItems, c
     { userId: 'usr_manager', off: [0, 6], shifts: [['10:00', '18:00'], ['10:00', '18:00']] },
   ];
 
-  for (let d = -14; d <= 6; d += 1) {
+  // 90 days back (attendance and pay history are seeded from these) and a week ahead.
+  for (let d = -SHIFT_HISTORY_DAYS; d <= 6; d += 1) {
     const day = addDays(today, d);
-    const weekParity = Math.floor((d + 14) / 7) % 2;
+    const weekParity = Math.floor((d + SHIFT_HISTORY_DAYS) / 7) % 2;
     for (const member of rota) {
       if (member.off.includes(day.getDay())) continue;
       const [start, end] = member.shifts[weekParity];

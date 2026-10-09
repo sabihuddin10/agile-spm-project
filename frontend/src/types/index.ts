@@ -484,6 +484,11 @@ export interface Settings {
   reservationGraceMinutes: number;
   openingHour: number;
   closingHour: number;
+  /** Attendance & pay policy (workforce) — optional until the server returns them. */
+  lateGraceMinutes?: number;
+  latePenalty?: number;
+  autoBreakMinutes?: number;
+  autoBreakAfterHours?: number;
 }
 
 /* ------------------------------------------------------------------ staff */
@@ -593,4 +598,170 @@ export interface AnalyticsDashboard {
     noShowRate: number;
     cancellationRate: number;
   };
+}
+
+/* -------------------------------------------------------------- workforce */
+
+export type AttendanceState = 'off' | 'working' | 'on_break';
+
+/** Attendance & pay policy, edited on the settings page (manager/admin). */
+export interface AttendanceSettings {
+  /** Minutes after the scheduled start before a check-in counts as late. */
+  lateGraceMinutes: number;
+  /** Deducted from pay for each late session. */
+  latePenalty: number;
+  /** Unpaid break deducted from a long session with no recorded break. */
+  autoBreakMinutes: number;
+  /** Sessions longer than this (with no recorded break) get the automatic break. */
+  autoBreakAfterHours: number;
+}
+
+/** 'HH:MM' start/end of a scheduled shift. */
+export interface ShiftTime {
+  start: string;
+  end: string;
+}
+
+export interface AttendanceBreak {
+  start: string;
+  end: string | null;
+}
+
+export interface AttendanceSession {
+  id: string;
+  userId: string;
+  /** Local date the session started on. */
+  date: string;
+  clockIn: string;
+  clockOut: string | null;
+  breaks: AttendanceBreak[];
+  /** Automatic unpaid break applied because no break was recorded on a long session (0 if none). */
+  autoBreakMinutes: number;
+  shiftId: string | null;
+  late: boolean;
+  lateMinutes: number;
+  paidMinutes: number;
+}
+
+export interface MyStatus {
+  state: AttendanceState;
+  since: string | null;
+  session: AttendanceSession | null;
+  todayShift: ShiftTime | null;
+}
+
+export interface PresenceEntry {
+  userId: string;
+  name: string;
+  role: StaffRole;
+  state: AttendanceState;
+  since: string | null;
+  todayShift: ShiftTime | null;
+}
+
+export interface PayAdjustment {
+  id: string;
+  /** Positive = bonus, negative = correction. */
+  amount: number;
+  reason: string;
+  date: string;
+}
+
+export interface LatePenalty {
+  date: string;
+  minutes: number;
+  amount: number;
+}
+
+export interface PayBreakdown {
+  /** 'YYYY-MM'. */
+  month: string;
+  hourlyWage: number;
+  paidHours: number;
+  base: number;
+  tips: number;
+  bonuses: PayAdjustment[];
+  bonusTotal: number;
+  latePenalties: LatePenalty[];
+  latePenaltyTotal: number;
+  net: number;
+  /** True until the month has ended. */
+  estimated: boolean;
+}
+
+export interface WorkSummary {
+  scheduledMinutes: number;
+  workedMinutes: number;
+  breakMinutes: number;
+  paidMinutes: number;
+  shifts: number;
+  shiftsWorked: number;
+  shiftsMissed: number;
+  lateCount: number;
+  lateMinutes: number;
+  /** 0..1 */
+  onTimeRate: number;
+  /** 0..1 */
+  attendanceRate: number;
+}
+
+export interface SeriesPoint {
+  /** '2026-10-08', '2026-W41', '2026-10' or an hour '14'. */
+  key: string;
+  label: string;
+  scheduledMinutes: number;
+  paidMinutes: number;
+  breakMinutes: number;
+  lateCount: number;
+}
+
+export type WorkShiftStatus = 'scheduled' | 'completed' | 'missed';
+
+export interface WorkShift {
+  id: string;
+  date: string;
+  start: string;
+  end: string;
+  status: WorkShiftStatus;
+}
+
+export interface WorkSeries {
+  day: SeriesPoint[];
+  week: SeriesPoint[];
+  month: SeriesPoint[];
+  /** 24 points: paid minutes by hour of day. */
+  hour: SeriesPoint[];
+}
+
+export interface WorkforceUserRef {
+  id: string;
+  name: string;
+  role: StaffRole;
+}
+
+export interface StaffAnalytics {
+  user: WorkforceUserRef;
+  range: { from: string; to: string };
+  summary: WorkSummary;
+  series: WorkSeries;
+  /** Newest first. */
+  sessions: AttendanceSession[];
+  shifts: WorkShift[];
+  /** Null when the viewer may not see money (managers looking at staff). */
+  pay: PayBreakdown | null;
+}
+
+export interface WorkforceOverviewRow {
+  user: WorkforceUserRef & { active: boolean };
+  state: AttendanceState;
+  summary: WorkSummary;
+  pay: PayBreakdown | null;
+}
+
+export interface WorkforceOverview {
+  month: string;
+  rows: WorkforceOverviewRow[];
+  totals: { paidMinutes: number; lateCount: number; payroll: number | null };
+  /** Team totals across the visible rows for the month (day, week and hour-of-day buckets). */
+  series: Pick<WorkSeries, 'day' | 'week' | 'hour'>;
 }

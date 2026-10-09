@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { SettingsForm } from '@/components/settings/settings-form';
 import { settingsApi } from '@/lib/api';
 import { useAuth } from '@/context/auth-context';
+import { workforceApi } from '@/lib/workforce-api';
 import type { Settings, User } from '@/types';
 
 vi.mock('@/lib/api', async () => {
@@ -11,6 +12,9 @@ vi.mock('@/lib/api', async () => {
   return { ...actual, settingsApi: { get: vi.fn(), update: vi.fn() } };
 });
 vi.mock('@/context/auth-context', () => ({ useAuth: vi.fn() }));
+vi.mock('@/lib/workforce-api', () => ({ workforceApi: { getSettings: vi.fn(), updateSettings: vi.fn() } }));
+
+const ATTENDANCE = { lateGraceMinutes: 5, latePenalty: 5, autoBreakMinutes: 60, autoBreakAfterHours: 6 };
 
 const toastFn = vi.fn();
 vi.mock('@/components/ui/toast', () => ({ useToast: () => toastFn }));
@@ -39,6 +43,9 @@ describe('SettingsForm', () => {
   beforeEach(() => {
     toastFn.mockClear();
     vi.mocked(settingsApi.get).mockResolvedValue({ settings: makeSettings(), timeSlots: ['12:00', '12:30'] });
+    vi.mocked(settingsApi.update).mockReset();
+    vi.mocked(workforceApi.getSettings).mockResolvedValue(ATTENDANCE);
+    vi.mocked(workforceApi.updateSettings).mockReset();
   });
 
   it('shows a loading spinner while settings are being fetched', () => {
@@ -166,5 +173,45 @@ describe('SettingsForm', () => {
 
     // Assert
     expect(await screen.findByText('Tax rate must be between 0% and 50%.')).toBeInTheDocument();
+  });
+
+  it('shows the Attendance & pay group and saves only those settings when only they changed', async () => {
+    // Arrange
+    mockUser('manager');
+    vi.mocked(workforceApi.updateSettings).mockResolvedValue({ ...ATTENDANCE, lateGraceMinutes: 10 });
+    const user = userEvent.setup({ delay: null });
+    render(<SettingsForm />);
+    const grace = await screen.findByLabelText('Late after');
+    expect(grace).toHaveValue(5);
+    expect(screen.getByLabelText('Late deduction')).toHaveValue(5);
+    expect(screen.getByLabelText('Automatic break after')).toHaveValue(6);
+    expect(screen.getByLabelText('Automatic break')).toHaveValue(60);
+
+    // Act
+    await user.clear(grace);
+    await user.type(grace, '10');
+    await user.click(screen.getByRole('button', { name: /save settings/i }));
+
+    // Assert
+    await waitFor(() => expect(workforceApi.updateSettings).toHaveBeenCalledWith({ ...ATTENDANCE, lateGraceMinutes: 10 }));
+    expect(settingsApi.update).not.toHaveBeenCalled();
+    expect(await screen.findByText('All changes saved.')).toBeInTheDocument();
+  });
+
+  it('maps an attendance validation error onto its field', async () => {
+    // Arrange
+    mockUser('admin');
+    vi.mocked(workforceApi.updateSettings).mockRejectedValue(new Error('latePenalty must be between 0 and 100.'));
+    const user = userEvent.setup({ delay: null });
+    render(<SettingsForm />);
+    const penalty = await screen.findByLabelText('Late deduction');
+
+    // Act
+    await user.clear(penalty);
+    await user.type(penalty, '150');
+    await user.click(screen.getByRole('button', { name: /save settings/i }));
+
+    // Assert
+    expect(await screen.findByText('Late deduction must be between $0.00 and $100.00.')).toBeInTheDocument();
   });
 });
