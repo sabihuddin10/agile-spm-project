@@ -88,12 +88,13 @@ export function seedAttendance({ attendance, payAdjustments, shifts, settings, n
   /* -------------------------------------- keep the presence board alive */
 
   const isOpen = (x) => !x.clockOut;
-  for (const userId of ['usr_waiter', 'usr_chef', 'usr_waiter2']) {
+  for (const userId of ['usr_waiter', 'usr_chef', 'usr_waiter2', 'usr_chef2', 'usr_manager']) {
     if (attendance.filter(isOpen).length >= 2) break;
     if (attendance.some((x) => x.userId === userId && isOpen(x))) continue;
-    const clockIn = nowMs - 100 * MINUTE;
-    const overlaps = attendance.some((x) => x.userId === userId && sessionSpan(x, nowMs)[1] > clockIn);
-    if (overlaps) continue;
+    // Start 100 minutes ago, or 15 minutes after their last session ended.
+    const lastEnd = Math.max(0, ...attendance.filter((x) => x.userId === userId).map((x) => sessionSpan(x, nowMs)[1]));
+    const clockIn = Math.max(nowMs - 100 * MINUTE, lastEnd + 15 * MINUTE);
+    if (clockIn > nowMs - 5 * MINUTE) continue;
     add(userId, matchShift(shifts, userId, iso(new Date(clockIn))), clockIn, null, []);
   }
   if (!attendance.some((x) => isOpen(x) && x.breaks.some((b) => !b.end))) {
