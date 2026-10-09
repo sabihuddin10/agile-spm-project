@@ -30,8 +30,17 @@
   .btn-ghost {
     @apply btn text-stone-600 hover:bg-stone-100 focus:ring-stone-400;
   }
+  /* Confirming a positive step (Ready, Start, Received). */
+  .btn-success {
+    @apply btn bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500;
+  }
+  /* Compact size for dense rows; combine with a colour: "btn-sm btn-secondary". Use instead of !py-1 overrides. */
+  .btn-sm {
+    @apply min-h-[36px] px-3 py-1.5 text-sm;
+  }
+  /* 16px text on phones so iOS does not zoom on focus. */
   .input {
-    @apply w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm shadow-sm placeholder:text-stone-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500;
+    @apply w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-base shadow-sm placeholder:text-stone-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500 sm:text-sm;
   }
   .label {
     @apply mb-1 block text-sm font-medium text-stone-700;
@@ -174,5 +183,12 @@
   }
   .no-print {
     display: none !important;
+  }
+}
+
+/* Touch screens (tablets on the floor, phones): every button is at least 44px tall. */
+@media (pointer: coarse) {
+  .btn, .btn-primary, .btn-secondary, .btn-danger, .btn-ghost, .btn-success, .btn-sm {
+    min-height: 44px;
   }
 }
