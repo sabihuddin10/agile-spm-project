@@ -11,6 +11,8 @@ const fraunces = Fraunces({
   variable: '--font-display',
   axes: ['SOFT', 'WONK', 'opsz'],
   display: 'swap',
+  // Only the storefront uses the display face; don't make staff screens preload it.
+  preload: false,
 });
 
 export const metadata: Metadata = {

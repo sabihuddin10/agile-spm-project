@@ -26,7 +26,7 @@ export function DevShell({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 z-40 border-b border-stone-200 bg-white">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-6">
           <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded bg-indigo-600 text-[11px] font-bold text-white">
+            <div className="flex h-7 w-7 items-center justify-center rounded bg-indigo-600 text-xs font-bold text-white">
               RO
             </div>
             <span className="text-sm font-semibold text-stone-900">Dev tracker</span>

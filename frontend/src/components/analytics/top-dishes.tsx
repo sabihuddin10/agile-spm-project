@@ -80,7 +80,7 @@ export function TopDishes({ dishes, className = '' }: { dishes: AnalyticsDashboa
       y: {
         grid: { display: false },
         border: { color: CHART_COLORS.axis },
-        ticks: { color: '#44403c', autoSkip: false },
+        ticks: { color: CHART_COLORS.label, autoSkip: false },
       },
     },
   };
@@ -129,7 +129,7 @@ export function TopDishes({ dishes, className = '' }: { dishes: AnalyticsDashboa
               <tbody className="tabular-nums">
                 {ranked.map((d, i) => (
                   <tr key={d.name}>
-                    <td className="text-stone-400">{i + 1}</td>
+                    <td className="text-stone-500">{i + 1}</td>
                     <td className="max-w-[12rem] truncate font-medium text-stone-800" title={d.name}>
                       {d.name}
                     </td>

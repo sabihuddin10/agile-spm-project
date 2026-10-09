@@ -32,7 +32,7 @@ export function LiveTile({
         <p className="text-2xl font-semibold text-stone-900">
           {loading ? (
             <>
-              <span className="inline-block h-7 w-12 animate-pulse rounded bg-stone-100 align-middle" aria-hidden="true" />
+              <span className="inline-block h-7 w-12 animate-pulse rounded bg-stone-100 align-middle motion-reduce:animate-none" aria-hidden="true" />
               <span className="sr-only">Loading</span>
             </>
           ) : (
@@ -42,7 +42,7 @@ export function LiveTile({
         {flag && !loading ? <Badge tone={flag.tone}>{flag.label}</Badge> : null}
       </div>
       {hint ? <p className="mt-0.5 text-xs text-stone-500">{hint}</p> : null}
-      <p className="mt-auto pt-2 text-xs font-medium text-stone-400 group-hover:text-brand-700">
+      <p className="mt-auto pt-2 text-xs font-medium text-stone-500 group-hover:text-brand-700">
         Open <span aria-hidden="true">→</span>
       </p>
     </Link>
@@ -54,7 +54,7 @@ export function TileGroup({ title, children, cols = 3 }: { title: string; childr
   return (
     <section aria-label={title}>
       <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">{title}</h2>
-      <div className={`grid grid-cols-2 gap-3 ${cols === 6 ? 'sm:grid-cols-3 2xl:grid-cols-6' : 'sm:grid-cols-3'}`}>{children}</div>
+      <div className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${cols === 6 ? 'lg:grid-cols-3 2xl:grid-cols-6' : 'lg:grid-cols-3'}`}>{children}</div>
     </section>
   );
 }

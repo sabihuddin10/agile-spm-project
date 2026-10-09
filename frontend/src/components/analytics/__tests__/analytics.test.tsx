@@ -129,10 +129,24 @@ describe('chart-setup', () => {
     expect(ChartJS.defaults.font.size).toBe(12);
     expect(ChartJS.defaults.color).toBe('#78716c');
   });
+
+  it('exposes shared text and state colour tokens so charts avoid hex literals', () => {
+    // Arrange / Act
+    const tokens = CHART_COLORS;
+
+    // Assert
+    expect(tokens).toMatchObject({
+      axisTitle: '#78716c',
+      label: '#44403c',
+      danger: '#b91c1c',
+      track: '#e7e5e4',
+      breakTime: '#d6d3d1',
+    });
+  });
 });
 
 describe('AnalyticsCard', () => {
-  it('renders the title as the section heading, the story tag, subtitle, action and body', () => {
+  it('renders the title as the section heading, subtitle, action and body, keeping the story as a data attribute only', () => {
     // Arrange / Act
     render(
       <AnalyticsCard title="Peak hours" story="US10.4" subtitle="Orders per hour." action={<button type="button">Export</button>}>
@@ -143,7 +157,8 @@ describe('AnalyticsCard', () => {
     // Assert
     const region = screen.getByRole('region', { name: 'Peak hours' });
     expect(within(region).getByRole('heading', { level: 2, name: 'Peak hours' })).toBeInTheDocument();
-    expect(within(region).getByText('US10.4')).toBeInTheDocument();
+    expect(region).toHaveAttribute('data-story', 'US10.4');
+    expect(within(region).queryByText('US10.4')).not.toBeInTheDocument();
     expect(within(region).getByText('Orders per hour.')).toBeInTheDocument();
     expect(within(region).getByRole('button', { name: 'Export' })).toBeInTheDocument();
     expect(within(region).getByText('Card body')).toBeInTheDocument();
@@ -524,9 +539,9 @@ describe('AnalyticsDashboard', () => {
     expect(await screen.findByRole('heading', { name: 'Revenue & orders trend' })).toBeInTheDocument();
     expect(analyticsApi.dashboard).toHaveBeenCalledWith({ from: addDaysISO(-29), to: localDateISO(), granularity: 'day' });
     for (const title of ['Top-selling dishes', 'Reservation no-shows', 'Peak hours', 'Table turnover & utilization']) {
-      expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
+      expect(await screen.findByRole('heading', { name: title })).toBeInTheDocument();
     }
-    expect(screen.getByText('Margherita', { selector: 'td' })).toBeInTheDocument();
+    expect(await screen.findByText('Margherita', { selector: 'td' })).toBeInTheDocument();
     expect(screen.getByText('30 days, grouped by day')).toBeInTheDocument();
     expect(screen.getByText(/^Showing/)).toHaveTextContent('Showing 1 Sep 2026 – 30 Sep 2026');
   });
