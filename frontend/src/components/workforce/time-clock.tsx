@@ -4,7 +4,7 @@ import type { AttendanceSettings, MyStatus } from '@/types';
 import { DEFAULT_ATTENDANCE_SETTINGS } from '@/lib/workforce-mock';
 import { useNow } from '@/hooks/use-polling';
 import { Badge } from '@/components/ui/badge';
-import { STATE_META, clockTime, elapsedSpoken, elapsedText, hoursText } from '@/components/workforce/workforce-format';
+import { STATE_META, clockTime, elapsedText, hoursText } from '@/components/workforce/workforce-format';
 
 export type ClockAction = 'clock-in' | 'break-start' | 'break-end' | 'clock-out';
 
@@ -58,8 +58,8 @@ export function TimeClock({
   else if (shiftOver) headline = `Checked out at ${clockTime(session?.clockOut)}`;
   else headline = 'Not checked in';
 
-  const announcement =
-    status.state === 'off' ? `${headline}.` : `${headline}. ${meta.label} for ${elapsedSpoken(sinceMs)}.`;
+  // Announced only when the state changes — the ticking timer itself is hidden from screen readers.
+  const announcement = `${headline}.`;
 
   return (
     <section className="card" aria-labelledby="time-clock-heading">
