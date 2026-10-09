@@ -1,0 +1,6273 @@
+{
+  "service": "restaurant-ops-api",
+  "endpoints": [
+    {
+      "id": "GET /api/health",
+      "module": "health",
+      "method": "GET",
+      "path": "/api/health",
+      "params": [],
+      "documented": true,
+      "summary": "Service status. Browsers get this page; other clients get JSON.",
+      "auth": "none",
+      "roles": [],
+      "rolesSource": null,
+      "access": null,
+      "query": {
+        "format": {
+          "type": "json|html",
+          "required": false,
+          "note": "Force a representation instead of using the Accept header"
+        }
+      },
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "status": "ok",
+          "service": "restaurant-ops-api",
+          "time": "2026-10-08T18:00:00.000Z",
+          "uptimeSeconds": 5321,
+          "persistence": {
+            "enabled": true,
+            "store": "postgres"
+          },
+          "endpoints": 84
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "GET /api/health/endpoints",
+      "module": "health",
+      "method": "GET",
+      "path": "/api/health/endpoints",
+      "params": [],
+      "documented": true,
+      "summary": "Machine-readable catalogue of every endpoint (this page as JSON).",
+      "auth": "none",
+      "roles": [],
+      "rolesSource": null,
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "service": "restaurant-ops-api",
+          "count": 84,
+          "modules": [
+            "auth",
+            "..."
+          ],
+          "endpoints": [
+            {
+              "method": "GET",
+              "path": "/api/menu",
+              "module": "menu",
+              "auth": "optional",
+              "roles": [],
+              "probe": {
+                "enabled": true
+              }
+            }
+          ]
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "GET /api/health/check",
+      "module": "health",
+      "method": "GET",
+      "path": "/api/health/check",
+      "params": [],
+      "documented": true,
+      "summary": "Runs the live probes: every safe GET is called without credentials; results are cached for a few seconds.",
+      "auth": "none",
+      "roles": [],
+      "rolesSource": null,
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "checkedAt": "2026-10-08T18:00:00.000Z",
+          "durationMs": 412,
+          "summary": {
+            "up": 30,
+            "auth": 25,
+            "warn": 0,
+            "down": 0,
+            "skipped": 50,
+            "total": 84
+          },
+          "database": {
+            "enabled": true,
+            "status": "up",
+            "latencyMs": 38
+          },
+          "results": [
+            {
+              "id": "GET /api/menu",
+              "status": "up",
+              "httpStatus": 200,
+              "latencyMs": 12
+            },
+            {
+              "id": "GET /api/orders",
+              "status": "auth",
+              "httpStatus": 401,
+              "latencyMs": 4
+            }
+          ]
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": false,
+        "reason": "Runs the probes itself"
+      }
+    },
+    {
+      "id": "POST /api/auth/register",
+      "module": "auth",
+      "method": "POST",
+      "path": "/api/auth/register",
+      "params": [],
+      "documented": true,
+      "summary": "Create a customer account and its linked customer profile.",
+      "auth": "none",
+      "roles": [],
+      "rolesSource": null,
+      "access": null,
+      "query": null,
+      "body": {
+        "name": {
+          "type": "string",
+          "required": true,
+          "note": ""
+        },
+        "email": {
+          "type": "string",
+          "required": true,
+          "note": "Valid email, unique"
+        },
+        "password": {
+          "type": "string",
+          "required": true,
+          "note": "At least 6 characters"
+        }
+      },
+      "response": {
+        "status": 201,
+        "example": {
+          "user": {
+            "id": "usr_12",
+            "name": "Jamie Rivera",
+            "email": "jamie@example.com",
+            "phone": "555-0144",
+            "role": "customer",
+            "active": true,
+            "mustChangePassword": false,
+            "createdAt": "2026-01-04T10:00:00.000Z"
+          },
+          "token": "<jwt>"
+        }
+      },
+      "errors": [
+        "400 missing/invalid fields",
+        "409 email already registered"
+      ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "POST /api/auth/login",
+      "module": "auth",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "params": [],
+      "documented": true,
+      "summary": "Sign in with email and password (any role) and receive a JWT.",
+      "auth": "none",
+      "roles": [],
+      "rolesSource": null,
+      "access": null,
+      "query": null,
+      "body": {
+        "email": {
+          "type": "string",
+          "required": true,
+          "note": ""
+        },
+        "password": {
+          "type": "string",
+          "required": true,
+          "note": ""
+        }
+      },
+      "response": {
+        "status": 200,
+        "example": {
+          "user": {
+            "id": "usr_12",
+            "name": "Jamie Rivera",
+            "email": "jamie@example.com",
+            "phone": "555-0144",
+            "role": "waiter",
+            "active": true,
+            "mustChangePassword": false,
+            "createdAt": "2026-01-04T10:00:00.000Z"
+          },
+          "token": "<jwt>"
+        }
+      },
+      "errors": [
+        "401 wrong email or password",
+        "403 account suspended"
+      ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "GET /api/auth/me",
+      "module": "auth",
+      "method": "GET",
+      "path": "/api/auth/me",
+      "params": [],
+      "documented": true,
+      "summary": "The signed-in user.",
+      "auth": "required",
+      "roles": [],
+      "rolesSource": null,
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "user": {
+            "id": "usr_12",
+            "name": "Jamie Rivera",
+            "email": "jamie@example.com",
+            "phone": "555-0144",
+            "role": "waiter",
+            "active": true,
+            "mustChangePassword": false,
+            "createdAt": "2026-01-04T10:00:00.000Z"
+          }
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "PATCH /api/auth/me",
+      "module": "auth",
+      "method": "PATCH",
+      "path": "/api/auth/me",
+      "params": [],
+      "documented": true,
+      "summary": "Staff edit their own name, email and phone. Changing the email (the login) needs the current password.",
+      "auth": "required",
+      "roles": [
+        "waiter",
+        "chef",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": {
+        "name": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        },
+        "email": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        },
+        "phone": {
+          "type": "string",
+          "required": false,
+          "note": "digits, spaces, + ( ) - .; max 30"
+        },
+        "currentPassword": {
+          "type": "string",
+          "required": false,
+          "note": "Required when the email changes"
+        }
+      },
+      "response": {
+        "status": 200,
+        "example": {
+          "user": {
+            "id": "usr_12",
+            "name": "Jamie Rivera",
+            "email": "jamie@example.com",
+            "phone": "555-0144",
+            "role": "waiter",
+            "active": true,
+            "mustChangePassword": false,
+            "createdAt": "2026-01-04T10:00:00.000Z"
+          }
+        }
+      },
+      "errors": [
+        "400 blank name / invalid email or phone / wrong or missing current password",
+        "409 email already in use"
+      ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "POST /api/auth/me/password",
+      "module": "auth",
+      "method": "POST",
+      "path": "/api/auth/me/password",
+      "params": [],
+      "documented": true,
+      "summary": "Change your own password. Your other sessions are signed out; use the returned token for this one. Admins do not need their current password.",
+      "auth": "required",
+      "roles": [],
+      "rolesSource": null,
+      "access": null,
+      "query": null,
+      "body": {
+        "currentPassword": {
+          "type": "string",
+          "required": false,
+          "note": "Required for everyone except admins"
+        },
+        "newPassword": {
+          "type": "string",
+          "required": true,
+          "note": "At least 6 characters, different from the current one"
+        }
+      },
+      "response": {
+        "status": 200,
+        "example": {
+          "user": {
+            "id": "usr_12",
+            "name": "Jamie Rivera",
+            "email": "jamie@example.com",
+            "phone": "555-0144",
+            "role": "waiter",
+            "active": true,
+            "mustChangePassword": false,
+            "createdAt": "2026-01-04T10:00:00.000Z"
+          },
+          "token": "<jwt>"
+        }
+      },
+      "errors": [
+        "400 wrong current password / too short / unchanged"
+      ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "PATCH /api/auth/users/:id/profile",
+      "module": "auth",
+      "method": "PATCH",
+      "path": "/api/auth/users/:id/profile",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Edit the name, email or phone of a staff account below your rank (managers: waiters and chefs; admins: also managers).",
+      "auth": "required",
+      "roles": [
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": "Handler checks rank: admin > manager > chef = waiter, strictly lower only, never yourself.",
+      "query": null,
+      "body": {
+        "name": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        },
+        "email": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        },
+        "phone": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        }
+      },
+      "response": {
+        "status": 200,
+        "example": {
+          "user": {
+            "id": "usr_12",
+            "name": "Jamie Rivera",
+            "email": "jamie@example.com",
+            "phone": "555-0144",
+            "role": "waiter",
+            "active": true,
+            "mustChangePassword": false,
+            "createdAt": "2026-01-04T10:00:00.000Z"
+          }
+        }
+      },
+      "errors": [
+        "400 invalid field",
+        "403 account is not below your rank",
+        "404 user not found",
+        "409 email already in use"
+      ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "POST /api/auth/users/:id/reset-password",
+      "module": "auth",
+      "method": "POST",
+      "path": "/api/auth/users/:id/reset-password",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Issue a one-time temporary password for a staff account below your rank. They must set their own on next sign-in, and their sessions are signed out.",
+      "auth": "required",
+      "roles": [
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": "Handler checks rank: admin > manager > chef = waiter, strictly lower only, never yourself.",
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "user": {
+            "id": "usr_12",
+            "name": "Jamie Rivera",
+            "email": "jamie@example.com",
+            "phone": "555-0144",
+            "role": "waiter",
+            "active": true,
+            "mustChangePassword": true,
+            "createdAt": "2026-01-04T10:00:00.000Z"
+          },
+          "tempPassword": "<generated>"
+        }
+      },
+      "errors": [
+        "403 account is not below your rank",
+        "404 user not found"
+      ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "POST /api/auth/users/:id/password",
+      "module": "auth",
+      "method": "POST",
+      "path": "/api/auth/users/:id/password",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "An admin sets a new password for a staff account below them, without the old one. Their sessions are signed out.",
+      "auth": "required",
+      "roles": [
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": "Admin only, and only for accounts below admin rank (not other admins).",
+      "query": null,
+      "body": {
+        "newPassword": {
+          "type": "string",
+          "required": true,
+          "note": "At least 6 characters"
+        }
+      },
+      "response": {
+        "status": 200,
+        "example": {
+          "user": {
+            "id": "usr_12",
+            "name": "Jamie Rivera",
+            "email": "jamie@example.com",
+            "phone": "555-0144",
+            "role": "waiter",
+            "active": true,
+            "mustChangePassword": false,
+            "createdAt": "2026-01-04T10:00:00.000Z"
+          }
+        }
+      },
+      "errors": [
+        "400 password too short",
+        "403 another admin",
+        "404 user not found"
+      ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "GET /api/auth/roles",
+      "module": "auth",
+      "method": "GET",
+      "path": "/api/auth/roles",
+      "params": [],
+      "documented": true,
+      "summary": "The five stakeholder roles.",
+      "auth": "none",
+      "roles": [],
+      "rolesSource": null,
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "roles": [
+            "customer",
+            "waiter",
+            "chef",
+            "manager",
+            "admin"
+          ]
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "GET /api/auth/users",
+      "module": "auth",
+      "method": "GET",
+      "path": "/api/auth/users",
+      "params": [],
+      "documented": true,
+      "summary": "Every user account, without password hashes.",
+      "auth": "required",
+      "roles": [
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "users": [
+            {
+              "id": "usr_12",
+              "name": "Jamie Rivera",
+              "email": "jamie@example.com",
+              "phone": "555-0144",
+              "role": "waiter",
+              "active": true,
+              "mustChangePassword": false,
+              "createdAt": "2026-01-04T10:00:00.000Z"
+            }
+          ]
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "PATCH /api/auth/users/:id",
+      "module": "auth",
+      "method": "PATCH",
+      "path": "/api/auth/users/:id",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Change a user's role or suspend/reactivate them. Admins cannot change their own role or suspend themselves.",
+      "auth": "required",
+      "roles": [
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": {
+        "role": {
+          "type": "string",
+          "required": false,
+          "note": "customer|waiter|chef|manager|admin"
+        },
+        "active": {
+          "type": "boolean",
+          "required": false,
+          "note": ""
+        }
+      },
+      "response": {
+        "status": 200,
+        "example": {
+          "user": {
+            "id": "usr_12",
+            "name": "Jamie Rivera",
+            "email": "jamie@example.com",
+            "phone": "555-0144",
+            "role": "waiter",
+            "active": true,
+            "mustChangePassword": false,
+            "createdAt": "2026-01-04T10:00:00.000Z"
+          }
+        }
+      },
+      "errors": [
+        "400 invalid role / self-change",
+        "403 another admin (admins manage accounts below them)",
+        "404 user not found"
+      ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "DELETE /api/auth/users/:id",
+      "module": "auth",
+      "method": "DELETE",
+      "path": "/api/auth/users/:id",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Remove an account; its tokens stop working immediately. Linked customer records are kept.",
+      "auth": "required",
+      "roles": [
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "deleted": true,
+          "id": "usr_12"
+        }
+      },
+      "errors": [
+        "400 cannot remove yourself",
+        "403 another admin",
+        "404 user not found"
+      ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "GET /api/customers/me",
+      "module": "customers",
+      "method": "GET",
+      "path": "/api/customers/me",
+      "params": [],
+      "documented": true,
+      "summary": "The caller's own customer profile with order history. A customer without a profile gets one created (201).",
+      "auth": "required",
+      "roles": [],
+      "rolesSource": null,
+      "access": "Staff without a linked customer profile get 404.",
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "customer": {
+            "id": "cus_8",
+            "userId": "usr_20",
+            "name": "Alex Kim",
+            "email": "alex@example.com",
+            "phone": "555-0100",
+            "type": "online",
+            "loyaltyPoints": 120,
+            "preferences": {
+              "dietary": [
+                "vegetarian"
+              ],
+              "allergies": [
+                "nuts"
+              ]
+            },
+            "notes": "",
+            "createdAt": "2026-02-01T09:00:00.000Z",
+            "orderHistory": [
+              {
+                "id": "ord_41",
+                "number": 1041,
+                "date": "2026-10-01",
+                "total": 42.5,
+                "items": [
+                  "2× Margherita"
+                ],
+                "status": "closed",
+                "paymentStatus": "paid"
+              }
+            ],
+            "orderCount": 1,
+            "totalSpend": 42.5
+          }
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "PATCH /api/customers/me",
+      "module": "customers",
+      "method": "PATCH",
+      "path": "/api/customers/me",
+      "params": [],
+      "documented": true,
+      "summary": "Edit the caller's own profile; name and email changes also update the login account.",
+      "auth": "required",
+      "roles": [
+        "customer"
+      ],
+      "rolesSource": "handler",
+      "access": "Other roles get 403.",
+      "query": null,
+      "body": {
+        "name": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        },
+        "email": {
+          "type": "string",
+          "required": false,
+          "note": "Valid, not used by another account"
+        },
+        "phone": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        },
+        "preferences": {
+          "type": "object",
+          "required": false,
+          "note": "{ dietary: string[], allergies: string[] }"
+        },
+        "notes": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        }
+      },
+      "response": {
+        "status": 200,
+        "example": {
+          "customer": {
+            "id": "cus_8",
+            "userId": "usr_20",
+            "name": "Alex Kim",
+            "email": "alex@example.com",
+            "phone": "555-0100",
+            "type": "online",
+            "loyaltyPoints": 120,
+            "preferences": {
+              "dietary": [
+                "vegetarian"
+              ],
+              "allergies": [
+                "nuts"
+              ]
+            },
+            "notes": "",
+            "createdAt": "2026-02-01T09:00:00.000Z",
+            "orderHistory": [
+              {
+                "id": "ord_41",
+                "number": 1041,
+                "date": "2026-10-01",
+                "total": 42.5,
+                "items": [
+                  "2× Margherita"
+                ],
+                "status": "closed",
+                "paymentStatus": "paid"
+              }
+            ],
+            "orderCount": 1,
+            "totalSpend": 42.5
+          }
+        }
+      },
+      "errors": [
+        "400 invalid field",
+        "403 not a customer",
+        "409 email in use"
+      ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "GET /api/customers",
+      "module": "customers",
+      "method": "GET",
+      "path": "/api/customers",
+      "params": [],
+      "documented": true,
+      "summary": "Customer ledger, sorted by name, each with order history and spend.",
+      "auth": "required",
+      "roles": [
+        "waiter",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": {
+        "q": {
+          "type": "string",
+          "required": false,
+          "note": "Matches name, email or phone"
+        },
+        "type": {
+          "type": "string",
+          "required": false,
+          "note": "walk-in|online"
+        },
+        "dietary": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        },
+        "allergy": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        }
+      },
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "customers": [
+            {
+              "id": "cus_8",
+              "userId": "usr_20",
+              "name": "Alex Kim",
+              "email": "alex@example.com",
+              "phone": "555-0100",
+              "type": "online",
+              "loyaltyPoints": 120,
+              "preferences": {
+                "dietary": [
+                  "vegetarian"
+                ],
+                "allergies": [
+                  "nuts"
+                ]
+              },
+              "notes": "",
+              "createdAt": "2026-02-01T09:00:00.000Z",
+              "orderHistory": [
+                {
+                  "id": "ord_41",
+                  "number": 1041,
+                  "date": "2026-10-01",
+                  "total": 42.5,
+                  "items": [
+                    "2× Margherita"
+                  ],
+                  "status": "closed",
+                  "paymentStatus": "paid"
+                }
+              ],
+              "orderCount": 1,
+              "totalSpend": 42.5
+            }
+          ]
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "GET /api/customers/:id",
+      "module": "customers",
+      "method": "GET",
+      "path": "/api/customers/:id",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "One customer with order history.",
+      "auth": "required",
+      "roles": [
+        "waiter",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "customer": {
+            "id": "cus_8",
+            "userId": "usr_20",
+            "name": "Alex Kim",
+            "email": "alex@example.com",
+            "phone": "555-0100",
+            "type": "online",
+            "loyaltyPoints": 120,
+            "preferences": {
+              "dietary": [
+                "vegetarian"
+              ],
+              "allergies": [
+                "nuts"
+              ]
+            },
+            "notes": "",
+            "createdAt": "2026-02-01T09:00:00.000Z",
+            "orderHistory": [
+              {
+                "id": "ord_41",
+                "number": 1041,
+                "date": "2026-10-01",
+                "total": 42.5,
+                "items": [
+                  "2× Margherita"
+                ],
+                "status": "closed",
+                "paymentStatus": "paid"
+              }
+            ],
+            "orderCount": 1,
+            "totalSpend": 42.5
+          }
+        }
+      },
+      "errors": [
+        "404 customer not found"
+      ],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "POST /api/customers",
+      "module": "customers",
+      "method": "POST",
+      "path": "/api/customers",
+      "params": [],
+      "documented": true,
+      "summary": "Create a customer record (not a login account).",
+      "auth": "required",
+      "roles": [
+        "waiter",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": {
+        "name": {
+          "type": "string",
+          "required": true,
+          "note": ""
+        },
+        "email": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        },
+        "phone": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        },
+        "type": {
+          "type": "string",
+          "required": false,
+          "note": "walk-in (default) | online"
+        },
+        "preferences": {
+          "type": "object",
+          "required": false,
+          "note": "{ dietary: string[], allergies: string[] }"
+        },
+        "notes": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        }
+      },
+      "response": {
+        "status": 201,
+        "example": {
+          "customer": {
+            "id": "cus_8",
+            "userId": null,
+            "name": "Alex Kim",
+            "email": "alex@example.com",
+            "phone": "555-0100",
+            "type": "walk-in",
+            "loyaltyPoints": 120,
+            "preferences": {
+              "dietary": [
+                "vegetarian"
+              ],
+              "allergies": [
+                "nuts"
+              ]
+            },
+            "notes": "",
+            "createdAt": "2026-02-01T09:00:00.000Z",
+            "orderHistory": [
+              {
+                "id": "ord_41",
+                "number": 1041,
+                "date": "2026-10-01",
+                "total": 42.5,
+                "items": [
+                  "2× Margherita"
+                ],
+                "status": "closed",
+                "paymentStatus": "paid"
+              }
+            ],
+            "orderCount": 1,
+            "totalSpend": 42.5
+          }
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "PATCH /api/customers/:id",
+      "module": "customers",
+      "method": "PATCH",
+      "path": "/api/customers/:id",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Update a customer record.",
+      "auth": "required",
+      "roles": [
+        "waiter",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": {
+        "name": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        },
+        "email": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        },
+        "phone": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        },
+        "type": {
+          "type": "string",
+          "required": false,
+          "note": "walk-in|online"
+        },
+        "preferences": {
+          "type": "object",
+          "required": false,
+          "note": "{ dietary: string[], allergies: string[] }"
+        },
+        "notes": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        }
+      },
+      "response": {
+        "status": 200,
+        "example": {
+          "customer": {
+            "id": "cus_8",
+            "userId": "usr_20",
+            "name": "Alex Kim",
+            "email": "alex@example.com",
+            "phone": "555-0100",
+            "type": "online",
+            "loyaltyPoints": 120,
+            "preferences": {
+              "dietary": [
+                "vegetarian"
+              ],
+              "allergies": [
+                "nuts"
+              ]
+            },
+            "notes": "",
+            "createdAt": "2026-02-01T09:00:00.000Z",
+            "orderHistory": [
+              {
+                "id": "ord_41",
+                "number": 1041,
+                "date": "2026-10-01",
+                "total": 42.5,
+                "items": [
+                  "2× Margherita"
+                ],
+                "status": "closed",
+                "paymentStatus": "paid"
+              }
+            ],
+            "orderCount": 1,
+            "totalSpend": 42.5
+          }
+        }
+      },
+      "errors": [
+        "400 empty name",
+        "404 customer not found"
+      ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "DELETE /api/customers/:id",
+      "module": "customers",
+      "method": "DELETE",
+      "path": "/api/customers/:id",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Delete a customer record that has no order history (management only).",
+      "auth": "required",
+      "roles": [
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "deleted": true,
+          "id": "cus_8"
+        }
+      },
+      "errors": [
+        "404 customer not found",
+        "409 customer has order history and can't be deleted"
+      ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "GET /api/menu",
+      "module": "menu",
+      "method": "GET",
+      "path": "/api/menu",
+      "params": [],
+      "documented": true,
+      "summary": "Menu grouped by category. Guests see active, non-empty categories; staff can ask for everything.",
+      "auth": "optional",
+      "roles": [],
+      "rolesSource": null,
+      "access": null,
+      "query": {
+        "scope": {
+          "type": "string",
+          "required": false,
+          "note": "\"manage\" (staff only) includes hidden categories; recipes only for chef/manager/admin"
+        }
+      },
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "menu": [
+            {
+              "id": "cat_2",
+              "name": "Pizza",
+              "sort": 2,
+              "active": true,
+              "itemCount": 1,
+              "items": [
+                {
+                  "id": "mi_3",
+                  "name": "Margherita",
+                  "categoryId": "cat_2",
+                  "category": "Pizza",
+                  "price": 14,
+                  "description": "Tomato, mozzarella, basil",
+                  "dietaryTags": [
+                    "vegetarian"
+                  ],
+                  "allergens": [
+                    "gluten",
+                    "dairy"
+                  ],
+                  "modifiers": [
+                    {
+                      "id": "mod_1",
+                      "name": "Size",
+                      "type": "single",
+                      "options": [
+                        {
+                          "label": "Large",
+                          "priceDelta": 4
+                        }
+                      ]
+                    }
+                  ],
+                  "available": true,
+                  "outOfStockReason": ""
+                }
+              ]
+            }
+          ],
+          "tags": [
+            "vegetarian",
+            "vegan"
+          ],
+          "allergens": [
+            "gluten",
+            "dairy"
+          ]
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "GET /api/menu/items",
+      "module": "menu",
+      "method": "GET",
+      "path": "/api/menu/items",
+      "params": [],
+      "documented": true,
+      "summary": "Flat list of every menu item. Chefs, managers and admins also get each recipe.",
+      "auth": "optional",
+      "roles": [],
+      "rolesSource": null,
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "items": [
+            {
+              "id": "mi_3",
+              "name": "Margherita",
+              "categoryId": "cat_2",
+              "category": "Pizza",
+              "price": 14,
+              "description": "Tomato, mozzarella, basil",
+              "dietaryTags": [
+                "vegetarian"
+              ],
+              "allergens": [
+                "gluten",
+                "dairy"
+              ],
+              "modifiers": [
+                {
+                  "id": "mod_1",
+                  "name": "Size",
+                  "type": "single",
+                  "options": [
+                    {
+                      "label": "Large",
+                      "priceDelta": 4
+                    }
+                  ]
+                }
+              ],
+              "available": true,
+              "outOfStockReason": ""
+            }
+          ]
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "POST /api/menu/items",
+      "module": "menu",
+      "method": "POST",
+      "path": "/api/menu/items",
+      "params": [],
+      "documented": true,
+      "summary": "Create a menu item.",
+      "auth": "required",
+      "roles": [
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": {
+        "name": {
+          "type": "string",
+          "required": true,
+          "note": ""
+        },
+        "categoryId": {
+          "type": "string",
+          "required": true,
+          "note": ""
+        },
+        "price": {
+          "type": "number",
+          "required": true,
+          "note": ">= 0"
+        },
+        "description": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        },
+        "dietaryTags": {
+          "type": "string[]",
+          "required": false,
+          "note": ""
+        },
+        "allergens": {
+          "type": "string[]",
+          "required": false,
+          "note": ""
+        },
+        "modifiers": {
+          "type": "array",
+          "required": false,
+          "note": "Modifier groups: [{ name, type: single|multi, options: [{ label, priceDelta }] }]"
+        },
+        "available": {
+          "type": "boolean",
+          "required": false,
+          "note": "Default true"
+        },
+        "outOfStockReason": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        }
+      },
+      "response": {
+        "status": 201,
+        "example": {
+          "item": {
+            "id": "mi_3",
+            "name": "Margherita",
+            "categoryId": "cat_2",
+            "category": "Pizza",
+            "price": 14,
+            "description": "Tomato, mozzarella, basil",
+            "dietaryTags": [
+              "vegetarian"
+            ],
+            "allergens": [
+              "gluten",
+              "dairy"
+            ],
+            "modifiers": [
+              {
+                "id": "mod_1",
+                "name": "Size",
+                "type": "single",
+                "options": [
+                  {
+                    "label": "Large",
+                    "priceDelta": 4
+                  }
+                ]
+              }
+            ],
+            "available": true,
+            "outOfStockReason": "",
+            "recipe": []
+          }
+        }
+      },
+      "errors": [
+        "400 missing fields / unknown category / bad modifiers"
+      ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "PATCH /api/menu/items/:id",
+      "module": "menu",
+      "method": "PATCH",
+      "path": "/api/menu/items/:id",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Update a menu item. Chefs may only change availability.",
+      "auth": "required",
+      "roles": [
+        "chef",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": "Handler limits chefs to available / outOfStockReason.",
+      "query": null,
+      "body": {
+        "name": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        },
+        "categoryId": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        },
+        "price": {
+          "type": "number",
+          "required": false,
+          "note": ""
+        },
+        "description": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        },
+        "dietaryTags": {
+          "type": "string[]",
+          "required": false,
+          "note": ""
+        },
+        "allergens": {
+          "type": "string[]",
+          "required": false,
+          "note": ""
+        },
+        "modifiers": {
+          "type": "array",
+          "required": false,
+          "note": "Modifier groups: [{ name, type: single|multi, options: [{ label, priceDelta }] }]"
+        },
+        "available": {
+          "type": "boolean",
+          "required": false,
+          "note": ""
+        },
+        "outOfStockReason": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        }
+      },
+      "response": {
+        "status": 200,
+        "example": {
+          "item": {
+            "id": "mi_3",
+            "name": "Margherita",
+            "categoryId": "cat_2",
+            "category": "Pizza",
+            "price": 14,
+            "description": "Tomato, mozzarella, basil",
+            "dietaryTags": [
+              "vegetarian"
+            ],
+            "allergens": [
+              "gluten",
+              "dairy"
+            ],
+            "modifiers": [
+              {
+                "id": "mod_1",
+                "name": "Size",
+                "type": "single",
+                "options": [
+                  {
+                    "label": "Large",
+                    "priceDelta": 4
+                  }
+                ]
+              }
+            ],
+            "available": true,
+            "outOfStockReason": ""
+          }
+        }
+      },
+      "errors": [
+        "400 invalid field",
+        "403 chef changing more than availability",
+        "404 item not found"
+      ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "PUT /api/menu/items/:id/recipe",
+      "module": "menu",
+      "method": "PUT",
+      "path": "/api/menu/items/:id/recipe",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Replace the dish's recipe (bill of materials) used for stock deduction.",
+      "auth": "required",
+      "roles": [
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": {
+        "recipe": {
+          "type": "array",
+          "required": true,
+          "note": "[{ inventoryId, qty > 0 }], each ingredient once"
+        }
+      },
+      "response": {
+        "status": 200,
+        "example": {
+          "item": {
+            "id": "mi_3",
+            "name": "Margherita",
+            "categoryId": "cat_2",
+            "category": "Pizza",
+            "price": 14,
+            "description": "Tomato, mozzarella, basil",
+            "dietaryTags": [
+              "vegetarian"
+            ],
+            "allergens": [
+              "gluten",
+              "dairy"
+            ],
+            "modifiers": [
+              {
+                "id": "mod_1",
+                "name": "Size",
+                "type": "single",
+                "options": [
+                  {
+                    "label": "Large",
+                    "priceDelta": 4
+                  }
+                ]
+              }
+            ],
+            "available": true,
+            "outOfStockReason": "",
+            "recipe": [
+              {
+                "inventoryId": "inv_5",
+                "qty": 0.2,
+                "name": "Mozzarella",
+                "unit": "kg"
+              }
+            ]
+          }
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "DELETE /api/menu/items/:id",
+      "module": "menu",
+      "method": "DELETE",
+      "path": "/api/menu/items/:id",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Delete a menu item.",
+      "auth": "required",
+      "roles": [
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "deleted": true,
+          "id": "mi_3"
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "GET /api/menu/categories",
+      "module": "menu",
+      "method": "GET",
+      "path": "/api/menu/categories",
+      "params": [],
+      "documented": true,
+      "summary": "All categories in display order with item counts.",
+      "auth": "optional",
+      "roles": [],
+      "rolesSource": null,
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "categories": [
+            {
+              "id": "cat_2",
+              "name": "Pizza",
+              "sort": 2,
+              "active": true,
+              "itemCount": 6
+            }
+          ]
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "POST /api/menu/categories",
+      "module": "menu",
+      "method": "POST",
+      "path": "/api/menu/categories",
+      "params": [],
+      "documented": true,
+      "summary": "Create a category.",
+      "auth": "required",
+      "roles": [
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": {
+        "name": {
+          "type": "string",
+          "required": true,
+          "note": "Unique"
+        },
+        "sort": {
+          "type": "number",
+          "required": false,
+          "note": ""
+        }
+      },
+      "response": {
+        "status": 201,
+        "example": {
+          "category": {
+            "id": "cat_9",
+            "name": "Desserts",
+            "sort": 9,
+            "active": true,
+            "itemCount": 0
+          }
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "PATCH /api/menu/categories/:id",
+      "module": "menu",
+      "method": "PATCH",
+      "path": "/api/menu/categories/:id",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Rename, reorder or hide a category. Sort must be a number; a rejected request changes nothing.",
+      "auth": "required",
+      "roles": [
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": {
+        "name": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        },
+        "sort": {
+          "type": "number",
+          "required": false,
+          "note": ""
+        },
+        "active": {
+          "type": "boolean",
+          "required": false,
+          "note": ""
+        }
+      },
+      "response": {
+        "status": 200,
+        "example": {
+          "category": {
+            "id": "cat_9",
+            "name": "Desserts",
+            "sort": 9,
+            "active": false,
+            "itemCount": 0
+          }
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "DELETE /api/menu/categories/:id",
+      "module": "menu",
+      "method": "DELETE",
+      "path": "/api/menu/categories/:id",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Delete an empty category.",
+      "auth": "required",
+      "roles": [
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "deleted": true,
+          "id": "cat_9"
+        }
+      },
+      "errors": [
+        "409 category still has items"
+      ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "POST /api/orders",
+      "module": "orders",
+      "method": "POST",
+      "path": "/api/orders",
+      "params": [],
+      "documented": true,
+      "summary": "Place an order. Customers order online or at their table; floor staff orders go straight to the kitchen.",
+      "auth": "required",
+      "roles": [
+        "customer",
+        "waiter",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "handler",
+      "access": "Chefs get 403.",
+      "query": null,
+      "body": {
+        "type": {
+          "type": "string",
+          "required": true,
+          "note": "dine-in|online"
+        },
+        "items": {
+          "type": "array",
+          "required": true,
+          "note": "[{ menuItemId, qty, modifiers }]"
+        },
+        "tableId": {
+          "type": "string",
+          "required": false,
+          "note": "Required for a customer dine-in order"
+        },
+        "fulfillment": {
+          "type": "string",
+          "required": false,
+          "note": "pickup|delivery (online)"
+        },
+        "deliveryAddress": {
+          "type": "string",
+          "required": false,
+          "note": "Required for delivery"
+        },
+        "customerId": {
+          "type": "string",
+          "required": false,
+          "note": "Staff only"
+        },
+        "notes": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        },
+        "paymentMethod": {
+          "type": "string",
+          "required": false,
+          "note": "card|cash (customers)"
+        },
+        "pointsUsed": {
+          "type": "number",
+          "required": false,
+          "note": "Loyalty points to redeem (customers)"
+        },
+        "sendToKitchen": {
+          "type": "boolean",
+          "required": false,
+          "note": "Staff; default true"
+        }
+      },
+      "response": {
+        "status": 201,
+        "example": {
+          "order": {
+            "id": "ord_41",
+            "number": 1041,
+            "type": "dine-in",
+            "fulfillment": "dine-in",
+            "tableId": "tab_3",
+            "tableNumber": 3,
+            "status": "confirmed",
+            "paymentStatus": "unpaid",
+            "priority": "normal",
+            "waiterName": "Jamie Rivera",
+            "customer": null,
+            "items": [
+              {
+                "id": "oi_90",
+                "menuItemId": "mi_3",
+                "name": "Margherita",
+                "qty": 2,
+                "unitPrice": 14,
+                "modifiers": [],
+                "status": "queued"
+              }
+            ],
+            "subtotal": 28,
+            "discount": 0,
+            "serviceCharge": 1.4,
+            "tax": 2.8,
+            "tip": 0,
+            "total": 32.2,
+            "createdAt": "2026-10-08T18:02:00.000Z"
+          }
+        }
+      },
+      "errors": [
+        "400 invalid order",
+        "403 role cannot order",
+        "409 item unavailable"
+      ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "GET /api/orders",
+      "module": "orders",
+      "method": "GET",
+      "path": "/api/orders",
+      "params": [],
+      "documented": true,
+      "summary": "Staff order list, newest first.",
+      "auth": "required",
+      "roles": [
+        "waiter",
+        "chef",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": {
+        "scope": {
+          "type": "string",
+          "required": false,
+          "note": "active (default) | today | all"
+        },
+        "status": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        },
+        "tableId": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        },
+        "type": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        },
+        "customerId": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        }
+      },
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "orders": [
+            {
+              "id": "ord_41",
+              "number": 1041,
+              "type": "dine-in",
+              "fulfillment": "dine-in",
+              "tableId": "tab_3",
+              "tableNumber": 3,
+              "status": "confirmed",
+              "paymentStatus": "unpaid",
+              "priority": "normal",
+              "waiterName": "Jamie Rivera",
+              "customer": null,
+              "items": [
+                {
+                  "id": "oi_90",
+                  "menuItemId": "mi_3",
+                  "name": "Margherita",
+                  "qty": 2,
+                  "unitPrice": 14,
+                  "modifiers": [],
+                  "status": "queued"
+                }
+              ],
+              "subtotal": 28,
+              "discount": 0,
+              "serviceCharge": 1.4,
+              "tax": 2.8,
+              "tip": 0,
+              "total": 32.2,
+              "createdAt": "2026-10-08T18:02:00.000Z"
+            }
+          ]
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "GET /api/orders/mine",
+      "module": "orders",
+      "method": "GET",
+      "path": "/api/orders/mine",
+      "params": [],
+      "documented": true,
+      "summary": "The signed-in customer's last 50 orders. Other roles get an empty list.",
+      "auth": "required",
+      "roles": [],
+      "rolesSource": null,
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "orders": [
+            {
+              "id": "ord_41",
+              "number": 1041,
+              "type": "dine-in",
+              "fulfillment": "dine-in",
+              "tableId": "tab_3",
+              "tableNumber": 3,
+              "status": "confirmed",
+              "paymentStatus": "unpaid",
+              "priority": "normal",
+              "waiterName": "Jamie Rivera",
+              "customer": null,
+              "items": [
+                {
+                  "id": "oi_90",
+                  "menuItemId": "mi_3",
+                  "name": "Margherita",
+                  "qty": 2,
+                  "unitPrice": 14,
+                  "modifiers": [],
+                  "status": "queued"
+                }
+              ],
+              "subtotal": 28,
+              "discount": 0,
+              "serviceCharge": 1.4,
+              "tax": 2.8,
+              "tip": 0,
+              "total": 32.2,
+              "createdAt": "2026-10-08T18:02:00.000Z"
+            }
+          ]
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "GET /api/orders/kitchen",
+      "module": "orders",
+      "method": "GET",
+      "path": "/api/orders/kitchen",
+      "params": [],
+      "documented": true,
+      "summary": "Kitchen display queue (rush first, then oldest) and the ready-for-pickup list.",
+      "auth": "required",
+      "roles": [
+        "waiter",
+        "chef",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "queue": [
+            {
+              "id": "ord_41",
+              "number": 1041,
+              "type": "dine-in",
+              "fulfillment": "dine-in",
+              "tableId": "tab_3",
+              "tableNumber": 3,
+              "status": "confirmed",
+              "paymentStatus": "unpaid",
+              "priority": "normal",
+              "waiterName": "Jamie Rivera",
+              "customer": null,
+              "items": [
+                {
+                  "id": "oi_90",
+                  "menuItemId": "mi_3",
+                  "name": "Margherita",
+                  "qty": 2,
+                  "unitPrice": 14,
+                  "modifiers": [],
+                  "status": "queued"
+                }
+              ],
+              "subtotal": 28,
+              "discount": 0,
+              "serviceCharge": 1.4,
+              "tax": 2.8,
+              "tip": 0,
+              "total": 32.2,
+              "createdAt": "2026-10-08T18:02:00.000Z"
+            }
+          ],
+          "ready": [],
+          "delayMinutes": 15
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "GET /api/orders/:id",
+      "module": "orders",
+      "method": "GET",
+      "path": "/api/orders/:id",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "One order.",
+      "auth": "required",
+      "roles": [],
+      "rolesSource": null,
+      "access": "Any staff role, or the customer who owns the order (others get 403).",
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "order": {
+            "id": "ord_41",
+            "number": 1041,
+            "type": "dine-in",
+            "fulfillment": "dine-in",
+            "tableId": "tab_3",
+            "tableNumber": 3,
+            "status": "confirmed",
+            "paymentStatus": "unpaid",
+            "priority": "normal",
+            "waiterName": "Jamie Rivera",
+            "customer": null,
+            "items": [
+              {
+                "id": "oi_90",
+                "menuItemId": "mi_3",
+                "name": "Margherita",
+                "qty": 2,
+                "unitPrice": 14,
+                "modifiers": [],
+                "status": "queued"
+              }
+            ],
+            "subtotal": 28,
+            "discount": 0,
+            "serviceCharge": 1.4,
+            "tax": 2.8,
+            "tip": 0,
+            "total": 32.2,
+            "createdAt": "2026-10-08T18:02:00.000Z"
+          }
+        }
+      },
+      "errors": [
+        "403 not your order",
+        "404 order not found"
+      ],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "PUT /api/orders/:id/items",
+      "module": "orders",
+      "method": "PUT",
+      "path": "/api/orders/:id/items",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Replace the line items of an unpaid order that has not been confirmed yet.",
+      "auth": "required",
+      "roles": [
+        "waiter",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": {
+        "items": {
+          "type": "array",
+          "required": true,
+          "note": "[{ menuItemId, qty, modifiers }]"
+        }
+      },
+      "response": {
+        "status": 200,
+        "example": {
+          "order": {
+            "id": "ord_41",
+            "number": 1041,
+            "type": "dine-in",
+            "fulfillment": "dine-in",
+            "tableId": "tab_3",
+            "tableNumber": 3,
+            "status": "confirmed",
+            "paymentStatus": "unpaid",
+            "priority": "normal",
+            "waiterName": "Jamie Rivera",
+            "customer": null,
+            "items": [
+              {
+                "id": "oi_90",
+                "menuItemId": "mi_3",
+                "name": "Margherita",
+                "qty": 2,
+                "unitPrice": 14,
+                "modifiers": [],
+                "status": "queued"
+              }
+            ],
+            "subtotal": 28,
+            "discount": 0,
+            "serviceCharge": 1.4,
+            "tax": 2.8,
+            "tip": 0,
+            "total": 32.2,
+            "createdAt": "2026-10-08T18:02:00.000Z"
+          }
+        }
+      },
+      "errors": [
+        "409 already confirmed or prepaid"
+      ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "POST /api/orders/:id/status",
+      "module": "orders",
+      "method": "POST",
+      "path": "/api/orders/:id/status",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Move the order through placed > confirmed > preparing > ready > served, or cancel it.",
+      "auth": "required",
+      "roles": [
+        "customer",
+        "waiter",
+        "chef",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "handler",
+      "access": "Per target status: confirmed/served/cancelled need floor staff, preparing/ready need kitchen staff; a customer may cancel their own order while it is still placed. Cancelling a paid order refunds it, so otherwise only a manager or admin may.",
+      "query": null,
+      "body": {
+        "status": {
+          "type": "string",
+          "required": true,
+          "note": "confirmed|preparing|ready|served|cancelled"
+        },
+        "reason": {
+          "type": "string",
+          "required": false,
+          "note": "Cancellation reason"
+        }
+      },
+      "response": {
+        "status": 200,
+        "example": {
+          "order": {
+            "id": "ord_41",
+            "number": 1041,
+            "type": "dine-in",
+            "fulfillment": "dine-in",
+            "tableId": "tab_3",
+            "tableNumber": 3,
+            "status": "preparing",
+            "paymentStatus": "unpaid",
+            "priority": "normal",
+            "waiterName": "Jamie Rivera",
+            "customer": null,
+            "items": [
+              {
+                "id": "oi_90",
+                "menuItemId": "mi_3",
+                "name": "Margherita",
+                "qty": 2,
+                "unitPrice": 14,
+                "modifiers": [],
+                "status": "queued"
+              }
+            ],
+            "subtotal": 28,
+            "discount": 0,
+            "serviceCharge": 1.4,
+            "tax": 2.8,
+            "tip": 0,
+            "total": 32.2,
+            "createdAt": "2026-10-08T18:02:00.000Z"
+          }
+        }
+      },
+      "errors": [
+        "400 invalid status",
+        "403 role not allowed / paid order needs a manager",
+        "409 illegal transition"
+      ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "PATCH /api/orders/:id/items/:itemId",
+      "module": "orders",
+      "method": "PATCH",
+      "path": "/api/orders/:id/items/:itemId",
+      "params": [
+        "id",
+        "itemId"
+      ],
+      "documented": true,
+      "summary": "Set one item's status (kitchen: preparing/ready, floor: served).",
+      "auth": "required",
+      "roles": [
+        "waiter",
+        "chef",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": "Handler checks the role against the target status.",
+      "query": null,
+      "body": {
+        "status": {
+          "type": "string",
+          "required": true,
+          "note": "preparing|ready|served"
+        }
+      },
+      "response": {
+        "status": 200,
+        "example": {
+          "order": {
+            "id": "ord_41",
+            "number": 1041,
+            "type": "dine-in",
+            "fulfillment": "dine-in",
+            "tableId": "tab_3",
+            "tableNumber": 3,
+            "status": "confirmed",
+            "paymentStatus": "unpaid",
+            "priority": "normal",
+            "waiterName": "Jamie Rivera",
+            "customer": null,
+            "items": [
+              {
+                "id": "oi_90",
+                "menuItemId": "mi_3",
+                "name": "Margherita",
+                "qty": 2,
+                "unitPrice": 14,
+                "modifiers": [],
+                "status": "queued"
+              }
+            ],
+            "subtotal": 28,
+            "discount": 0,
+            "serviceCharge": 1.4,
+            "tax": 2.8,
+            "tip": 0,
+            "total": 32.2,
+            "createdAt": "2026-10-08T18:02:00.000Z"
+          }
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "PATCH /api/orders/:id/table",
+      "module": "orders",
+      "method": "PATCH",
+      "path": "/api/orders/:id/table",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Attach an active dine-in order to a table.",
+      "auth": "required",
+      "roles": [
+        "waiter",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": {
+        "tableId": {
+          "type": "string",
+          "required": true,
+          "note": ""
+        }
+      },
+      "response": {
+        "status": 200,
+        "example": {
+          "order": {
+            "id": "ord_41",
+            "number": 1041,
+            "type": "dine-in",
+            "fulfillment": "dine-in",
+            "tableId": "tab_3",
+            "tableNumber": 3,
+            "status": "confirmed",
+            "paymentStatus": "unpaid",
+            "priority": "normal",
+            "waiterName": "Jamie Rivera",
+            "customer": null,
+            "items": [
+              {
+                "id": "oi_90",
+                "menuItemId": "mi_3",
+                "name": "Margherita",
+                "qty": 2,
+                "unitPrice": 14,
+                "modifiers": [],
+                "status": "queued"
+              }
+            ],
+            "subtotal": 28,
+            "discount": 0,
+            "serviceCharge": 1.4,
+            "tax": 2.8,
+            "tip": 0,
+            "total": 32.2,
+            "createdAt": "2026-10-08T18:02:00.000Z"
+          }
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "POST /api/orders/:id/kitchen",
+      "module": "orders",
+      "method": "POST",
+      "path": "/api/orders/:id/kitchen",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Reprioritise an order in the kitchen queue.",
+      "auth": "required",
+      "roles": [
+        "chef",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": {
+        "action": {
+          "type": "string",
+          "required": true,
+          "note": "up|down|rush|normal"
+        }
+      },
+      "response": {
+        "status": 200,
+        "example": {
+          "order": {
+            "id": "ord_41",
+            "number": 1041,
+            "type": "dine-in",
+            "fulfillment": "dine-in",
+            "tableId": "tab_3",
+            "tableNumber": 3,
+            "status": "confirmed",
+            "paymentStatus": "unpaid",
+            "priority": "rush",
+            "waiterName": "Jamie Rivera",
+            "customer": null,
+            "items": [
+              {
+                "id": "oi_90",
+                "menuItemId": "mi_3",
+                "name": "Margherita",
+                "qty": 2,
+                "unitPrice": 14,
+                "modifiers": [],
+                "status": "queued"
+              }
+            ],
+            "subtotal": 28,
+            "discount": 0,
+            "serviceCharge": 1.4,
+            "tax": 2.8,
+            "tip": 0,
+            "total": 32.2,
+            "createdAt": "2026-10-08T18:02:00.000Z"
+          }
+        }
+      },
+      "errors": [
+        "409 not in the queue / already at the edge"
+      ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "GET /api/billing",
+      "module": "billing",
+      "method": "GET",
+      "path": "/api/billing",
+      "params": [],
+      "documented": true,
+      "summary": "Bills with an outstanding / paid-today summary.",
+      "auth": "required",
+      "roles": [
+        "waiter",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": {
+        "scope": {
+          "type": "string",
+          "required": false,
+          "note": "open (default) | today | all"
+        }
+      },
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "bills": [
+            {
+              "id": "ord_41",
+              "number": 1041,
+              "receiptNumber": "R-1041",
+              "tableNumber": 3,
+              "status": "served",
+              "paymentStatus": "unpaid",
+              "paid": false,
+              "lines": [
+                {
+                  "id": "oi_90",
+                  "name": "Margherita",
+                  "qty": 2,
+                  "unitPrice": 14,
+                  "lineTotal": 28
+                }
+              ],
+              "subtotal": 28,
+              "discount": 0,
+              "serviceCharge": 1.4,
+              "tax": 2.8,
+              "tip": 0,
+              "total": 32.2,
+              "refundedAmount": 0,
+              "netTotal": 32.2,
+              "split": null,
+              "restaurant": {
+                "name": "Restaurant name",
+                "address": "Street address"
+              }
+            }
+          ],
+          "summary": {
+            "outstanding": 32.2,
+            "openCount": 1,
+            "paidToday": 410.75,
+            "paidTodayCount": 12
+          }
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "GET /api/billing/:id",
+      "module": "billing",
+      "method": "GET",
+      "path": "/api/billing/:id",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Itemised invoice for an order.",
+      "auth": "required",
+      "roles": [],
+      "rolesSource": null,
+      "access": "Waiter, manager, admin, or the customer who owns the order (others get 403).",
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "invoice": {
+            "id": "ord_41",
+            "number": 1041,
+            "receiptNumber": "R-1041",
+            "tableNumber": 3,
+            "status": "served",
+            "paymentStatus": "unpaid",
+            "paid": false,
+            "lines": [
+              {
+                "id": "oi_90",
+                "name": "Margherita",
+                "qty": 2,
+                "unitPrice": 14,
+                "lineTotal": 28
+              }
+            ],
+            "subtotal": 28,
+            "discount": 0,
+            "serviceCharge": 1.4,
+            "tax": 2.8,
+            "tip": 0,
+            "total": 32.2,
+            "refundedAmount": 0,
+            "netTotal": 32.2,
+            "split": null,
+            "restaurant": {
+              "name": "Restaurant name",
+              "address": "Street address"
+            }
+          }
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "GET /api/billing/:id/receipt",
+      "module": "billing",
+      "method": "GET",
+      "path": "/api/billing/:id/receipt",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Receipt for a settled bill.",
+      "auth": "required",
+      "roles": [],
+      "rolesSource": null,
+      "access": "Waiter, manager, admin, or the customer who owns the order (others get 403).",
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "receipt": {
+            "id": "ord_41",
+            "number": 1041,
+            "receiptNumber": "R-1041",
+            "tableNumber": 3,
+            "status": "served",
+            "paymentStatus": "paid",
+            "paid": true,
+            "lines": [
+              {
+                "id": "oi_90",
+                "name": "Margherita",
+                "qty": 2,
+                "unitPrice": 14,
+                "lineTotal": 28
+              }
+            ],
+            "subtotal": 28,
+            "discount": 0,
+            "serviceCharge": 1.4,
+            "tax": 2.8,
+            "tip": 0,
+            "total": 32.2,
+            "refundedAmount": 0,
+            "netTotal": 32.2,
+            "split": null,
+            "restaurant": {
+              "name": "Restaurant name",
+              "address": "Street address"
+            },
+            "issuedAt": "2026-10-08T19:30:00.000Z"
+          }
+        }
+      },
+      "errors": [
+        "409 bill not paid yet"
+      ],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "POST /api/billing/:id/tip",
+      "module": "billing",
+      "method": "POST",
+      "path": "/api/billing/:id/tip",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Set the tip as an amount or a percentage of the subtotal. Clears any split.",
+      "auth": "required",
+      "roles": [
+        "waiter",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": {
+        "amount": {
+          "type": "number",
+          "required": false,
+          "note": ">= 0"
+        },
+        "percent": {
+          "type": "number",
+          "required": false,
+          "note": "0-100; wins over amount"
+        }
+      },
+      "response": {
+        "status": 200,
+        "example": {
+          "invoice": {
+            "id": "ord_41",
+            "number": 1041,
+            "receiptNumber": "R-1041",
+            "tableNumber": 3,
+            "status": "served",
+            "paymentStatus": "unpaid",
+            "paid": false,
+            "lines": [
+              {
+                "id": "oi_90",
+                "name": "Margherita",
+                "qty": 2,
+                "unitPrice": 14,
+                "lineTotal": 28
+              }
+            ],
+            "subtotal": 28,
+            "discount": 0,
+            "serviceCharge": 1.4,
+            "tax": 2.8,
+            "tip": 4.2,
+            "total": 36.4,
+            "refundedAmount": 0,
+            "netTotal": 32.2,
+            "split": null,
+            "restaurant": {
+              "name": "Restaurant name",
+              "address": "Street address"
+            }
+          }
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "POST /api/billing/:id/split",
+      "module": "billing",
+      "method": "POST",
+      "path": "/api/billing/:id/split",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Split the bill evenly or by items; parts always sum to the total.",
+      "auth": "required",
+      "roles": [
+        "waiter",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": {
+        "mode": {
+          "type": "string",
+          "required": true,
+          "note": "even|items"
+        },
+        "ways": {
+          "type": "number",
+          "required": false,
+          "note": "2-20 (even)"
+        },
+        "groups": {
+          "type": "string[][]",
+          "required": false,
+          "note": "Item ids per payer (items)"
+        }
+      },
+      "response": {
+        "status": 200,
+        "example": {
+          "invoice": {
+            "id": "ord_41",
+            "number": 1041,
+            "receiptNumber": "R-1041",
+            "tableNumber": 3,
+            "status": "served",
+            "paymentStatus": "unpaid",
+            "paid": false,
+            "lines": [
+              {
+                "id": "oi_90",
+                "name": "Margherita",
+                "qty": 2,
+                "unitPrice": 14,
+                "lineTotal": 28
+              }
+            ],
+            "subtotal": 28,
+            "discount": 0,
+            "serviceCharge": 1.4,
+            "tax": 2.8,
+            "tip": 0,
+            "total": 32.2,
+            "refundedAmount": 0,
+            "netTotal": 32.2,
+            "split": {
+              "mode": "even",
+              "parts": [
+                {
+                  "label": "Guest 1",
+                  "amount": 16.1,
+                  "paid": false
+                },
+                {
+                  "label": "Guest 2",
+                  "amount": 16.1,
+                  "paid": false
+                }
+              ]
+            },
+            "restaurant": {
+              "name": "Restaurant name",
+              "address": "Street address"
+            }
+          }
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "DELETE /api/billing/:id/split",
+      "module": "billing",
+      "method": "DELETE",
+      "path": "/api/billing/:id/split",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Undo a split before anyone has paid a share.",
+      "auth": "required",
+      "roles": [
+        "waiter",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "invoice": {
+            "id": "ord_41",
+            "number": 1041,
+            "receiptNumber": "R-1041",
+            "tableNumber": 3,
+            "status": "served",
+            "paymentStatus": "unpaid",
+            "paid": false,
+            "lines": [
+              {
+                "id": "oi_90",
+                "name": "Margherita",
+                "qty": 2,
+                "unitPrice": 14,
+                "lineTotal": 28
+              }
+            ],
+            "subtotal": 28,
+            "discount": 0,
+            "serviceCharge": 1.4,
+            "tax": 2.8,
+            "tip": 0,
+            "total": 32.2,
+            "refundedAmount": 0,
+            "netTotal": 32.2,
+            "split": null,
+            "restaurant": {
+              "name": "Restaurant name",
+              "address": "Street address"
+            }
+          }
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "POST /api/billing/:id/split/:index/pay",
+      "module": "billing",
+      "method": "POST",
+      "path": "/api/billing/:id/split/:index/pay",
+      "params": [
+        "id",
+        "index"
+      ],
+      "documented": true,
+      "summary": "One payer settles their share; the bill is paid once every share is.",
+      "auth": "required",
+      "roles": [
+        "waiter",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": {
+        "method": {
+          "type": "string",
+          "required": false,
+          "note": "card (default) | cash"
+        }
+      },
+      "response": {
+        "status": 200,
+        "example": {
+          "invoice": {
+            "id": "ord_41",
+            "number": 1041,
+            "receiptNumber": "R-1041",
+            "tableNumber": 3,
+            "status": "served",
+            "paymentStatus": "unpaid",
+            "paid": false,
+            "lines": [
+              {
+                "id": "oi_90",
+                "name": "Margherita",
+                "qty": 2,
+                "unitPrice": 14,
+                "lineTotal": 28
+              }
+            ],
+            "subtotal": 28,
+            "discount": 0,
+            "serviceCharge": 1.4,
+            "tax": 2.8,
+            "tip": 0,
+            "total": 32.2,
+            "refundedAmount": 0,
+            "netTotal": 32.2,
+            "split": null,
+            "restaurant": {
+              "name": "Restaurant name",
+              "address": "Street address"
+            }
+          }
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "POST /api/billing/:id/pay",
+      "module": "billing",
+      "method": "POST",
+      "path": "/api/billing/:id/pay",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Record full payment.",
+      "auth": "required",
+      "roles": [
+        "waiter",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": {
+        "method": {
+          "type": "string",
+          "required": false,
+          "note": "card (default) | cash"
+        }
+      },
+      "response": {
+        "status": 200,
+        "example": {
+          "invoice": {
+            "id": "ord_41",
+            "number": 1041,
+            "receiptNumber": "R-1041",
+            "tableNumber": 3,
+            "status": "served",
+            "paymentStatus": "paid",
+            "paid": true,
+            "lines": [
+              {
+                "id": "oi_90",
+                "name": "Margherita",
+                "qty": 2,
+                "unitPrice": 14,
+                "lineTotal": 28
+              }
+            ],
+            "subtotal": 28,
+            "discount": 0,
+            "serviceCharge": 1.4,
+            "tax": 2.8,
+            "tip": 0,
+            "total": 32.2,
+            "refundedAmount": 0,
+            "netTotal": 32.2,
+            "split": null,
+            "restaurant": {
+              "name": "Restaurant name",
+              "address": "Street address"
+            }
+          },
+          "alreadyPaid": false
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "POST /api/billing/:id/unpay",
+      "module": "billing",
+      "method": "POST",
+      "path": "/api/billing/:id/unpay",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Reverse a payment recorded in error (management only, like refunds).",
+      "auth": "required",
+      "roles": [
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "invoice": {
+            "id": "ord_41",
+            "number": 1041,
+            "receiptNumber": "R-1041",
+            "tableNumber": 3,
+            "status": "served",
+            "paymentStatus": "unpaid",
+            "paid": false,
+            "lines": [
+              {
+                "id": "oi_90",
+                "name": "Margherita",
+                "qty": 2,
+                "unitPrice": 14,
+                "lineTotal": 28
+              }
+            ],
+            "subtotal": 28,
+            "discount": 0,
+            "serviceCharge": 1.4,
+            "tax": 2.8,
+            "tip": 0,
+            "total": 32.2,
+            "refundedAmount": 0,
+            "netTotal": 32.2,
+            "split": null,
+            "restaurant": {
+              "name": "Restaurant name",
+              "address": "Street address"
+            }
+          }
+        }
+      },
+      "errors": [
+        "409 not paid or already refunded"
+      ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "POST /api/billing/:id/refund",
+      "module": "billing",
+      "method": "POST",
+      "path": "/api/billing/:id/refund",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Refund a paid bill in full or in part, with a reason.",
+      "auth": "required",
+      "roles": [
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": {
+        "reason": {
+          "type": "string",
+          "required": true,
+          "note": "At least 3 characters"
+        },
+        "amount": {
+          "type": "number",
+          "required": false,
+          "note": "Defaults to the remaining total"
+        }
+      },
+      "response": {
+        "status": 200,
+        "example": {
+          "invoice": {
+            "id": "ord_41",
+            "number": 1041,
+            "receiptNumber": "R-1041",
+            "tableNumber": 3,
+            "status": "served",
+            "paymentStatus": "refunded",
+            "paid": false,
+            "lines": [
+              {
+                "id": "oi_90",
+                "name": "Margherita",
+                "qty": 2,
+                "unitPrice": 14,
+                "lineTotal": 28
+              }
+            ],
+            "subtotal": 28,
+            "discount": 0,
+            "serviceCharge": 1.4,
+            "tax": 2.8,
+            "tip": 0,
+            "total": 32.2,
+            "refundedAmount": 32.2,
+            "netTotal": 0,
+            "split": null,
+            "restaurant": {
+              "name": "Restaurant name",
+              "address": "Street address"
+            }
+          }
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "GET /api/tables/public",
+      "module": "tables",
+      "method": "GET",
+      "path": "/api/tables/public",
+      "params": [],
+      "documented": true,
+      "summary": "Table numbers, seats and zones for customers ordering at their table.",
+      "auth": "optional",
+      "roles": [],
+      "rolesSource": null,
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "tables": [
+            {
+              "id": "tab_3",
+              "number": 3,
+              "seats": 4,
+              "zone": "Main"
+            }
+          ]
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "GET /api/tables",
+      "module": "tables",
+      "method": "GET",
+      "path": "/api/tables",
+      "params": [],
+      "documented": true,
+      "summary": "Live floor plan with active orders and the next booking per table. Also refreshes reservation holds.",
+      "auth": "required",
+      "roles": [
+        "waiter",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "tables": [
+            {
+              "id": "tab_3",
+              "number": 3,
+              "seats": 4,
+              "zone": "Main",
+              "status": "occupied",
+              "waiterId": "usr_12",
+              "waiterName": "Jamie Rivera",
+              "held": false,
+              "activeOrders": [
+                {
+                  "id": "ord_41",
+                  "number": 1041,
+                  "status": "confirmed",
+                  "total": 32.2,
+                  "paymentStatus": "unpaid"
+                }
+              ],
+              "nextReservation": null
+            }
+          ],
+          "zones": [
+            "Main",
+            "Patio"
+          ],
+          "statuses": [
+            "free",
+            "occupied",
+            "reserved",
+            "cleaning"
+          ]
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "POST /api/tables",
+      "module": "tables",
+      "method": "POST",
+      "path": "/api/tables",
+      "params": [],
+      "documented": true,
+      "summary": "Add a table.",
+      "auth": "required",
+      "roles": [
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": {
+        "number": {
+          "type": "integer",
+          "required": true,
+          "note": "Unique, >= 1"
+        },
+        "seats": {
+          "type": "integer",
+          "required": false,
+          "note": "1-20, default 4"
+        },
+        "zone": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        }
+      },
+      "response": {
+        "status": 201,
+        "example": {
+          "table": {
+            "id": "tab_3",
+            "number": 3,
+            "seats": 4,
+            "zone": "Main",
+            "status": "free",
+            "waiterId": "usr_12",
+            "waiterName": "Jamie Rivera",
+            "held": false,
+            "activeOrders": [],
+            "nextReservation": null
+          }
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "PATCH /api/tables/:id",
+      "module": "tables",
+      "method": "PATCH",
+      "path": "/api/tables/:id",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Change status, assigned waiter or hold; managers can also change number, seats and zone.",
+      "auth": "required",
+      "roles": [
+        "waiter",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": "Handler limits layout fields (number, seats, zone) to manager/admin; only active floor staff can be assigned as the waiter.",
+      "query": null,
+      "body": {
+        "status": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        },
+        "waiterId": {
+          "type": "string|null",
+          "required": false,
+          "note": ""
+        },
+        "held": {
+          "type": "boolean",
+          "required": false,
+          "note": ""
+        },
+        "number": {
+          "type": "integer",
+          "required": false,
+          "note": ""
+        },
+        "seats": {
+          "type": "integer",
+          "required": false,
+          "note": ""
+        },
+        "zone": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        }
+      },
+      "response": {
+        "status": 200,
+        "example": {
+          "table": {
+            "id": "tab_3",
+            "number": 3,
+            "seats": 4,
+            "zone": "Main",
+            "status": "occupied",
+            "waiterId": "usr_12",
+            "waiterName": "Jamie Rivera",
+            "held": false,
+            "activeOrders": [
+              {
+                "id": "ord_41",
+                "number": 1041,
+                "status": "confirmed",
+                "total": 32.2,
+                "paymentStatus": "unpaid"
+              }
+            ],
+            "nextReservation": null
+          }
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "DELETE /api/tables/:id",
+      "module": "tables",
+      "method": "DELETE",
+      "path": "/api/tables/:id",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Remove a table without active orders.",
+      "auth": "required",
+      "roles": [
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "deleted": true,
+          "id": "tab_3"
+        }
+      },
+      "errors": [
+        "409 table has active orders"
+      ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "GET /api/reservations/availability",
+      "module": "reservations",
+      "method": "GET",
+      "path": "/api/reservations/availability",
+      "params": [],
+      "documented": true,
+      "summary": "Open time slots for a date and party size.",
+      "auth": "optional",
+      "roles": [],
+      "rolesSource": null,
+      "access": null,
+      "query": {
+        "date": {
+          "type": "YYYY-MM-DD",
+          "required": true,
+          "note": ""
+        },
+        "partySize": {
+          "type": "number",
+          "required": false,
+          "note": "Default 2"
+        }
+      },
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "date": "2026-10-10",
+          "partySize": 4,
+          "slots": [
+            {
+              "time": "19:00",
+              "available": true
+            }
+          ]
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "GET /api/reservations",
+      "module": "reservations",
+      "method": "GET",
+      "path": "/api/reservations",
+      "params": [],
+      "documented": true,
+      "summary": "Reservation book. Also refreshes table holds.",
+      "auth": "required",
+      "roles": [
+        "waiter",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": {
+        "scope": {
+          "type": "string",
+          "required": false,
+          "note": "upcoming (default) | past | all"
+        },
+        "status": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        }
+      },
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "reservations": [
+            {
+              "id": "res_7",
+              "customerName": "Alex Kim",
+              "email": "alex@example.com",
+              "phone": "",
+              "partySize": 4,
+              "date": "2026-10-10",
+              "time": "19:00",
+              "tableId": null,
+              "tableNumber": null,
+              "status": "requested",
+              "specialRequests": "",
+              "late": false,
+              "hasAccount": true
+            }
+          ],
+          "slots": [
+            "12:00",
+            "12:30"
+          ]
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "GET /api/reservations/mine",
+      "module": "reservations",
+      "method": "GET",
+      "path": "/api/reservations/mine",
+      "params": [],
+      "documented": true,
+      "summary": "The signed-in customer's bookings. Other roles get an empty list.",
+      "auth": "required",
+      "roles": [
+        "customer",
+        "waiter",
+        "chef",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "handler",
+      "access": "Guests get 401; non-customers get an empty list.",
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "reservations": [
+            {
+              "id": "res_7",
+              "customerName": "Alex Kim",
+              "email": "alex@example.com",
+              "phone": "",
+              "partySize": 4,
+              "date": "2026-10-10",
+              "time": "19:00",
+              "tableId": null,
+              "tableNumber": null,
+              "status": "requested",
+              "specialRequests": "",
+              "late": false,
+              "hasAccount": true
+            }
+          ]
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "POST /api/reservations",
+      "module": "reservations",
+      "method": "POST",
+      "path": "/api/reservations",
+      "params": [],
+      "documented": true,
+      "summary": "Request a booking (guests or customers). Fully booked slots return up to three alternatives.",
+      "auth": "optional",
+      "roles": [],
+      "rolesSource": null,
+      "access": null,
+      "query": null,
+      "body": {
+        "customerName": {
+          "type": "string",
+          "required": true,
+          "note": "Defaults to the signed-in customer"
+        },
+        "email": {
+          "type": "string",
+          "required": true,
+          "note": "Defaults to the signed-in customer"
+        },
+        "phone": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        },
+        "partySize": {
+          "type": "integer",
+          "required": true,
+          "note": "1-12"
+        },
+        "date": {
+          "type": "YYYY-MM-DD",
+          "required": true,
+          "note": ""
+        },
+        "time": {
+          "type": "HH:MM",
+          "required": true,
+          "note": "Not in the past"
+        },
+        "specialRequests": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        }
+      },
+      "response": {
+        "status": 201,
+        "example": {
+          "reservation": {
+            "id": "res_7",
+            "customerName": "Alex Kim",
+            "email": "alex@example.com",
+            "phone": "",
+            "partySize": 4,
+            "date": "2026-10-10",
+            "time": "19:00",
+            "tableId": null,
+            "tableNumber": null,
+            "status": "requested",
+            "specialRequests": "",
+            "late": false,
+            "hasAccount": true
+          }
+        }
+      },
+      "errors": [
+        "400 invalid fields",
+        "409 fully booked: { error, alternatives: [{ date, time }] }",
+        "429 guests: more than 5 booking requests in 10 minutes from one address (signed-in staff are exempt)"
+      ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "PATCH /api/reservations/:id",
+      "module": "reservations",
+      "method": "PATCH",
+      "path": "/api/reservations/:id",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Confirm, seat, cancel or mark no-show; move date/time, party size or table.",
+      "auth": "required",
+      "roles": [
+        "waiter",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": {
+        "status": {
+          "type": "string",
+          "required": false,
+          "note": "requested|confirmed|seated|cancelled|no_show"
+        },
+        "tableId": {
+          "type": "string|null",
+          "required": false,
+          "note": ""
+        },
+        "partySize": {
+          "type": "integer",
+          "required": false,
+          "note": ""
+        },
+        "date": {
+          "type": "YYYY-MM-DD",
+          "required": false,
+          "note": ""
+        },
+        "time": {
+          "type": "HH:MM",
+          "required": false,
+          "note": ""
+        },
+        "specialRequests": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        }
+      },
+      "response": {
+        "status": 200,
+        "example": {
+          "reservation": {
+            "id": "res_7",
+            "customerName": "Alex Kim",
+            "email": "alex@example.com",
+            "phone": "",
+            "partySize": 4,
+            "date": "2026-10-10",
+            "time": "19:00",
+            "tableId": "tab_3",
+            "tableNumber": 3,
+            "status": "confirmed",
+            "specialRequests": "",
+            "late": false,
+            "hasAccount": true
+          }
+        }
+      },
+      "errors": [
+        "400 invalid field",
+        "409 slot taken / illegal transition"
+      ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "POST /api/reservations/:id/cancel",
+      "module": "reservations",
+      "method": "POST",
+      "path": "/api/reservations/:id/cancel",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Cancel a requested or confirmed booking.",
+      "auth": "required",
+      "roles": [
+        "customer",
+        "waiter",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "handler",
+      "access": "Floor staff, or the customer who made the booking.",
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "reservation": {
+            "id": "res_7",
+            "customerName": "Alex Kim",
+            "email": "alex@example.com",
+            "phone": "",
+            "partySize": 4,
+            "date": "2026-10-10",
+            "time": "19:00",
+            "tableId": null,
+            "tableNumber": null,
+            "status": "cancelled",
+            "specialRequests": "",
+            "late": false,
+            "hasAccount": true
+          }
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "GET /api/inventory",
+      "module": "inventory",
+      "method": "GET",
+      "path": "/api/inventory",
+      "params": [],
+      "documented": true,
+      "summary": "Ingredient stock with low-stock flags and the dishes that use each one.",
+      "auth": "required",
+      "roles": [
+        "chef",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "inventory": [
+            {
+              "id": "inv_5",
+              "name": "Mozzarella",
+              "category": "Dairy",
+              "stock": 8,
+              "unit": "kg",
+              "reorderLevel": 5,
+              "costPerUnit": 9.5,
+              "supplier": "Dairy Co",
+              "lowStock": false,
+              "health": "ok",
+              "usedBy": [
+                "Margherita"
+              ]
+            }
+          ],
+          "units": [
+            "kg",
+            "L",
+            "units"
+          ],
+          "categories": [
+            "Dairy",
+            "Produce"
+          ]
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "POST /api/inventory",
+      "module": "inventory",
+      "method": "POST",
+      "path": "/api/inventory",
+      "params": [],
+      "documented": true,
+      "summary": "Add an ingredient.",
+      "auth": "required",
+      "roles": [
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": {
+        "name": {
+          "type": "string",
+          "required": true,
+          "note": "Unique"
+        },
+        "category": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        },
+        "stock": {
+          "type": "number",
+          "required": false,
+          "note": ""
+        },
+        "unit": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        },
+        "reorderLevel": {
+          "type": "number",
+          "required": false,
+          "note": ""
+        },
+        "costPerUnit": {
+          "type": "number",
+          "required": false,
+          "note": ""
+        },
+        "supplier": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        }
+      },
+      "response": {
+        "status": 201,
+        "example": {
+          "item": {
+            "id": "inv_5",
+            "name": "Mozzarella",
+            "category": "Dairy",
+            "stock": 8,
+            "unit": "kg",
+            "reorderLevel": 5,
+            "costPerUnit": 9.5,
+            "supplier": "Dairy Co",
+            "lowStock": false,
+            "health": "ok",
+            "usedBy": [
+              "Margherita"
+            ]
+          }
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "PATCH /api/inventory/:id",
+      "module": "inventory",
+      "method": "PATCH",
+      "path": "/api/inventory/:id",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Adjust stock by a delta (restock / wastage); managers can also edit details or set a counted stock level.",
+      "auth": "required",
+      "roles": [
+        "chef",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": "Chefs may only send delta; other fields need manager/admin.",
+      "query": null,
+      "body": {
+        "delta": {
+          "type": "number",
+          "required": false,
+          "note": ""
+        },
+        "stock": {
+          "type": "number",
+          "required": false,
+          "note": "Counted level"
+        },
+        "name": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        },
+        "category": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        },
+        "unit": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        },
+        "reorderLevel": {
+          "type": "number",
+          "required": false,
+          "note": ""
+        },
+        "costPerUnit": {
+          "type": "number",
+          "required": false,
+          "note": ""
+        },
+        "supplier": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        }
+      },
+      "response": {
+        "status": 200,
+        "example": {
+          "item": {
+            "id": "inv_5",
+            "name": "Mozzarella",
+            "category": "Dairy",
+            "stock": 8,
+            "unit": "kg",
+            "reorderLevel": 5,
+            "costPerUnit": 9.5,
+            "supplier": "Dairy Co",
+            "lowStock": false,
+            "health": "ok",
+            "usedBy": [
+              "Margherita"
+            ]
+          }
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "DELETE /api/inventory/:id",
+      "module": "inventory",
+      "method": "DELETE",
+      "path": "/api/inventory/:id",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Remove an ingredient that no recipe uses.",
+      "auth": "required",
+      "roles": [
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "deleted": true,
+          "id": "inv_5"
+        }
+      },
+      "errors": [
+        "409 used in recipes"
+      ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "GET /api/inventory/movements",
+      "module": "inventory",
+      "method": "GET",
+      "path": "/api/inventory/movements",
+      "params": [],
+      "documented": true,
+      "summary": "Recent stock movements, newest first.",
+      "auth": "required",
+      "roles": [
+        "chef",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": {
+        "limit": {
+          "type": "number",
+          "required": false,
+          "note": "Default 50, max 500"
+        },
+        "inventoryId": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        }
+      },
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "movements": [
+            {
+              "id": "mov_30",
+              "inventoryId": "inv_5",
+              "delta": -0.4,
+              "reason": "sale",
+              "at": "2026-10-08T18:05:00.000Z"
+            }
+          ]
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "GET /api/inventory/reorder",
+      "module": "inventory",
+      "method": "GET",
+      "path": "/api/inventory/reorder",
+      "params": [],
+      "documented": true,
+      "summary": "Suggested reorder quantities for low-stock ingredients.",
+      "auth": "required",
+      "roles": [
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": {
+        "all": {
+          "type": "any",
+          "required": false,
+          "note": "Present = include every ingredient"
+        }
+      },
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "lines": [
+            {
+              "inventoryId": "inv_5",
+              "name": "Mozzarella",
+              "unit": "kg",
+              "supplier": "Dairy Co",
+              "stock": 4,
+              "reorderLevel": 5,
+              "suggestedQty": 6,
+              "costPerUnit": 9.5,
+              "estimatedCost": 57
+            }
+          ],
+          "estimatedTotal": 57
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "GET /api/inventory/purchase-orders",
+      "module": "inventory",
+      "method": "GET",
+      "path": "/api/inventory/purchase-orders",
+      "params": [],
+      "documented": true,
+      "summary": "Submitted purchase orders, newest first.",
+      "auth": "required",
+      "roles": [
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "purchaseOrders": [
+            {
+              "id": "po_2",
+              "number": "PO-0002",
+              "status": "sent",
+              "total": 47.5,
+              "notes": "",
+              "createdAt": "2026-10-08T09:00:00.000Z",
+              "receivedAt": null,
+              "lines": [
+                {
+                  "inventoryId": "inv_5",
+                  "name": "Mozzarella",
+                  "unit": "kg",
+                  "supplier": "Dairy Co",
+                  "qty": 5,
+                  "costPerUnit": 9.5,
+                  "cost": 47.5
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "POST /api/inventory/purchase-orders",
+      "module": "inventory",
+      "method": "POST",
+      "path": "/api/inventory/purchase-orders",
+      "params": [],
+      "documented": true,
+      "summary": "Submit a reorder form.",
+      "auth": "required",
+      "roles": [
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": {
+        "lines": {
+          "type": "array",
+          "required": true,
+          "note": "[{ inventoryId, qty > 0 }]"
+        },
+        "notes": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        }
+      },
+      "response": {
+        "status": 201,
+        "example": {
+          "purchaseOrder": {
+            "id": "po_2",
+            "number": "PO-0002",
+            "status": "sent",
+            "total": 47.5,
+            "notes": "",
+            "createdAt": "2026-10-08T09:00:00.000Z",
+            "receivedAt": null,
+            "lines": [
+              {
+                "inventoryId": "inv_5",
+                "name": "Mozzarella",
+                "unit": "kg",
+                "supplier": "Dairy Co",
+                "qty": 5,
+                "costPerUnit": 9.5,
+                "cost": 47.5
+              }
+            ]
+          }
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "POST /api/inventory/purchase-orders/:id/receive",
+      "module": "inventory",
+      "method": "POST",
+      "path": "/api/inventory/purchase-orders/:id/receive",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Mark goods received and restock every line.",
+      "auth": "required",
+      "roles": [
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "purchaseOrder": {
+            "id": "po_2",
+            "number": "PO-0002",
+            "status": "received",
+            "total": 47.5,
+            "notes": "",
+            "createdAt": "2026-10-08T09:00:00.000Z",
+            "receivedAt": "2026-10-09T08:00:00.000Z",
+            "lines": [
+              {
+                "inventoryId": "inv_5",
+                "name": "Mozzarella",
+                "unit": "kg",
+                "supplier": "Dairy Co",
+                "qty": 5,
+                "costPerUnit": 9.5,
+                "cost": 47.5
+              }
+            ]
+          }
+        }
+      },
+      "errors": [
+        "409 already received"
+      ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "GET /api/staff/roster",
+      "module": "staff",
+      "method": "GET",
+      "path": "/api/staff/roster",
+      "params": [],
+      "documented": true,
+      "summary": "Staff accounts, active and suspended.",
+      "auth": "required",
+      "roles": [
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "staff": [
+            {
+              "id": "usr_12",
+              "name": "Jamie Rivera",
+              "email": "jamie@example.com",
+              "phone": "555-0144",
+              "role": "waiter",
+              "active": true,
+              "mustChangePassword": false,
+              "createdAt": "2026-01-04T10:00:00.000Z"
+            }
+          ]
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "POST /api/staff/applications",
+      "module": "staff",
+      "method": "POST",
+      "path": "/api/staff/applications",
+      "params": [],
+      "documented": true,
+      "summary": "Public \"join our team\" form.",
+      "auth": "optional",
+      "roles": [],
+      "rolesSource": null,
+      "access": null,
+      "query": null,
+      "body": {
+        "name": {
+          "type": "string",
+          "required": true,
+          "note": ""
+        },
+        "email": {
+          "type": "string",
+          "required": true,
+          "note": ""
+        },
+        "phone": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        },
+        "desiredRole": {
+          "type": "string",
+          "required": true,
+          "note": "waiter|chef"
+        },
+        "experience": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        }
+      },
+      "response": {
+        "status": 201,
+        "example": {
+          "application": {
+            "id": "app_4",
+            "name": "Sam Lee",
+            "email": "sam@example.com",
+            "phone": "",
+            "desiredRole": "chef",
+            "experience": "3 years line cook",
+            "status": "pending",
+            "createdAt": "2026-10-07T12:00:00.000Z",
+            "decidedAt": null,
+            "decidedBy": null,
+            "userId": null
+          }
+        }
+      },
+      "errors": [
+        "409 account exists / application pending",
+        "429 more than 3 applications an hour from one address"
+      ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "GET /api/staff/applications",
+      "module": "staff",
+      "method": "GET",
+      "path": "/api/staff/applications",
+      "params": [],
+      "documented": true,
+      "summary": "Application review queue, newest first.",
+      "auth": "required",
+      "roles": [
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": {
+        "status": {
+          "type": "string",
+          "required": false,
+          "note": "pending|approved|rejected"
+        }
+      },
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "applications": [
+            {
+              "id": "app_4",
+              "name": "Sam Lee",
+              "email": "sam@example.com",
+              "phone": "",
+              "desiredRole": "chef",
+              "experience": "3 years line cook",
+              "status": "pending",
+              "createdAt": "2026-10-07T12:00:00.000Z",
+              "decidedAt": null,
+              "decidedBy": null,
+              "userId": null,
+              "decidedByName": null
+            }
+          ]
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "POST /api/staff/applications/:id/approve",
+      "module": "staff",
+      "method": "POST",
+      "path": "/api/staff/applications/:id/approve",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Approve an application: creates the staff account and returns a one-time temporary password.",
+      "auth": "required",
+      "roles": [
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": "Managers approve waiters and chefs; admins may also approve managers.",
+      "query": null,
+      "body": {
+        "role": {
+          "type": "string",
+          "required": false,
+          "note": "Defaults to the desired role"
+        }
+      },
+      "response": {
+        "status": 200,
+        "example": {
+          "application": {
+            "id": "app_4",
+            "name": "Sam Lee",
+            "email": "sam@example.com",
+            "phone": "",
+            "desiredRole": "chef",
+            "experience": "3 years line cook",
+            "status": "approved",
+            "createdAt": "2026-10-07T12:00:00.000Z",
+            "decidedAt": null,
+            "decidedBy": null,
+            "userId": null
+          },
+          "user": {
+            "id": "usr_12",
+            "name": "Jamie Rivera",
+            "email": "jamie@example.com",
+            "phone": "555-0144",
+            "role": "chef",
+            "active": true,
+            "mustChangePassword": false,
+            "createdAt": "2026-01-04T10:00:00.000Z"
+          },
+          "tempPassword": "<generated>"
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "POST /api/staff/applications/:id/reject",
+      "module": "staff",
+      "method": "POST",
+      "path": "/api/staff/applications/:id/reject",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Reject a pending application.",
+      "auth": "required",
+      "roles": [
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "application": {
+            "id": "app_4",
+            "name": "Sam Lee",
+            "email": "sam@example.com",
+            "phone": "",
+            "desiredRole": "chef",
+            "experience": "3 years line cook",
+            "status": "rejected",
+            "createdAt": "2026-10-07T12:00:00.000Z",
+            "decidedAt": null,
+            "decidedBy": null,
+            "userId": null
+          }
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "GET /api/staff/shifts/mine",
+      "module": "staff",
+      "method": "GET",
+      "path": "/api/staff/shifts/mine",
+      "params": [],
+      "documented": true,
+      "summary": "The signed-in staff member's shifts (default: last 7 to next 14 days).",
+      "auth": "required",
+      "roles": [
+        "waiter",
+        "chef",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": {
+        "from": {
+          "type": "YYYY-MM-DD",
+          "required": false,
+          "note": ""
+        },
+        "to": {
+          "type": "YYYY-MM-DD",
+          "required": false,
+          "note": ""
+        }
+      },
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "shifts": [
+            {
+              "id": "shf_9",
+              "userId": "usr_12",
+              "userName": "Jamie Rivera",
+              "role": "waiter",
+              "date": "2026-10-09",
+              "start": "17:00",
+              "end": "23:00",
+              "hours": 6,
+              "status": "scheduled",
+              "notes": ""
+            }
+          ],
+          "from": "2026-10-01",
+          "to": "2026-10-22"
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "GET /api/staff/shifts",
+      "module": "staff",
+      "method": "GET",
+      "path": "/api/staff/shifts",
+      "params": [],
+      "documented": true,
+      "summary": "Full rota (default: the next 7 days).",
+      "auth": "required",
+      "roles": [
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": {
+        "from": {
+          "type": "YYYY-MM-DD",
+          "required": false,
+          "note": ""
+        },
+        "to": {
+          "type": "YYYY-MM-DD",
+          "required": false,
+          "note": ""
+        },
+        "userId": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        }
+      },
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "shifts": [
+            {
+              "id": "shf_9",
+              "userId": "usr_12",
+              "userName": "Jamie Rivera",
+              "role": "waiter",
+              "date": "2026-10-09",
+              "start": "17:00",
+              "end": "23:00",
+              "hours": 6,
+              "status": "scheduled",
+              "notes": ""
+            }
+          ],
+          "from": "2026-10-08",
+          "to": "2026-10-14"
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "POST /api/staff/shifts",
+      "module": "staff",
+      "method": "POST",
+      "path": "/api/staff/shifts",
+      "params": [],
+      "documented": true,
+      "summary": "Assign a shift; rejects overlaps and suspended staff. Notifies the staff member.",
+      "auth": "required",
+      "roles": [
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": {
+        "userId": {
+          "type": "string",
+          "required": true,
+          "note": ""
+        },
+        "date": {
+          "type": "YYYY-MM-DD",
+          "required": true,
+          "note": ""
+        },
+        "start": {
+          "type": "HH:MM",
+          "required": true,
+          "note": ""
+        },
+        "end": {
+          "type": "HH:MM",
+          "required": true,
+          "note": "After start"
+        },
+        "notes": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        }
+      },
+      "response": {
+        "status": 201,
+        "example": {
+          "shift": {
+            "id": "shf_9",
+            "userId": "usr_12",
+            "userName": "Jamie Rivera",
+            "role": "waiter",
+            "date": "2026-10-09",
+            "start": "17:00",
+            "end": "23:00",
+            "hours": 6,
+            "status": "scheduled",
+            "notes": ""
+          }
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "PATCH /api/staff/shifts/:id",
+      "module": "staff",
+      "method": "PATCH",
+      "path": "/api/staff/shifts/:id",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Reschedule a shift or mark it completed / missed.",
+      "auth": "required",
+      "roles": [
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": {
+        "userId": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        },
+        "date": {
+          "type": "YYYY-MM-DD",
+          "required": false,
+          "note": ""
+        },
+        "start": {
+          "type": "HH:MM",
+          "required": false,
+          "note": ""
+        },
+        "end": {
+          "type": "HH:MM",
+          "required": false,
+          "note": ""
+        },
+        "status": {
+          "type": "string",
+          "required": false,
+          "note": "scheduled|completed|missed"
+        },
+        "notes": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        }
+      },
+      "response": {
+        "status": 200,
+        "example": {
+          "shift": {
+            "id": "shf_9",
+            "userId": "usr_12",
+            "userName": "Jamie Rivera",
+            "role": "waiter",
+            "date": "2026-10-09",
+            "start": "17:00",
+            "end": "23:00",
+            "hours": 6,
+            "status": "completed",
+            "notes": ""
+          }
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "DELETE /api/staff/shifts/:id",
+      "module": "staff",
+      "method": "DELETE",
+      "path": "/api/staff/shifts/:id",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Delete a shift.",
+      "auth": "required",
+      "roles": [
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "deleted": true,
+          "id": "shf_9"
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "GET /api/staff/performance",
+      "module": "staff",
+      "method": "GET",
+      "path": "/api/staff/performance",
+      "params": [],
+      "documented": true,
+      "summary": "Per-staff metrics: orders, revenue, tips, prep time, shifts (default: last 30 days).",
+      "auth": "required",
+      "roles": [
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": {
+        "from": {
+          "type": "YYYY-MM-DD",
+          "required": false,
+          "note": ""
+        },
+        "to": {
+          "type": "YYYY-MM-DD",
+          "required": false,
+          "note": ""
+        }
+      },
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "from": "2026-09-09",
+          "to": "2026-10-08",
+          "staff": [
+            {
+              "userId": "usr_12",
+              "name": "Jamie Rivera",
+              "role": "waiter",
+              "active": true,
+              "ordersTaken": 120,
+              "ordersServed": 110,
+              "revenueHandled": 5400.5,
+              "tips": 380,
+              "itemsPrepared": 0,
+              "avgPrepMinutes": null,
+              "shiftsCompleted": 18,
+              "shiftsMissed": 1,
+              "hoursWorked": 108
+            }
+          ]
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "GET /api/attendance/me",
+      "module": "attendance",
+      "method": "GET",
+      "path": "/api/attendance/me",
+      "params": [],
+      "documented": true,
+      "summary": "The caller's clock status: off / working / on break, since when, the current (or today's latest) session and today's shift.",
+      "auth": "required",
+      "roles": [
+        "waiter",
+        "chef",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "state": "working",
+          "since": "2026-10-09T20:00:00.000Z",
+          "session": {
+            "id": "att_40",
+            "userId": "usr_12",
+            "date": "2026-10-09",
+            "clockIn": "2026-10-09T16:58:00.000Z",
+            "clockOut": null,
+            "breaks": [
+              {
+                "start": "2026-10-09T19:30:00.000Z",
+                "end": "2026-10-09T20:00:00.000Z"
+              }
+            ],
+            "autoBreakMinutes": 0,
+            "shiftId": "shf_9",
+            "late": false,
+            "lateMinutes": 0,
+            "paidMinutes": 182
+          },
+          "todayShift": {
+            "start": "17:00",
+            "end": "23:00"
+          }
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "POST /api/attendance/clock-in",
+      "module": "attendance",
+      "method": "POST",
+      "path": "/api/attendance/clock-in",
+      "params": [],
+      "documented": true,
+      "summary": "Clock in. Matched to today's shift; later than start + lateGraceMinutes is late.",
+      "auth": "required",
+      "roles": [
+        "waiter",
+        "chef",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "state": "working",
+          "since": "2026-10-09T16:58:00.000Z",
+          "session": {
+            "id": "att_40",
+            "userId": "usr_12",
+            "date": "2026-10-09",
+            "clockIn": "2026-10-09T16:58:00.000Z",
+            "clockOut": null,
+            "breaks": [],
+            "autoBreakMinutes": 0,
+            "shiftId": "shf_9",
+            "late": false,
+            "lateMinutes": 0,
+            "paidMinutes": 182
+          },
+          "todayShift": {
+            "start": "17:00",
+            "end": "23:00"
+          }
+        }
+      },
+      "errors": [
+        "409 invalid transition (already clocked in, not clocked in, already on a break, not on a break)"
+      ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "POST /api/attendance/clock-out",
+      "module": "attendance",
+      "method": "POST",
+      "path": "/api/attendance/clock-out",
+      "params": [],
+      "documented": true,
+      "summary": "Clock out (an open break ends with it).",
+      "auth": "required",
+      "roles": [
+        "waiter",
+        "chef",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "state": "off",
+          "since": "2026-10-09T23:02:00.000Z",
+          "session": {
+            "id": "att_40",
+            "userId": "usr_12",
+            "date": "2026-10-09",
+            "clockIn": "2026-10-09T16:58:00.000Z",
+            "clockOut": "2026-10-09T23:02:00.000Z",
+            "breaks": [
+              {
+                "start": "2026-10-09T19:30:00.000Z",
+                "end": "2026-10-09T20:00:00.000Z"
+              }
+            ],
+            "autoBreakMinutes": 0,
+            "shiftId": "shf_9",
+            "late": false,
+            "lateMinutes": 0,
+            "paidMinutes": 182
+          },
+          "todayShift": {
+            "start": "17:00",
+            "end": "23:00"
+          }
+        }
+      },
+      "errors": [
+        "409 invalid transition (already clocked in, not clocked in, already on a break, not on a break)"
+      ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "POST /api/attendance/break/start",
+      "module": "attendance",
+      "method": "POST",
+      "path": "/api/attendance/break/start",
+      "params": [],
+      "documented": true,
+      "summary": "Start an unpaid break.",
+      "auth": "required",
+      "roles": [
+        "waiter",
+        "chef",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "state": "on_break",
+          "since": "2026-10-09T19:30:00.000Z",
+          "session": {
+            "id": "att_40",
+            "userId": "usr_12",
+            "date": "2026-10-09",
+            "clockIn": "2026-10-09T16:58:00.000Z",
+            "clockOut": null,
+            "breaks": [
+              {
+                "start": "2026-10-09T19:30:00.000Z",
+                "end": "2026-10-09T20:00:00.000Z"
+              }
+            ],
+            "autoBreakMinutes": 0,
+            "shiftId": "shf_9",
+            "late": false,
+            "lateMinutes": 0,
+            "paidMinutes": 182
+          },
+          "todayShift": {
+            "start": "17:00",
+            "end": "23:00"
+          }
+        }
+      },
+      "errors": [
+        "409 invalid transition (already clocked in, not clocked in, already on a break, not on a break)"
+      ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "POST /api/attendance/break/end",
+      "module": "attendance",
+      "method": "POST",
+      "path": "/api/attendance/break/end",
+      "params": [],
+      "documented": true,
+      "summary": "End the current break.",
+      "auth": "required",
+      "roles": [
+        "waiter",
+        "chef",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "state": "working",
+          "since": "2026-10-09T20:00:00.000Z",
+          "session": {
+            "id": "att_40",
+            "userId": "usr_12",
+            "date": "2026-10-09",
+            "clockIn": "2026-10-09T16:58:00.000Z",
+            "clockOut": null,
+            "breaks": [
+              {
+                "start": "2026-10-09T19:30:00.000Z",
+                "end": "2026-10-09T20:00:00.000Z"
+              }
+            ],
+            "autoBreakMinutes": 0,
+            "shiftId": "shf_9",
+            "late": false,
+            "lateMinutes": 0,
+            "paidMinutes": 182
+          },
+          "todayShift": {
+            "start": "17:00",
+            "end": "23:00"
+          }
+        }
+      },
+      "errors": [
+        "409 invalid transition (already clocked in, not clocked in, already on a break, not on a break)"
+      ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "GET /api/attendance/presence",
+      "module": "attendance",
+      "method": "GET",
+      "path": "/api/attendance/presence",
+      "params": [],
+      "documented": true,
+      "summary": "Who is working, on a break or off right now, with today's shift.",
+      "auth": "required",
+      "roles": [
+        "waiter",
+        "chef",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": "Waiters see waiters, chefs see chefs, managers see managers, waiters and chefs, the admin sees all staff.",
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "people": [
+            {
+              "userId": "usr_12",
+              "name": "Jamie Rivera",
+              "role": "waiter",
+              "state": "working",
+              "since": "2026-10-09T16:58:00.000Z",
+              "todayShift": {
+                "start": "17:00",
+                "end": "23:00"
+              }
+            }
+          ]
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "GET /api/workforce/me",
+      "module": "workforce",
+      "method": "GET",
+      "path": "/api/workforce/me",
+      "params": [],
+      "documented": true,
+      "summary": "The caller's attendance analytics (summary, day/week/month/hour series, sessions, shifts) and pay estimate for the month of \"to\".",
+      "auth": "required",
+      "roles": [
+        "waiter",
+        "chef",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": {
+        "from": {
+          "type": "YYYY-MM-DD",
+          "required": false,
+          "note": "Default: first day of the month of \"to\""
+        },
+        "to": {
+          "type": "YYYY-MM-DD",
+          "required": false,
+          "note": "Default: today; at most a year after \"from\""
+        }
+      },
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "user": {
+            "id": "usr_12",
+            "name": "Jamie Rivera",
+            "role": "waiter"
+          },
+          "range": {
+            "from": "2026-10-01",
+            "to": "2026-10-09"
+          },
+          "summary": {
+            "scheduledMinutes": 2160,
+            "workedMinutes": 1990,
+            "breakMinutes": 150,
+            "paidMinutes": 1840,
+            "shifts": 6,
+            "shiftsWorked": 5,
+            "shiftsMissed": 1,
+            "lateCount": 1,
+            "lateMinutes": 12,
+            "onTimeRate": 0.8,
+            "attendanceRate": 0.833
+          },
+          "series": {
+            "day": [
+              {
+                "key": "2026-10-09",
+                "label": "9 Oct",
+                "scheduledMinutes": 360,
+                "paidMinutes": 182,
+                "breakMinutes": 30,
+                "lateCount": 0
+              }
+            ],
+            "week": [
+              {
+                "key": "2026-W41",
+                "label": "w/c 5 Oct",
+                "scheduledMinutes": 360,
+                "paidMinutes": 182,
+                "breakMinutes": 30,
+                "lateCount": 0
+              }
+            ],
+            "month": [
+              {
+                "key": "2026-10",
+                "label": "Oct 2026",
+                "scheduledMinutes": 360,
+                "paidMinutes": 182,
+                "breakMinutes": 30,
+                "lateCount": 0
+              }
+            ],
+            "hour": [
+              {
+                "key": "17",
+                "label": "17:00",
+                "scheduledMinutes": 360,
+                "paidMinutes": 182,
+                "breakMinutes": 30,
+                "lateCount": 0
+              }
+            ]
+          },
+          "sessions": [
+            {
+              "id": "att_40",
+              "userId": "usr_12",
+              "date": "2026-10-09",
+              "clockIn": "2026-10-09T16:58:00.000Z",
+              "clockOut": null,
+              "breaks": [
+                {
+                  "start": "2026-10-09T19:30:00.000Z",
+                  "end": "2026-10-09T20:00:00.000Z"
+                }
+              ],
+              "autoBreakMinutes": 0,
+              "shiftId": "shf_9",
+              "late": false,
+              "lateMinutes": 0,
+              "paidMinutes": 182
+            }
+          ],
+          "shifts": [
+            {
+              "id": "shf_9",
+              "date": "2026-10-09",
+              "start": "17:00",
+              "end": "23:00",
+              "status": "completed"
+            }
+          ],
+          "pay": {
+            "month": "2026-10",
+            "hourlyWage": 12,
+            "paidHours": 30.67,
+            "base": 368.04,
+            "tips": 64.5,
+            "bonuses": [
+              {
+                "id": "adj_3",
+                "amount": 25,
+                "reason": "Birthday",
+                "date": "2026-10-04"
+              }
+            ],
+            "bonusTotal": 25,
+            "latePenalties": [
+              {
+                "date": "2026-10-02",
+                "minutes": 12,
+                "amount": 5
+              }
+            ],
+            "latePenaltyTotal": 5,
+            "net": 452.54,
+            "estimated": true
+          }
+        }
+      },
+      "errors": [
+        "400 invalid date / \"from\" after \"to\" / range over a year"
+      ],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "GET /api/workforce/users/:id",
+      "module": "workforce",
+      "method": "GET",
+      "path": "/api/workforce/users/:id",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "One staff member's attendance analytics, with pay when the caller may see it.",
+      "auth": "required",
+      "roles": [
+        "waiter",
+        "chef",
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": "Yourself or the admin: everything including pay. Managers: waiters and chefs only, with pay null. Others get 403.",
+      "query": {
+        "from": {
+          "type": "YYYY-MM-DD",
+          "required": false,
+          "note": "Default: first day of the month of \"to\""
+        },
+        "to": {
+          "type": "YYYY-MM-DD",
+          "required": false,
+          "note": "Default: today; at most a year after \"from\""
+        }
+      },
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "user": {
+            "id": "usr_12",
+            "name": "Jamie Rivera",
+            "role": "waiter"
+          },
+          "range": {
+            "from": "2026-10-01",
+            "to": "2026-10-09"
+          },
+          "summary": {
+            "scheduledMinutes": 2160,
+            "workedMinutes": 1990,
+            "breakMinutes": 150,
+            "paidMinutes": 1840,
+            "shifts": 6,
+            "shiftsWorked": 5,
+            "shiftsMissed": 1,
+            "lateCount": 1,
+            "lateMinutes": 12,
+            "onTimeRate": 0.8,
+            "attendanceRate": 0.833
+          },
+          "series": {
+            "day": [
+              {
+                "key": "2026-10-09",
+                "label": "9 Oct",
+                "scheduledMinutes": 360,
+                "paidMinutes": 182,
+                "breakMinutes": 30,
+                "lateCount": 0
+              }
+            ],
+            "week": [
+              {
+                "key": "2026-W41",
+                "label": "w/c 5 Oct",
+                "scheduledMinutes": 360,
+                "paidMinutes": 182,
+                "breakMinutes": 30,
+                "lateCount": 0
+              }
+            ],
+            "month": [
+              {
+                "key": "2026-10",
+                "label": "Oct 2026",
+                "scheduledMinutes": 360,
+                "paidMinutes": 182,
+                "breakMinutes": 30,
+                "lateCount": 0
+              }
+            ],
+            "hour": [
+              {
+                "key": "17",
+                "label": "17:00",
+                "scheduledMinutes": 360,
+                "paidMinutes": 182,
+                "breakMinutes": 30,
+                "lateCount": 0
+              }
+            ]
+          },
+          "sessions": [
+            {
+              "id": "att_40",
+              "userId": "usr_12",
+              "date": "2026-10-09",
+              "clockIn": "2026-10-09T16:58:00.000Z",
+              "clockOut": null,
+              "breaks": [
+                {
+                  "start": "2026-10-09T19:30:00.000Z",
+                  "end": "2026-10-09T20:00:00.000Z"
+                }
+              ],
+              "autoBreakMinutes": 0,
+              "shiftId": "shf_9",
+              "late": false,
+              "lateMinutes": 0,
+              "paidMinutes": 182
+            }
+          ],
+          "shifts": [
+            {
+              "id": "shf_9",
+              "date": "2026-10-09",
+              "start": "17:00",
+              "end": "23:00",
+              "status": "completed"
+            }
+          ],
+          "pay": null
+        }
+      },
+      "errors": [
+        "403 not allowed to see this person",
+        "404 staff member not found",
+        "400 invalid range"
+      ],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "GET /api/workforce/overview",
+      "module": "workforce",
+      "method": "GET",
+      "path": "/api/workforce/overview",
+      "params": [],
+      "documented": true,
+      "summary": "Month overview: one row per visible staff member (state, attendance summary, pay), totals, and team series (day, week, hour) for the charts.",
+      "auth": "required",
+      "roles": [
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": "Admin: all staff with pay and payroll. Managers: waiters and chefs, pay and payroll null.",
+      "query": {
+        "month": {
+          "type": "YYYY-MM",
+          "required": false,
+          "note": "Default: this month"
+        }
+      },
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "month": "2026-10",
+          "rows": [
+            {
+              "user": {
+                "id": "usr_12",
+                "name": "Jamie Rivera",
+                "role": "waiter",
+                "active": true
+              },
+              "state": "working",
+              "summary": {
+                "scheduledMinutes": 2160,
+                "workedMinutes": 1990,
+                "breakMinutes": 150,
+                "paidMinutes": 1840,
+                "shifts": 6,
+                "shiftsWorked": 5,
+                "shiftsMissed": 1,
+                "lateCount": 1,
+                "lateMinutes": 12,
+                "onTimeRate": 0.8,
+                "attendanceRate": 0.833
+              },
+              "pay": {
+                "month": "2026-10",
+                "hourlyWage": 12,
+                "paidHours": 30.67,
+                "base": 368.04,
+                "tips": 64.5,
+                "bonuses": [
+                  {
+                    "id": "adj_3",
+                    "amount": 25,
+                    "reason": "Birthday",
+                    "date": "2026-10-04"
+                  }
+                ],
+                "bonusTotal": 25,
+                "latePenalties": [
+                  {
+                    "date": "2026-10-02",
+                    "minutes": 12,
+                    "amount": 5
+                  }
+                ],
+                "latePenaltyTotal": 5,
+                "net": 452.54,
+                "estimated": true
+              }
+            }
+          ],
+          "totals": {
+            "paidMinutes": 1840,
+            "lateCount": 1,
+            "payroll": 452.54
+          },
+          "series": {
+            "day": [
+              {
+                "key": "2026-10-09",
+                "label": "9 Oct",
+                "scheduledMinutes": 360,
+                "paidMinutes": 182,
+                "breakMinutes": 30,
+                "lateCount": 0
+              }
+            ],
+            "week": [
+              {
+                "key": "2026-W41",
+                "label": "w/c 5 Oct",
+                "scheduledMinutes": 360,
+                "paidMinutes": 182,
+                "breakMinutes": 30,
+                "lateCount": 0
+              }
+            ],
+            "hour": [
+              {
+                "key": "17",
+                "label": "17:00",
+                "scheduledMinutes": 360,
+                "paidMinutes": 182,
+                "breakMinutes": 30,
+                "lateCount": 0
+              }
+            ]
+          }
+        }
+      },
+      "errors": [
+        "400 month not YYYY-MM"
+      ],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "PUT /api/workforce/users/:id/wage",
+      "module": "workforce",
+      "method": "PUT",
+      "path": "/api/workforce/users/:id/wage",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Set a staff member's hourly wage.",
+      "auth": "required",
+      "roles": [
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": {
+        "hourlyWage": {
+          "type": "number",
+          "required": true,
+          "note": "Above 0, at most 500"
+        }
+      },
+      "response": {
+        "status": 200,
+        "example": {
+          "hourlyWage": 13.5
+        }
+      },
+      "errors": [
+        "400 invalid wage",
+        "404 staff member not found"
+      ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "POST /api/workforce/users/:id/adjustments",
+      "module": "workforce",
+      "method": "POST",
+      "path": "/api/workforce/users/:id/adjustments",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Add a bonus (or, with a negative amount, a deduction) to a staff member's pay.",
+      "auth": "required",
+      "roles": [
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": {
+        "amount": {
+          "type": "number",
+          "required": true,
+          "note": "Non-zero, at most 10000 either way; negative for a deduction"
+        },
+        "reason": {
+          "type": "string",
+          "required": true,
+          "note": "Up to 200 characters"
+        },
+        "date": {
+          "type": "YYYY-MM-DD",
+          "required": false,
+          "note": "Default: today"
+        }
+      },
+      "response": {
+        "status": 201,
+        "example": {
+          "adjustment": {
+            "id": "adj_3",
+            "userId": "usr_12",
+            "amount": 25,
+            "reason": "Birthday",
+            "date": "2026-10-04",
+            "createdBy": "usr_1",
+            "createdAt": "2026-10-04T09:00:00.000Z"
+          }
+        }
+      },
+      "errors": [
+        "400 invalid amount / missing reason / invalid date",
+        "404 staff member not found"
+      ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "DELETE /api/workforce/users/:id/adjustments/:adjId",
+      "module": "workforce",
+      "method": "DELETE",
+      "path": "/api/workforce/users/:id/adjustments/:adjId",
+      "params": [
+        "id",
+        "adjId"
+      ],
+      "documented": true,
+      "summary": "Remove a bonus or deduction.",
+      "auth": "required",
+      "roles": [
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "deleted": true,
+          "id": "adj_3"
+        }
+      },
+      "errors": [
+        "404 staff member or adjustment not found"
+      ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "GET /api/analytics/summary",
+      "module": "analytics",
+      "method": "GET",
+      "path": "/api/analytics/summary",
+      "params": [],
+      "documented": true,
+      "summary": "Today's headline numbers for the staff overview.",
+      "auth": "required",
+      "roles": [
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "summary": {
+            "revenueToday": 1240.5,
+            "ordersToday": 38,
+            "activeOrders": 6,
+            "openBills": 4,
+            "lowStock": 2,
+            "bookingsToday": 9
+          }
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "GET /api/analytics/dashboard",
+      "module": "analytics",
+      "method": "GET",
+      "path": "/api/analytics/dashboard",
+      "params": [],
+      "documented": true,
+      "summary": "KPI dashboard: trend, top dishes, table turnover, peak hours, inventory health, no-show rate.",
+      "auth": "required",
+      "roles": [
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": {
+        "from": {
+          "type": "YYYY-MM-DD",
+          "required": false,
+          "note": "Default 29 days before \"to\""
+        },
+        "to": {
+          "type": "YYYY-MM-DD",
+          "required": false,
+          "note": "Default today"
+        },
+        "granularity": {
+          "type": "string",
+          "required": false,
+          "note": "day (default) | week | month"
+        }
+      },
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "range": {
+            "from": "2026-09-09",
+            "to": "2026-10-08",
+            "granularity": "day",
+            "days": 30
+          },
+          "kpis": {
+            "revenue": 35210.4,
+            "orders": 1180,
+            "avgOrder": 29.84,
+            "tips": 2100,
+            "refunds": 64.5,
+            "cancelled": 12,
+            "customers": 410
+          },
+          "trend": [
+            {
+              "period": "2026-10-08",
+              "revenue": 1240.5,
+              "orders": 38
+            }
+          ],
+          "dishes": [
+            {
+              "name": "Margherita",
+              "qty": 240,
+              "revenue": 3360
+            }
+          ],
+          "tables": [],
+          "zones": [],
+          "peakHours": [
+            {
+              "hour": 19,
+              "orders": 210,
+              "revenue": 6300,
+              "avgPerDay": 7
+            }
+          ],
+          "inventory": [],
+          "reservations": {
+            "total": 220,
+            "seated": 180,
+            "noShows": 9,
+            "cancelled": 31,
+            "noShowRate": 4.8,
+            "cancellationRate": 14.1
+          }
+        }
+      },
+      "errors": [
+        "400 \"from\" after \"to\""
+      ],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "GET /api/notifications",
+      "module": "notifications",
+      "method": "GET",
+      "path": "/api/notifications",
+      "params": [],
+      "documented": true,
+      "summary": "The caller's 30 latest in-app notifications (personal and role-wide) with the unread count.",
+      "auth": "required",
+      "roles": [],
+      "rolesSource": null,
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "notifications": [
+            {
+              "id": "ntf_55",
+              "type": "order_ready",
+              "title": "Order ready",
+              "message": "Table 3 — order #1041 is ready.",
+              "link": "/staff/orders",
+              "read": false,
+              "createdAt": "2026-10-08T18:20:00.000Z"
+            }
+          ],
+          "unreadCount": 1
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "POST /api/notifications/read-all",
+      "module": "notifications",
+      "method": "POST",
+      "path": "/api/notifications/read-all",
+      "params": [],
+      "documented": true,
+      "summary": "Mark all of the caller's notifications as read.",
+      "auth": "required",
+      "roles": [],
+      "rolesSource": null,
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "ok": true
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "POST /api/notifications/:id/read",
+      "module": "notifications",
+      "method": "POST",
+      "path": "/api/notifications/:id/read",
+      "params": [
+        "id"
+      ],
+      "documented": true,
+      "summary": "Mark one notification as read.",
+      "auth": "required",
+      "roles": [],
+      "rolesSource": null,
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "notification": {
+            "id": "ntf_55",
+            "type": "order_ready",
+            "title": "Order ready",
+            "read": true
+          }
+        }
+      },
+      "errors": [
+        "404 not found or not addressed to you"
+      ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "GET /api/settings",
+      "module": "settings",
+      "method": "GET",
+      "path": "/api/settings",
+      "params": [],
+      "documented": true,
+      "summary": "Restaurant policy (tax, service charge, points value, hours) and booking time slots.",
+      "auth": "optional",
+      "roles": [],
+      "rolesSource": null,
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 200,
+        "example": {
+          "settings": {
+            "restaurantName": "Restaurant name",
+            "address": "Street address",
+            "taxRate": 0.1,
+            "serviceChargeRate": 0.05,
+            "pointValue": 0.1,
+            "kitchenDelayMinutes": 15,
+            "reservationDurationMinutes": 90,
+            "reservationGraceMinutes": 15,
+            "openingHour": 12,
+            "closingHour": 22,
+            "lateGraceMinutes": 5,
+            "latePenalty": 5,
+            "autoBreakMinutes": 60,
+            "autoBreakAfterHours": 6
+          },
+          "timeSlots": [
+            "12:00",
+            "12:30"
+          ]
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "PATCH /api/settings",
+      "module": "settings",
+      "method": "PATCH",
+      "path": "/api/settings",
+      "params": [],
+      "documented": true,
+      "summary": "Update restaurant policy. Numeric fields must be numbers within range (null or blank is rejected); opening hour must be before closing.",
+      "auth": "required",
+      "roles": [
+        "manager",
+        "admin"
+      ],
+      "rolesSource": "guard",
+      "access": null,
+      "query": null,
+      "body": {
+        "restaurantName": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        },
+        "address": {
+          "type": "string",
+          "required": false,
+          "note": ""
+        },
+        "taxRate": {
+          "type": "number",
+          "required": false,
+          "note": "0-0.5"
+        },
+        "serviceChargeRate": {
+          "type": "number",
+          "required": false,
+          "note": "0-0.5"
+        },
+        "pointValue": {
+          "type": "number",
+          "required": false,
+          "note": "0-1"
+        },
+        "kitchenDelayMinutes": {
+          "type": "number",
+          "required": false,
+          "note": "1-240"
+        },
+        "reservationDurationMinutes": {
+          "type": "number",
+          "required": false,
+          "note": "30-300"
+        },
+        "reservationGraceMinutes": {
+          "type": "number",
+          "required": false,
+          "note": "0-120"
+        },
+        "openingHour": {
+          "type": "number",
+          "required": false,
+          "note": "0-23"
+        },
+        "closingHour": {
+          "type": "number",
+          "required": false,
+          "note": "1-24"
+        },
+        "lateGraceMinutes": {
+          "type": "number",
+          "required": false,
+          "note": "0-60"
+        },
+        "latePenalty": {
+          "type": "number",
+          "required": false,
+          "note": "0-100, deducted per late arrival"
+        },
+        "autoBreakMinutes": {
+          "type": "number",
+          "required": false,
+          "note": "0-120"
+        },
+        "autoBreakAfterHours": {
+          "type": "number",
+          "required": false,
+          "note": "1-12"
+        }
+      },
+      "response": {
+        "status": 200,
+        "example": {
+          "settings": {
+            "restaurantName": "Restaurant name",
+            "address": "Street address",
+            "taxRate": 0.1,
+            "serviceChargeRate": 0.05,
+            "pointValue": 0.1,
+            "kitchenDelayMinutes": 15,
+            "reservationDurationMinutes": 90,
+            "reservationGraceMinutes": 15,
+            "openingHour": 12,
+            "closingHour": 22,
+            "lateGraceMinutes": 5,
+            "latePenalty": 5,
+            "autoBreakMinutes": 60,
+            "autoBreakAfterHours": 6
+          }
+        }
+      },
+      "errors": [],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    }
+  ]
+}

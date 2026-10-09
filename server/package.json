@@ -11,7 +11,8 @@
     "test": "node --test test/*.test.js test/*/*.test.js",
     "lint": "node scripts/check-syntax.js",
     "test:db": "node --test --test-concurrency=1 test-db/*.test.js",
-    "db:reset": "node scripts/db-reset.js"
+    "db:reset": "node scripts/db-reset.js",
+    "export:health": "node scripts/export-health.js"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",
