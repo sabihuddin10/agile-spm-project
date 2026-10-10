@@ -118,10 +118,10 @@ export function MySchedule() {
           <Spinner label="Loading your shifts…" />
         </Card>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {next ? (
             <div
-              className={`rounded-xl border p-5 shadow-sm ${
+              className={`rounded-xl border p-4 shadow-sm sm:p-5 ${
                 onShiftNow ? 'border-emerald-300 bg-emerald-50' : 'border-brand-200 bg-brand-50'
               }`}
             >

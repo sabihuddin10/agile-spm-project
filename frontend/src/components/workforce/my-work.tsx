@@ -110,7 +110,7 @@ export function MyWork() {
         subtitle={`Check in and out, and see your hours and pay${user ? `, ${user.name.split(' ')[0]}` : ''}.`}
       />
 
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {status ? (
           <TimeClock status={status} onAction={act} busy={busy} settings={settings} />
         ) : liveError ? (

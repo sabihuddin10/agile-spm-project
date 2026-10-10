@@ -76,8 +76,8 @@ export function CareersForm() {
 
   if (submitted) {
     return (
-      <Card className="p-6 text-center sm:p-8">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-ember/15 text-ember-soft">
+      <Card className="p-4 text-center sm:p-5 lg:p-6">
+        <div className="mx-auto flex h-10 w-10 items-center sm:h-12 sm:w-12 justify-center rounded-full bg-ember/15 text-ember-soft">
           <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
@@ -101,7 +101,7 @@ export function CareersForm() {
   }
 
   return (
-    <Card className="p-6 sm:p-7">
+    <Card className="p-4 sm:p-5 lg:p-6">
       <h2 className="font-display text-2xl font-semibold tracking-tight text-bone">Apply now</h2>
       <p className="mt-1 text-sm text-bone-dim">It takes two minutes. No CV needed.</p>
 

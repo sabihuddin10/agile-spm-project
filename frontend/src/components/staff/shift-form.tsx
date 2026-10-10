@@ -197,7 +197,7 @@ export function ShiftForm({
                   type="button"
                   aria-pressed={form.status === s}
                   onClick={() => set('status', s)}
-                  className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                  className={`min-h-[36px] rounded-lg border px-2 py-1.5 text-sm font-medium transition sm:px-3 ${
                     form.status === s ? STATUS_ACTIVE[s] : 'border-stone-200 text-stone-600 hover:bg-stone-50'
                   }`}
                 >

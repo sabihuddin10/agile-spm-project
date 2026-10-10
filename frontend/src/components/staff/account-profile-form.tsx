@@ -101,7 +101,7 @@ export function AccountProfileForm({ user }: { user: User }) {
     <Card>
       <CardHeader title="Profile" subtitle="How you appear to the team and how we reach you." />
       <form onSubmit={save} noValidate>
-        <fieldset disabled={saving} className="grid gap-4 sm:grid-cols-2">
+        <fieldset disabled={saving} className="grid gap-3 sm:grid-cols-2 sm:gap-4">
           <TextField
             id="account-name"
             label="Name"
@@ -166,7 +166,7 @@ export function AccountProfileForm({ user }: { user: User }) {
           </p>
         ) : null}
 
-        <div className="mt-5 flex flex-wrap items-center gap-3">
+        <div className="mt-4 flex flex-wrap items-center gap-2 sm:mt-5 sm:gap-3">
           <button
             type="submit"
             className="btn-primary"

@@ -149,7 +149,7 @@ export function WorkCharts({
   const description = describe(points, mode);
 
   return (
-    <section className="card flex min-w-0 flex-col" aria-labelledby={headingId}>
+    <section className="card flex min-w-0 flex-col p-4 sm:p-5" aria-labelledby={headingId}>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 id={headingId} className="text-lg font-semibold">

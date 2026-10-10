@@ -141,7 +141,7 @@ export function StaffDrilldown({
           onRemoveAdjustment={canManagePay ? (id) => setRemoving(id) : undefined}
           payFooter={
             canManagePay && data.pay ? (
-              <div className="mt-5 space-y-5 border-t border-stone-200 pt-4">
+              <div className="mt-4 space-y-4 border-t sm:mt-5 sm:space-y-5 border-stone-200 pt-4">
                 <WageEditor name={data.user.name} wage={data.pay.hourlyWage} onSave={saveWage} />
                 <AdjustmentForm
                   name={data.user.name}

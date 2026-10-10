@@ -36,7 +36,7 @@ export function PayBreakdownCard({
   footer?: ReactNode;
 }) {
   return (
-    <section className="card" aria-labelledby="pay-heading">
+    <section className="card p-4 sm:p-5" aria-labelledby="pay-heading">
       <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">

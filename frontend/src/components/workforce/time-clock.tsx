@@ -62,7 +62,7 @@ export function TimeClock({
   const announcement = `${headline}.`;
 
   return (
-    <section className="card" aria-labelledby="time-clock-heading">
+    <section className="card p-4 sm:p-5" aria-labelledby="time-clock-heading">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 id="time-clock-heading" className="text-lg font-semibold">
@@ -84,14 +84,14 @@ export function TimeClock({
         </Badge>
       </div>
 
-      <div className="mt-5 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+      <div className="mt-4 flex flex-col gap-4 sm:mt-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-sm text-stone-600" aria-live="polite" aria-atomic="true">
             <span className="sr-only">{announcement}</span>
             <span aria-hidden="true">{headline}</span>
           </p>
           {status.state !== 'off' ? (
-            <p className="mt-1 font-mono text-4xl font-semibold tabular-nums text-stone-900" aria-hidden="true">
+            <p className="mt-1 font-mono text-3xl font-semibold sm:text-4xl tabular-nums text-stone-900" aria-hidden="true">
               {elapsedText(sinceMs)}
             </p>
           ) : session ? (
@@ -110,7 +110,7 @@ export function TimeClock({
             <button
               key={a.action}
               type="button"
-              className={`${a.primary ? 'btn-primary' : 'btn-secondary'} min-h-[48px] px-6 text-base`}
+              className={`${a.primary ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => onAction(a.action)}
               disabled={busy}
             >

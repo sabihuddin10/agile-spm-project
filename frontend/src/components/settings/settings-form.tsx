@@ -327,7 +327,7 @@ export function SettingsForm() {
   return (
     <form onSubmit={submit} noValidate>
       {!editable ? (
-        <div className="mb-4 rounded-lg border border-stone-200 bg-stone-100 px-4 py-3 text-sm text-stone-600">
+        <div className="mb-4 rounded-lg border border-stone-200 bg-stone-100 px-3 py-2.5 text-sm sm:px-4 sm:py-3 text-stone-600">
           You can view these settings but only managers and admins can change them.
         </div>
       ) : null}
@@ -335,7 +335,7 @@ export function SettingsForm() {
       <fieldset disabled={!editable || saving} className="min-w-0 space-y-4">
         <Card>
           <CardHeader title="Restaurant" subtitle="Printed on invoices and receipts." />
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
             <Field id="setting-restaurantName" label="Restaurant name" error={errors.restaurantName} hint="Shown at the top of every bill and receipt.">
               {input('restaurantName', { maxLength: 80, placeholder: 'e.g. Plate & Flame' })}
             </Field>
@@ -350,7 +350,7 @@ export function SettingsForm() {
             title="Billing & loyalty"
             subtitle="The restaurant-configured rates applied to every bill."
           />
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-3 sm:gap-4">
             <Field id="setting-taxPercent" label="Tax rate" suffix="%" error={errors.taxPercent} hint="0–50%. Charged on the subtotal after any Flame Point discount.">
               {input('taxPercent', { type: 'number', inputMode: 'decimal', min: 0, max: 50, step: 0.01, padRight: true, placeholder: '16' })}
             </Field>
@@ -390,7 +390,7 @@ export function SettingsForm() {
 
           <Card>
             <CardHeader title="Opening hours" subtitle="Used for table occupancy and peak-hour analytics." />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
               <Field id="setting-openingHour" label="Opens" error={errors.openingHour}>
                 <select
                   id="setting-openingHour"
@@ -426,7 +426,7 @@ export function SettingsForm() {
 
         <Card>
           <CardHeader title="Reservations" subtitle="Table holds and late arrivals." />
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
             <Field
               id="setting-reservationDurationMinutes"
               label="Booking duration"
@@ -455,7 +455,7 @@ export function SettingsForm() {
 
         <Card>
           <CardHeader title="Attendance & pay" subtitle="How check-ins, breaks and lateness affect staff hours and pay." />
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
             <Field
               id="setting-lateGraceMinutes"
               label="Late after"
@@ -497,7 +497,7 @@ export function SettingsForm() {
       </fieldset>
 
       {editable ? (
-        <div className="sticky bottom-0 z-20 -mx-4 mt-4 flex flex-wrap items-center gap-2 border-t border-stone-200 bg-stone-50/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-xl sm:border sm:bg-white/95">
+        <div className="sticky bottom-0 z-20 -mx-4 mt-4 flex flex-wrap items-center gap-2 border-t border-stone-200 bg-stone-50/95 px-4 py-2.5 backdrop-blur sm:py-3 sm:mx-0 sm:rounded-xl sm:border sm:bg-white/95">
           <p className={`mr-auto text-sm ${dirty ? 'font-medium text-amber-700' : 'text-stone-500'}`} aria-live="polite">
             {dirty ? 'You have unsaved changes.' : 'All changes saved.'}
           </p>

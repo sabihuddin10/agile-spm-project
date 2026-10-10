@@ -72,7 +72,7 @@ export function SessionsTable({
 
   return (
     <section className="card !p-0" aria-labelledby="sessions-heading">
-      <div className="flex flex-wrap items-start justify-between gap-3 px-5 pb-3 pt-5">
+      <div className="flex flex-wrap items-start justify-between gap-3 px-4 pb-3 pt-4 sm:px-5 sm:pt-5">
         <div>
           <h2 id="sessions-heading" className="text-lg font-semibold">
             Sessions &amp; shifts
@@ -166,7 +166,7 @@ export function SessionsTable({
           </ul>
 
           {rows.length > shown ? (
-            <div className="border-t border-stone-100 px-5 py-3">
+            <div className="border-t border-stone-100 px-4 py-3 sm:px-5">
               <button type="button" className="btn-secondary w-full sm:w-auto" onClick={() => setShown((n) => n + pageSize)}>
                 Show more ({rows.length - shown} older)
               </button>

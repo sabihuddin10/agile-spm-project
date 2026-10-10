@@ -55,7 +55,7 @@ export function ProgressRing({
           y="50%"
           dominantBaseline="central"
           textAnchor="middle"
-          className="fill-stone-800 text-[13px] font-semibold tabular-nums"
+          className="fill-stone-800 text-sm font-semibold tabular-nums"
           aria-hidden="true"
         >
           {center}

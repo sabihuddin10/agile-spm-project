@@ -30,7 +30,7 @@ export function MyAccount() {
       <PageHeader title="My account" subtitle="Your details, your password and what your role gives you access to." />
 
       {user.mustChangePassword ? (
-        <div role="alert" className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <div role="alert" className="mb-4 rounded-lg sm:mb-5 border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           <p className="font-medium">You&apos;re signed in with a temporary password.</p>
           <p className="mt-0.5">
             Set your own password below before you carry on.{' '}
@@ -41,9 +41,9 @@ export function MyAccount() {
         </div>
       ) : null}
 
-      <div className="card mb-5 flex flex-col gap-4 sm:flex-row sm:items-center">
+      <div className="card mb-4 flex flex-col gap-3 p-4 sm:mb-5 sm:flex-row sm:gap-4 sm:p-5 sm:items-center">
         <span
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-50 text-base font-bold text-brand-700"
+          className="flex h-10 w-10 shrink-0 items-center sm:h-12 sm:w-12 justify-center rounded-full bg-brand-50 text-base font-bold text-brand-700"
           aria-hidden="true"
         >
           {initials(user.name)}
@@ -59,8 +59,8 @@ export function MyAccount() {
         </div>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-3 lg:items-start">
-        <div className="space-y-5 lg:col-span-2">
+      <div className="grid gap-4 sm:gap-5 lg:grid-cols-3 lg:items-start">
+        <div className="space-y-4 sm:space-y-5 lg:col-span-2">
           <AccountProfileForm key={user.id} user={user} />
           <ChangePasswordForm id="change-password" />
         </div>

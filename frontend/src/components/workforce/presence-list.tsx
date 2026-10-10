@@ -56,7 +56,7 @@ export function PresenceList({
   const counts = groups.map((g) => `${g.list.length} ${STATE_META[g.state].label.toLowerCase()}`).join(' · ');
 
   return (
-    <section className="card" aria-labelledby={`presence-${variant}-heading`}>
+    <section className="card p-4 sm:p-5" aria-labelledby={`presence-${variant}-heading`}>
       <div className="mb-2">
         <h2 id={`presence-${variant}-heading`} className="text-lg font-semibold">
           {title}

@@ -33,7 +33,7 @@ function KpiTiles({ tiles }: { tiles: Tile[] }) {
       {tiles.map((t) => (
         <div key={t.label} className="card flex min-w-0 items-center justify-between gap-3 !p-4 sm:block">
           <dt className="min-w-0 text-xs font-medium text-stone-500">{t.label}</dt>
-          <dd className="shrink-0 text-xl font-semibold tabular-nums text-stone-900 sm:mt-1 sm:text-2xl">{t.value}</dd>
+          <dd className="shrink-0 text-2xl font-semibold tabular-nums text-stone-900 sm:mt-1">{t.value}</dd>
           <dd className="mt-0.5 hidden text-xs text-stone-500 sm:block">{t.hint}</dd>
         </div>
       ))}
@@ -179,7 +179,7 @@ function WorkforceHubContent() {
           <Spinner label="Loading workforce…" />
         </Card>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           <section aria-label={`Totals for ${monthLabel(month)}`}>
             <KpiTiles tiles={tiles} />
           </section>

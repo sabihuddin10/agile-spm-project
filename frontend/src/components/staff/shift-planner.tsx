@@ -112,7 +112,7 @@ export function ShiftPlanner({ roster }: { roster: User[] }) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-1">
-          <button type="button" className="btn-secondary px-2.5" onClick={() => shiftWeek(-1)} aria-label="Previous week">
+          <button type="button" className="btn-secondary h-9 w-9 shrink-0 p-0 lg:h-9 lg:min-h-[36px] lg:px-0" onClick={() => shiftWeek(-1)} aria-label="Previous week">
             ‹
           </button>
           <button
@@ -123,7 +123,7 @@ export function ShiftPlanner({ roster }: { roster: User[] }) {
           >
             This week
           </button>
-          <button type="button" className="btn-secondary px-2.5" onClick={() => shiftWeek(1)} aria-label="Next week">
+          <button type="button" className="btn-secondary h-9 w-9 shrink-0 p-0 lg:h-9 lg:min-h-[36px] lg:px-0" onClick={() => shiftWeek(1)} aria-label="Next week">
             ›
           </button>
         </div>
