@@ -13,7 +13,7 @@ interface BottomNavItem {
 
 function IconHome() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="h-[22px] w-[22px]" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="h-5 w-5" aria-hidden="true">
       <path strokeLinecap="round" strokeLinejoin="round" d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1v-8.5Z" />
     </svg>
   );
@@ -21,7 +21,7 @@ function IconHome() {
 
 function IconSearch() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="h-[22px] w-[22px]" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="h-5 w-5" aria-hidden="true">
       <circle cx="11" cy="11" r="7" />
       <path strokeLinecap="round" d="m20 20-3.5-3.5" />
     </svg>
@@ -30,7 +30,7 @@ function IconSearch() {
 
 function IconOrders() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="h-[22px] w-[22px]" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="h-5 w-5" aria-hidden="true">
       <path strokeLinecap="round" strokeLinejoin="round" d="M4 5h16M4 12h10M4 19h14" />
     </svg>
   );
@@ -38,7 +38,7 @@ function IconOrders() {
 
 function IconProfile() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="h-[22px] w-[22px]" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="h-5 w-5" aria-hidden="true">
       <circle cx="12" cy="8" r="3.5" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M5 20c1.4-3 4-4.5 7-4.5s5.6 1.5 7 4.5" />
     </svg>
@@ -75,7 +75,7 @@ export function MobileBottomNav() {
             <Link
               key={item.label}
               href={item.href}
-              className="flex flex-col items-center gap-1 py-2.5"
+              className="flex flex-col items-center gap-0.5 py-2"
               aria-current={active ? 'page' : undefined}
             >
               <span className={active ? 'text-ember' : 'text-bone-faint'}>{item.icon}</span>

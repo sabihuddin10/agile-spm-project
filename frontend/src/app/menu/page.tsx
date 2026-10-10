@@ -4,8 +4,8 @@ import { PublicMenu } from '@/components/menu/public-menu';
 export default function MenuPage() {
   return (
     <StorefrontShell>
-      <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-        <header className="mb-8 border-b border-char-hairline pb-8">
+      <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-12">
+        <header className="mb-6 border-b border-char-hairline pb-6 md:mb-8 md:pb-8">
           <h1 className="font-display text-4xl font-semibold tracking-tight text-bone">
             The menu
           </h1>

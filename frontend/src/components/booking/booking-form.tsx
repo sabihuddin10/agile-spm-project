@@ -180,7 +180,7 @@ export function BookingForm() {
   if (done) {
     const inAccount = user?.role === 'customer';
     return (
-      <Card className="w-full max-w-xl p-6 text-center sm:p-8">
+      <Card className="w-full max-w-xl p-4 text-center sm:p-8">
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-ember/15 text-ember-soft">
           <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -195,7 +195,7 @@ export function BookingForm() {
           {inAccount ? ' and in your account' : ''} once the team has checked the book.
         </p>
 
-        <dl className="mx-auto mt-6 grid max-w-sm grid-cols-2 gap-x-4 gap-y-2 rounded-xl border border-char-hairline bg-char-deep p-4 text-left text-sm">
+        <dl className="mx-auto mt-5 grid max-w-sm grid-cols-2 gap-x-4 gap-y-2 rounded-xl border border-char-hairline bg-char-deep p-3 text-left text-sm sm:mt-6 sm:p-4">
           <dt className="text-bone-faint">Reference</dt>
           <dd className="text-right font-mono text-bone">{done.id}</dd>
           <dt className="text-bone-faint">Name</dt>
@@ -210,7 +210,7 @@ export function BookingForm() {
           </dd>
         </dl>
 
-        <div className="mt-6 flex flex-col justify-center gap-2 sm:flex-row">
+        <div className="mt-5 flex flex-col justify-center gap-2 sm:mt-6 sm:flex-row">
           <button type="button" className="btn-primary" onClick={startAgain}>
             Make another booking
           </button>
@@ -230,14 +230,14 @@ export function BookingForm() {
       : null;
 
   return (
-    <Card className="w-full max-w-xl p-5 sm:p-6">
+    <Card className="w-full max-w-xl p-4 sm:p-6">
       <h2 className="font-display text-2xl font-semibold tracking-tight text-bone">Book a table</h2>
       <p className="mt-1 text-sm text-bone-dim">
         {user ? `Booking as ${user.name} — you can change the details below.` : 'No account needed, just your details.'}
       </p>
 
-      <form onSubmit={handleSubmit} noValidate className="mt-5 space-y-5">
-        <div className="grid gap-4 sm:grid-cols-2">
+      <form onSubmit={handleSubmit} noValidate className="mt-4 space-y-4 sm:mt-5 sm:space-y-5">
+        <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
           <div className="sm:col-span-2">
             <label className="label" htmlFor="bk-name">
               Full name
@@ -353,7 +353,7 @@ export function BookingForm() {
         </fieldset>
 
         {conflict ? (
-          <div role="alert" className="rounded-xl border border-ember/40 bg-ember/10 p-4">
+          <div role="alert" className="rounded-xl border border-ember/40 bg-ember/10 p-3 sm:p-4">
             <p className="text-sm font-medium text-bone">{conflict.error}</p>
             {conflict.alternatives.length > 0 ? (
               <>
@@ -404,7 +404,7 @@ export function BookingForm() {
           {summary ? <p className="text-center text-sm text-bone-dim">{summary}</p> : null}
           <button
             type="submit"
-            className="btn-primary w-full"
+            className="btn-primary h-10 w-full lg:h-12"
             disabled={submitting || !v.isValid}
             aria-disabled={submitting || !v.isValid}
             aria-describedby={v.isValid ? undefined : 'bk-submit-hint'}

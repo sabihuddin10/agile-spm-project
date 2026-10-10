@@ -68,7 +68,7 @@ export function PublicMenu({ compact = false }: { compact?: boolean }) {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-16">
+      <div className="flex justify-center py-10 md:py-16">
         <Spinner label="Loading menu…" />
       </div>
     );
@@ -92,7 +92,7 @@ export function PublicMenu({ compact = false }: { compact?: boolean }) {
   const visible = compact ? categories.slice(0, 3) : categories;
 
   const tagChip = (active: boolean) =>
-    `rounded-full border px-3.5 py-1.5 text-sm font-medium capitalize transition ${
+    `rounded-full border px-3 py-1.5 text-sm font-medium capitalize transition ${
       active
         ? 'border-ember bg-ember text-bone'
         : 'border-char-hairline bg-char-raised text-bone-dim hover:border-ember/40 hover:text-bone'
@@ -111,7 +111,7 @@ export function PublicMenu({ compact = false }: { compact?: boolean }) {
       ) : null}
 
       {!compact && tags.length > 0 ? (
-        <div className="mb-8 flex flex-wrap items-center gap-2" role="group" aria-label="Filter by dietary tag">
+        <div className="mb-6 flex flex-wrap items-center gap-2 md:mb-8" role="group" aria-label="Filter by dietary tag">
           <button type="button" onClick={() => setActiveTag(null)} className={tagChip(activeTag === null)} aria-pressed={activeTag === null}>
             All
           </button>
@@ -129,7 +129,7 @@ export function PublicMenu({ compact = false }: { compact?: boolean }) {
         </div>
       ) : null}
 
-      <div className="space-y-12">
+      <div className="space-y-8 md:space-y-12">
         {visible.map((cat) => (
           <section key={cat.id}>
             <div className="mb-4 flex items-center gap-3">
@@ -153,7 +153,7 @@ export function PublicMenu({ compact = false }: { compact?: boolean }) {
       </div>
 
       {compact ? (
-        <div className="mt-8 text-center">
+        <div className="mt-6 text-center md:mt-8">
           <Link href="/menu" className="btn-secondary">
             View full menu
           </Link>

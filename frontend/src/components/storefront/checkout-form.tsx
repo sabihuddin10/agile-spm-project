@@ -132,12 +132,12 @@ export function CheckoutForm({ onBack, onPlaced }: { onBack: () => void; onPlace
   }
 
   const optionCard = (active: boolean) =>
-    `rounded-xl border p-3 text-left transition disabled:cursor-not-allowed disabled:opacity-50 ${
+    `rounded-xl border p-2.5 text-left transition sm:p-3 disabled:cursor-not-allowed disabled:opacity-50 ${
       active ? 'border-ember bg-ember/10' : 'border-char-hairline bg-char-deep hover:border-ember/40'
     }`;
 
   return (
-    <form onSubmit={placeOrder} className="space-y-6 px-5 py-5">
+    <form onSubmit={placeOrder} className="space-y-5 px-4 py-4 sm:space-y-6 sm:px-5 sm:py-5">
       {loadIssue ? (
         <p className="rounded-xl border border-char-hairline bg-char-deep px-3.5 py-2.5 text-xs text-bone-dim">
           {loadIssue} Totals below are approximate.
@@ -158,7 +158,7 @@ export function CheckoutForm({ onBack, onPlaced }: { onBack: () => void; onPlace
               className={optionCard(fulfillment === f.id)}
             >
               <span className="block text-sm font-medium text-bone">{f.label}</span>
-              <span className="mt-0.5 block text-[11px] leading-tight text-bone-dim">{f.hint}</span>
+              <span className="mt-0.5 block text-2xs leading-tight text-bone-dim">{f.hint}</span>
             </button>
           ))}
         </div>
@@ -218,7 +218,7 @@ export function CheckoutForm({ onBack, onPlaced }: { onBack: () => void; onPlace
             className={optionCard(payment === 'card')}
           >
             <span className="block text-sm font-medium text-bone">Card</span>
-            <span className="mt-0.5 block text-[11px] text-bone-dim">Pay now</span>
+            <span className="mt-0.5 block text-2xs text-bone-dim">Pay now</span>
           </button>
           <button
             type="button"
@@ -229,7 +229,7 @@ export function CheckoutForm({ onBack, onPlaced }: { onBack: () => void; onPlace
             className={optionCard(payment === 'cash')}
           >
             <span className="block text-sm font-medium text-bone">Cash</span>
-            <span className="mt-0.5 block text-[11px] text-bone-dim">{CASH_HINT[fulfillment]}</span>
+            <span className="mt-0.5 block text-2xs text-bone-dim">{CASH_HINT[fulfillment]}</span>
           </button>
         </div>
       </fieldset>
@@ -249,7 +249,7 @@ export function CheckoutForm({ onBack, onPlaced }: { onBack: () => void; onPlace
             aria-checked={usePoints}
             disabled={maxPoints <= 0 || placing}
             onClick={togglePoints}
-            className={`shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${
+            className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${
               usePoints
                 ? 'border-ember bg-ember text-bone'
                 : 'border-char-hairline bg-char-raised text-bone-dim hover:border-ember/40 hover:text-bone'
@@ -332,10 +332,10 @@ export function CheckoutForm({ onBack, onPlaced }: { onBack: () => void; onPlace
       ) : null}
 
       <div className="flex gap-2 pt-1">
-        <button type="button" className="btn-ghost flex-1 !py-2.5 text-sm" onClick={onBack} disabled={placing}>
+        <button type="button" className="btn-ghost h-10 flex-1 lg:h-12" onClick={onBack} disabled={placing}>
           Back to cart
         </button>
-        <button type="submit" className="btn-primary flex-[2] !py-2.5 text-sm" disabled={placing || Boolean(missing)}>
+        <button type="submit" className="btn-primary h-10 flex-[2] lg:h-12" disabled={placing || Boolean(missing)}>
           {placing
             ? 'Placing…'
             : payment === 'card'

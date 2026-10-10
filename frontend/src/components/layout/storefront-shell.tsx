@@ -40,7 +40,7 @@ function Avatar({ name, className }: { name: string; className?: string }) {
   return (
     <span
       aria-hidden="true"
-      className={`flex items-center justify-center rounded-full bg-ember text-bone ${className ?? 'h-8 w-8 text-xs font-extrabold'}`}
+      className={`flex items-center justify-center rounded-full bg-ember text-bone ${className ?? 'h-7 w-7 text-2xs font-extrabold'}`}
     >
       {initials}
     </span>
@@ -97,14 +97,14 @@ export function StorefrontShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="storefront flex min-h-screen flex-col bg-char">
       <header className="sticky top-0 z-[52] border-b border-char-hairline bg-char/90 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-[1240px] items-center gap-2 px-4 sm:px-6">
+        <div className="mx-auto flex h-14 max-w-[1240px] items-center gap-1.5 px-4 sm:gap-2 sm:px-6 lg:h-16">
           {/* Hamburger — mobile */}
           <button
             onClick={() => setMenuOpen(true)}
-            className="flex h-10 w-10 items-center justify-center rounded-pill text-bone lg:hidden"
+            className="flex h-9 w-9 items-center justify-center rounded-pill text-bone lg:hidden"
             aria-label="Open menu"
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="h-6 w-6" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="h-5 w-5" aria-hidden="true">
               <path strokeLinecap="round" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
@@ -141,7 +141,7 @@ export function StorefrontShell({ children }: { children: React.ReactNode }) {
             {/* Search icon */}
             <Link
               href="/menu"
-              className="hidden h-10 w-10 items-center justify-center rounded-pill text-bone-dim transition hover:bg-char-raised hover:text-bone md:flex"
+              className="hidden h-9 w-9 items-center justify-center rounded-pill text-bone-dim transition hover:bg-char-raised hover:text-bone md:flex"
               aria-label="Browse the menu"
             >
               <SearchIcon />
@@ -158,12 +158,12 @@ export function StorefrontShell({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               onClick={() => setOpen(true)}
-              className="relative flex h-10 w-10 items-center justify-center rounded-pill text-bone-dim transition hover:bg-char-raised hover:text-bone"
+              className="relative flex h-9 w-9 items-center justify-center rounded-pill text-bone-dim transition hover:bg-char-raised hover:text-bone"
               aria-label={`Open your order, ${count} ${count === 1 ? 'item' : 'items'}`}
             >
               <BagIcon />
               {count > 0 ? (
-                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-ember px-1 text-[10px] font-bold text-bone">
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-ember px-1 text-2xs font-bold text-bone">
                   {count}
                 </span>
               ) : null}
@@ -193,7 +193,7 @@ export function StorefrontShell({ children }: { children: React.ReactNode }) {
                     </svg>
                   </button>
                   {profileOpen ? (
-                    <div className="fade-in absolute right-0 top-12 z-50 w-52 overflow-hidden rounded-2xl border border-char-hairline bg-char-raised py-2 shadow-ember">
+                    <div className="fade-in absolute right-0 top-11 z-50 w-52 overflow-hidden rounded-2xl border border-char-hairline bg-char-raised py-2 shadow-ember">
                       <div className="border-b border-char-hairline px-4 py-2.5">
                         <p className="truncate text-sm font-semibold text-bone">{user.name}</p>
                         <p className="truncate text-xs text-bone-faint">{user.email}</p>
@@ -245,7 +245,7 @@ export function StorefrontShell({ children }: { children: React.ReactNode }) {
                 </Link>
                 <Link
                   href="/register"
-                  className="rounded-pill bg-ember px-4 py-1.5 text-sm font-bold text-bone transition hover:bg-ember-soft"
+                  className="inline-flex h-9 items-center rounded-pill bg-ember px-4 text-sm font-bold text-bone lg:h-10 transition hover:bg-ember-soft"
                 >
                   Join
                 </Link>

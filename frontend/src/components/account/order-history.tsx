@@ -33,7 +33,7 @@ export function OrderHistory({
       <div className="rounded-2xl border border-dashed border-char-hairline px-4 py-8 text-center">
         <p className="text-sm font-medium text-bone">No past orders yet</p>
         <p className="mt-1 text-sm text-bone-dim">Finished and cancelled orders will appear here.</p>
-        <Link href="/menu" className="btn-secondary mt-4 !py-2 text-sm">
+        <Link href="/menu" className="btn-secondary mt-4">
           Browse the menu
         </Link>
       </div>
@@ -102,7 +102,7 @@ export function OrderHistory({
       </ul>
       {sorted.length > shown ? (
         <div className="mt-3 text-center">
-          <button type="button" className="btn-ghost !py-1.5 text-sm" onClick={() => setShown((n) => n + PAGE)}>
+          <button type="button" className="btn-ghost" onClick={() => setShown((n) => n + PAGE)}>
             Show more ({sorted.length - shown} older)
           </button>
         </div>
