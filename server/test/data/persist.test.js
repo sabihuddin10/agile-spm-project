@@ -10,7 +10,7 @@ import express from 'express';
 import { customers } from '../../src/data/store.js';
 import { snapshot, restore } from '../../src/data/snapshot.js';
 import { setPool } from '../../src/data/db.js';
-import { persistState, pack } from '../../src/data/persist.js';
+import { persistState, pack, isReadOnly } from '../../src/data/persist.js';
 
 const initial = snapshot();
 let keySeq = 0;
@@ -62,6 +62,7 @@ function startApi(key) {
   const app = express();
   app.use('/api', persistState({ key }));
   app.get('/api/count', (req, res) => res.json({ names: customers.map((c) => c.name) }));
+  app.get('/api/tables', (req, res) => res.json({ ok: true }));
   app.post('/api/add', (req, res) => {
     customers.push({ id: 'cus_added', name: 'Added' });
     res.status(201).json({ ok: true });
@@ -190,4 +191,52 @@ test('a failed save answers 500 and discards the change', async () => {
   assert.equal(res.body.error, 'Could not save changes. Please try again.');
   assert.equal(names().includes('Added'), false);
   assert.equal(db.row(key).version, 1);
+});
+
+test('a plain read takes no lock and no transaction, only a version check', async () => {
+  // Arrange
+  const api = startApi(key);
+  await api.call('GET', '/count');
+  db.statements.length = 0;
+
+  // Act
+  const res = await api.call('GET', '/count');
+
+  // Assert
+  assert.equal(res.status, 200);
+  assert.deepEqual(db.statements, ['SELECT']);
+});
+
+test('a GET that refreshes table holds still takes the locked write path', async () => {
+  // Arrange
+  const api = startApi(key);
+  await api.call('GET', '/count');
+  db.statements.length = 0;
+
+  // Act
+  await api.call('GET', '/tables');
+
+  // Assert
+  assert.equal(db.statements[0], 'BEGIN');
+  assert.equal(db.statements.at(-1), 'COMMIT');
+});
+
+test('isReadOnly is true for plain GET/HEAD and false for writes and the state-changing GETs', () => {
+  // Arrange
+  const req = (method, originalUrl) => ({ method, originalUrl });
+
+  // Act
+  const results = [
+    isReadOnly(req('GET', '/api/orders?status=ready')),
+    isReadOnly(req('HEAD', '/api/menu')),
+    isReadOnly(req('POST', '/api/orders')),
+    isReadOnly(req('PATCH', '/api/tables/tab_1')),
+    isReadOnly(req('GET', '/api/tables')),
+    isReadOnly(req('GET', '/api/tables/?zone=Patio')),
+    isReadOnly(req('GET', '/api/reservations?date=2026-10-11')),
+    isReadOnly(req('GET', '/api/reservations/availability')),
+  ];
+
+  // Assert
+  assert.deepEqual(results, [true, true, false, false, false, false, false, true]);
 });
