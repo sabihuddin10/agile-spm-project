@@ -1,0 +1,121 @@
+# Work Plan
+
+A living plan for the work after Sprints 13–14. Work is split into small phases.
+Each phase follows the same flow:
+
+1. Build on a `feat/<name>` branch.
+2. Pass the six CI checks (see `CLAUDE.md`).
+3. Merge into `development`.
+4. Release `development` → `main`.
+
+If a phase grows too big, it is split, never stretched. Update this file whenever a phase changes status.
+
+## Legend
+
+- `[x]` done: merged into `main`
+- `[~]` in progress: built, being verified, or merged into `development` but not released yet
+- `[ ]` planned: not started
+
+## Status at a glance
+
+| Phase | Theme | Sprint | Status |
+|---|---|---|---|
+| 1 | Workforce: attendance, payroll, My work, Workforce hub | 13–14 | [x] |
+| 2 | Web `/api/health` page on the main site | 14 | [x] |
+| 3 | Shared UI base + late-booking fix | 15 | [x] |
+| 4 | Admin UI polish, batch 1 + input safety | 15 | [~] |
+| 5 | Admin UI polish, batch 2: staff, workforce, settings | 15 | [~] |
+| 6 | Formik/Yup-style form validation + placeholders | 16 | [~] |
+| 7 | Clean-up and hardening | 16 | [ ] |
+| 8 | Open product questions | 16 | [ ] |
+
+---
+
+## Phase 1: Workforce [x]
+
+**Goal:** staff can clock in and out, and managers can see hours and pay.
+
+- [x] Attendance, presence and payroll API (`server/src/routes/workforce.js`, `server/src/lib/attendance.js`)
+- [x] My work page for each staff member, and the Workforce hub for managers and admins
+- [x] Sprint 13–14 docs marked delivered
+
+## Phase 2: Health page on the main site [x]
+
+**Goal:** `/api/health` opens on the web domain, not only on the API domain.
+
+- [x] Route handler `frontend/src/app/api/health/route.ts`, which proxies JSON and renders HTML from the catalogue
+- [x] `pnpm --dir server run export:health` keeps the frontend copy in sync, and a test fails if it is stale
+
+## Phase 3: Shared UI base + late-booking fix [x]
+
+**Goal:** give every admin screen the same building blocks, and fix a real bug that shows up after midnight.
+
+- [x] Shared `ConfirmDialog`, icon set, `.btn-sm` / `.btn-success`, 44px tap targets on touch screens
+- [x] Reservations: late, still-confirmed bookings from last night stay on the "upcoming" list after midnight, so staff can still seat them or mark a no-show
+
+## Phase 4: Admin UI polish, batch 1 + input safety [~]
+
+**Goal:** the admin screens follow the UI/UX review (accessible, phone-first, not AI-looking), and every API input is type-checked.
+
+- [~] Shell: accessible modal, toast, spinner, staff drawer, phone-first overview and analytics
+- [~] Inventory, menu, customers: phone card layouts, confirm dialogs instead of `window.confirm`, keyboard tabs, allergy pills
+- [~] Floor, kitchen, orders, reservations, billing: accessible dialogs, keyboard tabs, phone-first cards
+- [~] Password policy on the server and in the UI: 8+ characters, mixed case, a number, a special character, not common, not your name or email
+- [~] Server input guards:
+  - finite numbers within ranges
+  - real booleans
+  - length caps
+  - 100 KB body limit
+  - `__proto__` keys rejected
+  - query arrays rejected
+- [~] SQL-injection audit and the `test/data/sql-safety.test.js` regression test (no issues found)
+
+**Done when:** all six checks pass on `development` and it is merged into `main`.
+
+## Phase 5: Admin UI polish, batch 2 [~]
+
+**Goal:** the same polish for the staff, workforce and settings screens.
+
+- [x] Row-actions menu, confirm dialogs, lazy-loaded charts, phone-first tables (branch verified: 854/854 tests, build OK)
+- [ ] Merge into `development` after the Phase 4 release
+- [ ] Shift form: placeholder and the 500-character notes limit
+
+## Phase 6: Formik/Yup-style validation + placeholders [~]
+
+**Goal:** forms behave the way users expect from modern sites.
+
+- [ ] Errors update live while typing; an untouched form shows no red
+- [ ] Submit button stays disabled until the whole form is valid, with a short note saying what is missing
+- [ ] Live password checklist on every password field
+- [ ] Customers need a real name (3+ letters or two words) plus an email or a phone, enforced on the server as well
+- [ ] Staff forms check the same rules as the server before submitting:
+  - staff booking
+  - customer
+  - account edit
+  - menu
+  - inventory
+  - billing
+  - tables
+- [ ] A correct, realistic placeholder on every text input (labels stay)
+
+**Done when:** the forms and their tests are updated, all six checks pass, and it is merged into `main`.
+
+## Phase 7: Clean-up and hardening [ ]
+
+- [ ] Remove merged branches and old worktrees (after the team agrees)
+- [ ] Redeploy the API Vercel project, which is not git-connected and is stale
+- [ ] Browser check of the phone layouts and print view, which jsdom cannot test
+- [ ] Phone card list for the customer table, which has no fixed width today
+
+## Phase 8: Open product questions [ ]
+
+- [ ] Should a single super-admin manage the other admins?
+
+---
+
+## Rules of the road
+
+- Flow is always `feat/<name>` → `development` → `main`. No direct commits to `main` or `development`.
+- A phase is done only when all six CI checks pass. A test that times out under load is re-run once on its own before it counts as a real failure.
+- Tests stay module-wise with `// Arrange // Act // Assert` comments (see `TestsPLAN.md`).
+- Every delivered feature is also added to the sprint docs.
