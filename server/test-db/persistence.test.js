@@ -1,5 +1,5 @@
 /**
- * Persistence against a real Neon database (needs DATABASE_URL, see
+ * Persistence against a real Postgres database (Neon or local) (needs DATABASE_URL, see
  * `npm run test:db`). Each API server runs in its own process — like separate
  * serverless instances — and the whole run uses a unique app_state row that is
  * deleted afterwards.
@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { gunzipSync } from 'node:zlib';
-import { Pool } from '@neondatabase/serverless';
+import { createPool } from '../src/data/db.js';
 
 const STATE_KEY = `test_${process.pid}_${Date.now()}`;
 const SERVER_DIR = fileURLToPath(new URL('..', import.meta.url));
@@ -21,7 +21,7 @@ let pool;
 const servers = [];
 
 before(() => {
-  pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  pool = createPool(process.env.DATABASE_URL);
 });
 
 after(async () => {
