@@ -54,6 +54,21 @@ describe('ShiftForm — adding a shift', () => {
     expect(screen.getByText(/must end after it starts/i)).toBeInTheDocument();
   });
 
+  it('caps notes at 500 characters (server limit) with a live counter', async () => {
+    // Arrange
+    const user = userEvent.setup({ delay: null });
+    render(<ShiftForm roster={roster} onClose={vi.fn()} onSaved={vi.fn()} />);
+    const notes = screen.getByLabelText(/notes/i);
+
+    // Act
+    await user.type(notes, 'Opening duties');
+
+    // Assert
+    expect(notes).toHaveAttribute('maxLength', '500');
+    expect(notes).toHaveAttribute('placeholder', 'e.g. covering the terrace, opening duties');
+    expect(notes).toHaveAccessibleDescription('14/500');
+  });
+
   it('creates a new shift for the chosen staff member', async () => {
     // Arrange
     const onSaved = vi.fn();
