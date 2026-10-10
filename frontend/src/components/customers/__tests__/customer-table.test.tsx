@@ -9,7 +9,7 @@ function makeCustomer(overrides: Partial<Customer> = {}): Customer {
     id: 'cus_1',
     name: 'Sofia Ramirez',
     email: 'sofia@example.com',
-    phone: '+1 555-0103',
+    phone: '+92 300 5550103',
     type: 'walk-in',
     loyaltyPoints: 540,
     totalSpend: 320.5,
@@ -111,7 +111,7 @@ describe('CustomerTable phone cards', () => {
     expect(cards().getAllByRole('listitem')).toHaveLength(2);
     expect(within(sofia).getByText('Walk-In')).toBeInTheDocument();
     expect(within(sofia).getByText('sofia@example.com')).toBeInTheDocument();
-    expect(within(sofia).getByText('+1 555-0103')).toBeInTheDocument();
+    expect(within(sofia).getByText('+92 300 5550103')).toBeInTheDocument();
     expect(within(sofia).getByText(/540 points/)).toBeInTheDocument();
     expect(within(sofia).getByText('Allergy:').parentElement).toHaveTextContent('Allergy: shellfish');
     expect(within(liam).getByText('Online')).toBeInTheDocument();

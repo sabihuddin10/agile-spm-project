@@ -82,7 +82,7 @@ function makeApplication(overrides: Partial<StaffApplication> = {}): StaffApplic
     id: 'app_1',
     name: 'Jane Applicant',
     email: 'jane@example.com',
-    phone: '555-0100',
+    phone: '+92 300 5550100',
     desiredRole: 'waiter',
     experience: 'Two years at a bistro.',
     status: 'pending',
@@ -369,20 +369,21 @@ describe('AccountTable', () => {
     // Arrange
     auth.user = manager;
     const onChanged = vi.fn();
-    vi.mocked(authApi.updateUserProfile).mockResolvedValue({ user: { ...waiter, phone: '555-0300' } } as never);
+    vi.mocked(authApi.updateUserProfile).mockResolvedValue({ user: { ...waiter, phone: '+92 300 5550300' } } as never);
     const user = userEvent.setup({ delay: null });
     render(<AccountTable users={[manager, waiter]} onChanged={onChanged} />);
 
     // Act
     await user.click(screen.getByRole('button', { name: 'Edit details for Will Waiter' }));
-    await user.type(screen.getByLabelText('Phone (optional)'), '555-0300');
+    await user.clear(screen.getByLabelText('Phone (optional)'));
+    await user.type(screen.getByLabelText('Phone (optional)'), '0300 5550300');
     await user.click(screen.getByRole('button', { name: 'Save details' }));
 
     // Assert
     expect(authApi.updateUserProfile).toHaveBeenCalledWith('usr_waiter', {
       name: 'Will Waiter',
       email: 'will@rest.test',
-      phone: '555-0300',
+      phone: '+92 300 5550300',
     });
     expect(onChanged).toHaveBeenCalled();
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
@@ -1076,7 +1077,7 @@ describe('CareersForm — live field checks', () => {
 
     // Act
     await user.type(screen.getByLabelText('Email'), 'jo@');
-    await user.type(screen.getByLabelText(/phone/i), '12');
+    await user.type(screen.getByLabelText(/phone/i), '0300 12');
     await user.click(screen.getByRole('button', { name: 'Send application' }));
 
     // Assert
@@ -1086,7 +1087,7 @@ describe('CareersForm — live field checks', () => {
     );
     expect(screen.getByLabelText('Full name')).not.toHaveAttribute('aria-invalid');
     expect(screen.getByLabelText('Email')).toHaveAccessibleDescription('Enter an email address like name@example.com.');
-    expect(screen.getByLabelText(/phone/i)).toHaveAccessibleDescription('Phone numbers have 7 to 20 digits.');
+    expect(screen.getByLabelText(/phone/i)).toHaveAccessibleDescription('Enter a mobile number like 0300 1234567.');
     expect(staffApi.apply).not.toHaveBeenCalled();
   });
 });

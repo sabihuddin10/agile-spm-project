@@ -139,7 +139,7 @@ export function AccountProfileForm({ user }: { user: User }) {
             placeholder="+92 300 1234567"
             inputMode="numeric"
             error={errors.phone}
-            hint="Digits, spaces and + ( ) - . (7 to 20 digits)."
+            hint="Pakistani mobile, digits only, e.g. 0300 1234567."
             optional
           />
           {emailChanged ? (

@@ -34,8 +34,8 @@ test('US1.3 the ledger can be searched and filtered', async () => {
   assert.deepEqual(byName.body.customers.map((c) => c.name), ['Sofia Ramirez']);
 
   // Act / Assert — by phone
-  const byPhone = await api.call('GET', '/customers?q=555-0102', { token });
-  assert.equal(byPhone.body.customers[0].name, 'Liam Nguyen');
+  const byPhone = await api.call('GET', '/customers?q=5550102', { token });
+  assert.deepEqual(byPhone.body.customers.map((c) => c.name), ['Liam Nguyen']);
 
   // Act / Assert — by type
   const online = await api.call('GET', '/customers?type=online', { token });

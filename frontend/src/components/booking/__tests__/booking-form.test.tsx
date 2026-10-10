@@ -117,16 +117,17 @@ describe('BookingForm — live field checks', () => {
     const phone = screen.getByLabelText(/phone/i);
 
     // Act
-    await user.type(phone, 'call me');
+    await user.type(phone, 'call 0300 12');
     await user.tab();
 
     // Assert
     expect(phone).toHaveAttribute('aria-invalid', 'true');
-    expect(phone).toHaveAccessibleDescription('Use digits, spaces and + ( ) - . only.');
+    expect(phone).toHaveValue('+92 300 12');
+    expect(phone).toHaveAccessibleDescription('Enter a mobile number like 0300 1234567.');
 
     // Act
     await user.clear(phone);
-    await user.type(phone, '+44 20 7946 0958');
+    await user.type(phone, '0300 1234567');
 
     // Assert
     expect(phone).toHaveAttribute('aria-invalid', 'false');

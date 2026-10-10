@@ -36,11 +36,18 @@ test('email validates format and length and lower-cases', () => {
   assert.equal(email('', { required: false }), '');
 });
 
-test('phone allows digits, spaces, + ( ) - . with 7–20 digits', () => {
+test('phone normalises Pakistani mobiles to +92 3XX XXXXXXX and rejects anything else', () => {
   // Act / Assert
-  assert.equal(phone(' +1 (555) 010-2000 '), '+1 (555) 010-2000');
+  assert.equal(phone(' 0300 1234567 '), '+92 300 1234567');
+  assert.equal(phone('923001234567'), '+92 300 1234567');
+  assert.equal(phone('+92 300 1234567'), '+92 300 1234567');
+  assert.equal(phone('0092-300-1234567'), '+92 300 1234567');
+  assert.equal(phone('3001234567'), '+92 300 1234567');
   assert.equal(phone(''), '');
   rejects(() => phone('12-34'), /valid phone/);
+  rejects(() => phone('+1 (555) 010-2000'), /valid phone/);
+  rejects(() => phone('0300 123456'), /valid phone/);
+  rejects(() => phone('0212 1234567'), /valid phone/);
   rejects(() => phone('call me maybe'), /valid phone/);
   rejects(() => phone('1'.repeat(21)), /valid phone/);
   rejects(() => phone(5550100), /valid phone/);

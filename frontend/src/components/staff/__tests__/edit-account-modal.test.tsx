@@ -19,7 +19,7 @@ const waiter: User = {
   email: 'will@rest.test',
   role: 'waiter',
   active: true,
-  phone: '555-0100',
+  phone: '+92 300 5550100',
 };
 
 afterEach(() => vi.resetAllMocks());
@@ -27,26 +27,26 @@ afterEach(() => vi.resetAllMocks());
 describe('EditAccountModal', () => {
   it('prefills the current details and submits the edited ones', async () => {
     // Arrange
-    const updated = { ...waiter, name: 'William Waiter', phone: '555-0200' };
+    const updated = { ...waiter, name: 'William Waiter', phone: '+92 300 5550200' };
     vi.mocked(authApi.updateUserProfile).mockResolvedValue({ user: updated });
     const onSaved = vi.fn();
     const user = userEvent.setup({ delay: null });
     render(<EditAccountModal user={waiter} onClose={vi.fn()} onSaved={onSaved} />);
     expect(screen.getByRole('dialog', { name: "Edit Will Waiter's details" })).toBeInTheDocument();
-    expect(screen.getByLabelText('Phone (optional)')).toHaveValue('555-0100');
+    expect(screen.getByLabelText('Phone (optional)')).toHaveValue('+92 300 5550100');
 
     // Act
     await user.clear(screen.getByLabelText('Name'));
     await user.type(screen.getByLabelText('Name'), 'William Waiter');
     await user.clear(screen.getByLabelText('Phone (optional)'));
-    await user.type(screen.getByLabelText('Phone (optional)'), '555-0200');
+    await user.type(screen.getByLabelText('Phone (optional)'), '0300-5550200');
     await user.click(screen.getByRole('button', { name: 'Save details' }));
 
     // Assert
     expect(authApi.updateUserProfile).toHaveBeenCalledWith('usr_w', {
       name: 'William Waiter',
       email: 'will@rest.test',
-      phone: '555-0200',
+      phone: '+92 300 5550200',
     });
     expect(toastMock).toHaveBeenCalledWith("William Waiter's details were updated.", 'success');
     expect(onSaved).toHaveBeenCalledWith(updated);
@@ -98,7 +98,7 @@ describe('EditAccountModal', () => {
     expect(authApi.updateUserProfile).not.toHaveBeenCalled();
   });
 
-  it('checks the name rule, phone digits and the server length caps', async () => {
+  it('checks the name rule, the phone format and the server length caps', async () => {
     // Arrange
     const user = userEvent.setup({ delay: null });
     render(<EditAccountModal user={waiter} onClose={vi.fn()} onSaved={vi.fn()} />);
@@ -113,7 +113,7 @@ describe('EditAccountModal', () => {
 
     // Assert
     expect(name).toHaveAccessibleDescription(/full name/);
-    expect(phone).toHaveAccessibleDescription('Phone numbers have 7 to 20 digits.');
+    expect(phone).toHaveAccessibleDescription('Enter a mobile number like 0300 1234567.');
     expect(screen.getByLabelText('Email')).toHaveAttribute('maxLength', '254');
     expect(phone).toHaveAttribute('maxLength', '30');
   });

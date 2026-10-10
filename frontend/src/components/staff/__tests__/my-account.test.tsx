@@ -20,7 +20,7 @@ function makeUser(overrides: Partial<User> = {}): User {
     email: 'sam@rest.test',
     role: 'waiter',
     active: true,
-    phone: '555-0100',
+    phone: '+92 300 5550100',
     mustChangePassword: false,
     createdAt: '2025-03-14T12:00:00.000Z',
     ...overrides,
@@ -84,7 +84,7 @@ describe('MyAccount', () => {
     // Assert
     expect(screen.getByLabelText('Name')).toHaveValue('Sam Staff');
     expect(screen.getByLabelText('Email')).toHaveValue('sam@rest.test');
-    expect(screen.getByLabelText('Phone (optional)')).toHaveValue('555-0100');
+    expect(screen.getByLabelText('Phone (optional)')).toHaveValue('+92 300 5550100');
     expect(screen.getByRole('button', { name: 'Change password' })).toBeInTheDocument();
   });
 
