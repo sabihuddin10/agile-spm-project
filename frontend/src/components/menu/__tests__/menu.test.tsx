@@ -211,28 +211,79 @@ describe('MenuItemForm', () => {
     await user.click(screen.getByRole('button', { name: 'Add item' }));
 
     // Assert
-    expect(screen.getByRole('alert')).toHaveTextContent('Item name is required.');
+    expect(screen.getByLabelText('Item name *')).toHaveAccessibleDescription('Item name is required.');
+    expect(screen.getByRole('button', { name: 'Add item' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Add item' })).toHaveAccessibleDescription(
+      'Complete these fields to continue: Item name.',
+    );
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
-  it('rejects a blank or negative price', async () => {
+  it('rejects a blank, negative or over-10,000 price, even on a forced submit', async () => {
     // Arrange
     const user = userEvent.setup({ delay: null });
     const { onSubmit, form } = renderForm();
     await user.type(screen.getByLabelText('Item name *'), 'Focaccia');
+    const price = screen.getByLabelText('Price (USD) *');
 
-    // Act — fireEvent.submit bypasses the input's own required/min constraints
+    // Act — fireEvent.submit bypasses the disabled button
     fireEvent.submit(form);
 
     // Assert
-    expect(screen.getByRole('alert')).toHaveTextContent('Price must be zero or more.');
+    expect(price).toHaveAccessibleDescription('Price is required.');
 
     // Act
-    await user.type(screen.getByLabelText('Price (USD) *'), '-2');
+    await user.type(price, '-2');
+
+    // Assert
+    expect(price).toHaveAccessibleDescription('Price must be between 0 and 10,000.');
+
+    // Act
+    await user.clear(price);
+    await user.type(price, '10000.01');
     fireEvent.submit(form);
 
     // Assert
-    expect(screen.getByRole('alert')).toHaveTextContent('Price must be zero or more.');
+    expect(price).toHaveAccessibleDescription('Price must be between 0 and 10,000.');
+    expect(price).toHaveAttribute('max', '10000');
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('caps the name, description and modifier text at the server limits', async () => {
+    // Arrange
+    const user = userEvent.setup({ delay: null });
+    renderForm();
+    await user.click(screen.getByRole('button', { name: '+ Add modifier group' }));
+
+    // Act
+    fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'd'.repeat(501) } });
+
+    // Assert
+    expect(screen.getByLabelText('Item name *')).toHaveAttribute('maxLength', '80');
+    expect(screen.getByLabelText('Modifier group 1 name')).toHaveAttribute('maxLength', '60');
+    expect(screen.getByLabelText('Group option 1 label')).toHaveAttribute('maxLength', '60');
+    expect(screen.getByText('501/500')).toBeInTheDocument();
+    expect(screen.getByLabelText('Description')).toHaveAccessibleDescription(
+      /Description can be at most 500 characters \(501 now\)\./,
+    );
+  });
+
+  it('refuses an option price change above 10,000', async () => {
+    // Arrange
+    const user = userEvent.setup({ delay: null });
+    const { onSubmit } = renderForm();
+    await user.type(screen.getByLabelText('Item name *'), 'Focaccia');
+    await user.type(screen.getByLabelText('Price (USD) *'), '6');
+    await user.click(screen.getByRole('button', { name: '+ Add modifier group' }));
+    await user.type(screen.getByLabelText('Modifier group 1 name'), 'Size');
+    await user.type(screen.getByLabelText('Size option 1 label'), 'Huge');
+
+    // Act
+    await user.type(screen.getByLabelText('Huge price change'), '10001');
+
+    // Assert
+    expect(screen.getByRole('alert')).toHaveTextContent('Price changes in "Size" can be at most 10,000.');
+    expect(screen.getByRole('button', { name: 'Add item' })).toBeDisabled();
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
@@ -248,7 +299,10 @@ describe('MenuItemForm', () => {
     await user.click(screen.getByRole('button', { name: 'Add item' }));
 
     // Assert
-    expect(screen.getByRole('alert')).toHaveTextContent('Add a reason for marking it out of stock.');
+    expect(screen.getByRole('button', { name: 'Add item' })).toHaveAccessibleDescription(
+      'Complete these fields to continue: Out-of-stock reason.',
+    );
+    expect(screen.getByLabelText('Out-of-stock reason *')).toHaveAttribute('maxLength', '200');
     expect(onSubmit).not.toHaveBeenCalled();
 
     // Act

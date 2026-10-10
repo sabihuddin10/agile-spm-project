@@ -80,18 +80,42 @@ describe('EditAccountModal', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('You can only manage accounts below your own rank.');
   });
 
-  it('validates before calling the server', async () => {
+  it('validates live before calling the server and keeps "Save details" disabled', async () => {
     // Arrange
     const user = userEvent.setup({ delay: null });
     render(<EditAccountModal user={waiter} onClose={vi.fn()} onSaved={vi.fn()} />);
-    await user.clear(screen.getByLabelText('Name'));
 
     // Act
+    await user.clear(screen.getByLabelText('Name'));
     await user.click(screen.getByRole('button', { name: 'Save details' }));
 
     // Assert
     expect(screen.getByLabelText('Name')).toHaveAccessibleDescription('Enter a name.');
+    expect(screen.getByRole('button', { name: 'Save details' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Save details' })).toHaveAccessibleDescription(
+      'Complete these fields to continue: Name.',
+    );
     expect(authApi.updateUserProfile).not.toHaveBeenCalled();
+  });
+
+  it('checks the name rule, phone digits and the server length caps', async () => {
+    // Arrange
+    const user = userEvent.setup({ delay: null });
+    render(<EditAccountModal user={waiter} onClose={vi.fn()} onSaved={vi.fn()} />);
+    const name = screen.getByLabelText('Name');
+    const phone = screen.getByLabelText('Phone (optional)');
+
+    // Act
+    await user.clear(name);
+    await user.type(name, 'SS');
+    await user.clear(phone);
+    await user.type(phone, '12-34');
+
+    // Assert
+    expect(name).toHaveAccessibleDescription(/full name/);
+    expect(phone).toHaveAccessibleDescription('Phone numbers have 7 to 20 digits.');
+    expect(screen.getByLabelText('Email')).toHaveAttribute('maxLength', '254');
+    expect(phone).toHaveAttribute('maxLength', '30');
   });
 
   it('cancels without saving', async () => {

@@ -2,7 +2,18 @@
 
 import { useState } from 'react';
 import type { InventoryItem } from '@/types';
+import { FieldError, SubmitHint, describedBy } from '@/components/forms/field-error';
+import { TONES } from '@/components/forms/tone';
+import { validateMaxLength, validateNumberInRange } from '@/lib/validation/fields';
+import { useFormValidation, type Rules } from '@/lib/validation/use-form-validation';
 import { qty, toNumber } from './helpers';
+
+/** Limits from server/src/routes/inventory.js. */
+export const INVENTORY_LIMITS = { name: 80, category: 60, supplier: 120, amount: 1_000_000 } as const;
+const ERR = TONES.light.inputError;
+
+const amount = (label: string) => (v: string) =>
+  validateNumberInRange(v, 0, INVENTORY_LIMITS.amount, label, { required: false });
 
 interface Draft {
   name: string;
@@ -13,6 +24,23 @@ interface Draft {
   costPerUnit: string;
   supplier: string;
 }
+
+const RULES: Rules<Draft> = {
+  name: (v) => (v.trim() ? validateMaxLength(v.trim(), INVENTORY_LIMITS.name, 'Name') : 'Ingredient name is required.'),
+  category: (v) => (v.trim() ? validateMaxLength(v.trim(), INVENTORY_LIMITS.category, 'Category') : 'Category is required.'),
+  stock: amount('Stock'),
+  reorderLevel: amount('Reorder level'),
+  costPerUnit: amount('Cost per unit'),
+  supplier: (v) => validateMaxLength(v.trim(), INVENTORY_LIMITS.supplier, 'Supplier'),
+};
+const LABELS = {
+  name: 'Name',
+  category: 'Category',
+  stock: 'Stock',
+  reorderLevel: 'Reorder level',
+  costPerUnit: 'Cost per unit',
+  supplier: 'Supplier',
+};
 
 /**
  * Add / edit an ingredient (US8.1, manager/admin). On edit, changing "stock on
@@ -44,26 +72,28 @@ export function IngredientForm({
     costPerUnit: initial ? String(initial.costPerUnit) : '',
     supplier: initial?.supplier ?? '',
   }));
-  const [error, setError] = useState('');
+  const v = useFormValidation(draft, RULES, { labels: LABELS });
+  const errors = v.errors;
 
   const set = (key: keyof Draft) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setDraft((d) => ({ ...d, [key]: e.target.value }));
-    setError('');
   };
+
+  /** aria and error-border props for one field. */
+  const invalid = (key: keyof Draft, extra?: string) => ({
+    'aria-invalid': Boolean(errors[key]) || undefined,
+    'aria-describedby': describedBy(extra, errors[key] && `ing-${key}-err`),
+    onBlur: () => v.blur(key),
+  });
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!draft.name.trim()) return setError('Ingredient name is required.');
-    if (!draft.category.trim()) return setError('Category is required.');
+    if (!v.touchAll()) return;
     const numbers = {
       stock: draft.stock.trim() === '' ? 0 : toNumber(draft.stock),
       reorderLevel: draft.reorderLevel.trim() === '' ? 0 : toNumber(draft.reorderLevel),
       costPerUnit: draft.costPerUnit.trim() === '' ? 0 : toNumber(draft.costPerUnit),
     };
-    const labels = { stock: 'Stock', reorderLevel: 'Reorder level', costPerUnit: 'Cost per unit' };
-    for (const key of Object.keys(numbers) as (keyof typeof numbers)[]) {
-      if (!(numbers[key] >= 0)) return setError(`${labels[key]} must be zero or more.`);
-    }
 
     const data: Partial<InventoryItem> = {
       name: draft.name.trim(),
@@ -81,13 +111,23 @@ export function IngredientForm({
   const stockChanged = initial && draft.stock.trim() !== '' && toNumber(draft.stock) !== initial.stock;
 
   return (
-    <form onSubmit={submit} className="space-y-4">
+    <form onSubmit={submit} noValidate className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
           <label className="label" htmlFor="ing-name">
             Name *
           </label>
-          <input id="ing-name" className="input" required value={draft.name} onChange={set('name')} />
+          <input
+            id="ing-name"
+            className={`input ${errors.name ? ERR : ''}`}
+            required
+            maxLength={INVENTORY_LIMITS.name}
+            placeholder="e.g. Fresh basil"
+            value={draft.name}
+            onChange={set('name')}
+            {...invalid('name')}
+          />
+          <FieldError id="ing-name-err" message={errors.name} />
         </div>
         <div>
           <label className="label" htmlFor="ing-category">
@@ -95,13 +135,16 @@ export function IngredientForm({
           </label>
           <input
             id="ing-category"
-            className="input"
+            className={`input ${errors.category ? ERR : ''}`}
             list="ing-categories"
             required
+            maxLength={INVENTORY_LIMITS.category}
             placeholder="e.g. Produce"
             value={draft.category}
             onChange={set('category')}
+            {...invalid('category')}
           />
+          <FieldError id="ing-category-err" message={errors.category} />
           <datalist id="ing-categories">
             {categories.map((c) => (
               <option key={c} value={c} />
@@ -127,17 +170,20 @@ export function IngredientForm({
           <div className="flex items-center gap-2">
             <input
               id="ing-stock"
-              className="input"
+              className={`input ${errors.stock ? ERR : ''}`}
               type="number"
               min="0"
+              max={INVENTORY_LIMITS.amount}
               step="any"
               inputMode="decimal"
-              placeholder="0"
+              placeholder="e.g. 12"
               value={draft.stock}
               onChange={set('stock')}
+              {...invalid('stock')}
             />
             <span className="w-12 shrink-0 text-sm text-stone-500">{draft.unit}</span>
           </div>
+          <FieldError id="ing-stock-err" message={errors.stock} />
           {stockChanged ? (
             <p className="mt-1 text-xs text-blue-700">
               Recorded as a stock count ({qty(initial.stock)} → {draft.stock} {draft.unit}).
@@ -151,18 +197,23 @@ export function IngredientForm({
           <div className="flex items-center gap-2">
             <input
               id="ing-reorder"
-              className="input"
+              className={`input ${errors.reorderLevel ? ERR : ''}`}
               type="number"
               min="0"
+              max={INVENTORY_LIMITS.amount}
               step="any"
               inputMode="decimal"
-              placeholder="0"
+              placeholder="e.g. 5"
               value={draft.reorderLevel}
               onChange={set('reorderLevel')}
+              {...invalid('reorderLevel', 'ing-reorder-hint')}
             />
             <span className="w-12 shrink-0 text-sm text-stone-500">{draft.unit}</span>
           </div>
-          <p className="mt-1 text-xs text-stone-500">At or below this, the item is flagged low and managers are alerted.</p>
+          <FieldError id="ing-reorderLevel-err" message={errors.reorderLevel} />
+          <p id="ing-reorder-hint" className="mt-1 text-xs text-stone-500">
+            At or below this, the item is flagged low and managers are alerted.
+          </p>
         </div>
         <div>
           <label className="label" htmlFor="ing-cost">
@@ -170,15 +221,18 @@ export function IngredientForm({
           </label>
           <input
             id="ing-cost"
-            className="input"
+            className={`input ${errors.costPerUnit ? ERR : ''}`}
             type="number"
             min="0"
+            max={INVENTORY_LIMITS.amount}
             step="0.01"
             inputMode="decimal"
-            placeholder="0.00"
+            placeholder="e.g. 2.40"
             value={draft.costPerUnit}
             onChange={set('costPerUnit')}
+            {...invalid('costPerUnit')}
           />
+          <FieldError id="ing-costPerUnit-err" message={errors.costPerUnit} />
         </div>
         <div>
           <label className="label" htmlFor="ing-supplier">
@@ -186,11 +240,15 @@ export function IngredientForm({
           </label>
           <input
             id="ing-supplier"
-            className="input"
+            className={`input ${errors.supplier ? ERR : ''}`}
             list="ing-suppliers"
+            maxLength={INVENTORY_LIMITS.supplier}
+            placeholder="e.g. Green Valley Farms"
             value={draft.supplier}
             onChange={set('supplier')}
+            {...invalid('supplier')}
           />
+          <FieldError id="ing-supplier-err" message={errors.supplier} />
           <datalist id="ing-suppliers">
             {suppliers.map((s) => (
               <option key={s} value={s} />
@@ -199,19 +257,22 @@ export function IngredientForm({
         </div>
       </div>
 
-      {error ? (
-        <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
-        </p>
-      ) : null}
-
-      <div className="flex justify-end gap-2">
-        <button type="button" className="btn-secondary" onClick={onCancel}>
-          Cancel
-        </button>
-        <button type="submit" className="btn-primary" disabled={submitting}>
-          {submitting ? 'Saving…' : initial ? 'Save changes' : 'Add ingredient'}
-        </button>
+      <div className="space-y-2">
+        <SubmitHint id="ing-submit-hint" fields={v.invalidLabels} className="text-right" />
+        <div className="flex justify-end gap-2">
+          <button type="button" className="btn-secondary" onClick={onCancel}>
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={submitting || !v.isValid}
+            aria-disabled={submitting || !v.isValid}
+            aria-describedby={v.isValid ? undefined : 'ing-submit-hint'}
+          >
+            {submitting ? 'Saving…' : initial ? 'Save changes' : 'Add ingredient'}
+          </button>
+        </div>
       </div>
     </form>
   );

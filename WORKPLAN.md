@@ -25,7 +25,7 @@ If a phase grows too big, it is split, never stretched. Update this file wheneve
 | 3 | Shared UI base + late-booking fix | 15 | [x] |
 | 4 | Admin UI polish, batch 1 + input safety | 15 | [x] |
 | 5 | Admin UI polish, batch 2: staff, workforce, settings | 15 | [x] |
-| 6a | Live validation, submit disabled until valid, customer rules | 16 | [~] |
+| 6a | Live validation, submit disabled until valid, customer rules | 16 | [x] |
 | 6b | Screen-side checks matching server limits | 16 | [~] |
 | 6c | Placeholders on every input | 16 | [~] |
 | 7a | Hardening and browser checks | 16 | [ ] |
@@ -101,11 +101,11 @@ If a phase grows too big, it is split, never stretched. Update this file wheneve
 
 **Goal:** forms behave the way users expect from modern sites.
 
-- [~] **6a** (06866dc, merging): errors update live while typing; an untouched form shows no red
-- [~] **6a**: submit button stays disabled until the whole form is valid, with a short note saying what is missing
-- [~] **6a**: live password checklist on every password field
-- [~] **6a**: names need 3+ letters or two words, so "SS" is refused; customers need an email or a phone, enforced on the server as well
-- [ ] Staff forms check the same rules as the server before submitting:
+- [x] **6a** (06866dc, released to `main` as 201f198: 397 server tests, 931 frontend tests): errors update live while typing; an untouched form shows no red
+- [x] **6a**: submit button stays disabled until the whole form is valid, with a short note saying what is missing
+- [x] **6a**: live password checklist on every password field
+- [x] **6a**: names need 3+ letters or two words, so "SS" is refused; customers need an email or a phone, enforced on the server as well
+- [~] **6b** (37ec310, merging): staff forms check the same rules as the server before submitting, and their save buttons stay disabled until valid:
   - staff booking
   - customer
   - account edit
@@ -115,7 +115,7 @@ If a phase grows too big, it is split, never stretched. Update this file wheneve
   - tables
 - [ ] A correct, realistic placeholder on every text input (labels stay)
 - [ ] Shift form: placeholder and the 500-character notes limit (moved from Phase 5)
-- [ ] Optional: block a 51st order line (server limit is 50)
+- [~] **6b**: block a 51st order line in the cart and the staff order editor (server limit is 50)
 
 **Released in three slices, in order.** Each slice is one commit on `feat/form-guards`, merged and released on its own:
 - **6a:** live errors, submit disabled until valid, password checklist, customer name + contact rule (frontend and server)
@@ -126,7 +126,7 @@ If a phase grows too big, it is split, never stretched. Update this file wheneve
 
 ## Phase 7a: Hardening and browser checks [ ]
 
-- [ ] Redeploy the API Vercel project, which is not git-connected and is stale
+- [ ] **Reconnect both Vercel projects to GitHub (needs the user or Burhan).** Found 2026-10-10: neither `plate-and-flame-web` nor `plate-and-flame-api` deploys from `main`, so the live site is about 3 days old and `/staff/workforce` returns 404. Set web root `frontend` and api root `server`, production branch `main`, then redeploy.
 - [ ] Browser check of the phone layouts and print view, which jsdom cannot test
 - [ ] Phone card list for the customer table, which has no fixed width today
 - [ ] Page test for menu category delete through the confirm dialog

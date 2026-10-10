@@ -78,6 +78,10 @@ export function validateMaxLength(value: string, max: number, label = 'This'): s
   return value.length > max ? `${label} can be at most ${max} characters (${value.length} now).` : undefined;
 }
 
+/** An order can have at most 50 distinct lines (MAX_LINES in server/src/routes/orders.js). */
+export const MAX_ORDER_LINES = 50;
+export const ORDER_LINES_FULL = `An order can have at most ${MAX_ORDER_LINES} different dishes. Add to an existing line or place a second order.`;
+
 export const CONTACT_MISSING = 'Add an email or phone so we can reach them.';
 
 /** At least one way to reach someone: returns CONTACT_MISSING when both are blank. */

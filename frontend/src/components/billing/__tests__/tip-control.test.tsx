@@ -68,6 +68,21 @@ describe('TipControl', () => {
     expect(billingApi.tip).not.toHaveBeenCalled();
   });
 
+  it('flags a custom tip above $10,000 as it is typed and keeps "Set tip" disabled', () => {
+    // Arrange
+    render(<TipControl invoice={makeInvoice()} onUpdated={vi.fn()} />);
+    const input = screen.getByLabelText('Custom tip amount');
+
+    // Act
+    fireEvent.change(input, { target: { value: '10000.01' } });
+
+    // Assert
+    expect(input).toHaveAccessibleDescription('Tips can be at most $10,000.');
+    expect(input).toHaveAttribute('max', '10000');
+    expect(screen.getByRole('button', { name: /set tip/i })).toBeDisabled();
+    expect(billingApi.tip).not.toHaveBeenCalled();
+  });
+
   it('submits a valid custom tip amount', async () => {
     // Arrange
     const updated = makeInvoice({ tip: 12 });

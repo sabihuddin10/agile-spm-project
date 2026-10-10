@@ -9,6 +9,17 @@ import { toCents } from './bill-utils';
 import { useBillAction } from './use-bill-action';
 
 const PRESETS = [0, 10, 12, 15, 20];
+/** Largest tip the server accepts (MAX_TIP in server/src/routes/billing.js). */
+const MAX_TIP = 10000;
+
+/** Problem with a typed custom tip, or undefined while it is blank or fine. */
+function customTipError(value: string): string | undefined {
+  if (value.trim() === '') return undefined;
+  const amount = Number(value);
+  if (!Number.isFinite(amount) || amount < 0) return 'Enter a tip of $0.00 or more.';
+  if (amount > MAX_TIP) return `Tips can be at most $${MAX_TIP.toLocaleString('en-US')}.`;
+  return undefined;
+}
 
 /**
  * Tip on an unpaid bill (US5.2): quick percentages of the subtotal or a custom
@@ -26,7 +37,9 @@ export function TipControl({
 }) {
   const { pending, run } = useBillAction(onUpdated, onConflict);
   const [custom, setCustom] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [submitError, setError] = useState<string | null>(null);
+  // Checked live as the amount is typed; a forced submit of a blank amount sets submitError.
+  const error = customTipError(custom) ?? submitError;
 
   const sharePaid = Boolean(invoice.split?.parts.some((p) => p.paid));
   const locked = sharePaid || pending !== null;
@@ -44,10 +57,11 @@ export function TipControl({
   async function submitCustom(e: FormEvent) {
     e.preventDefault();
     const amount = Number(custom);
-    if (custom.trim() === '' || !Number.isFinite(amount) || amount < 0) {
+    if (custom.trim() === '') {
       setError('Enter a tip of $0.00 or more.');
       return;
     }
+    if (customTipError(custom)) return;
     setError(null);
     const ok = await run('tip-custom', () => billingApi.tip(invoice.id, { amount: Math.round(amount * 100) / 100 }), (inv) =>
       `Tip set to ${money(inv.tip)}.`,
@@ -87,7 +101,7 @@ export function TipControl({
         })}
       </div>
 
-      <form onSubmit={submitCustom} className="mt-2 flex gap-2">
+      <form onSubmit={submitCustom} noValidate className="mt-2 flex gap-2">
         <label htmlFor={`tip-custom-${invoice.id}`} className="sr-only">
           Custom tip amount
         </label>
@@ -98,17 +112,21 @@ export function TipControl({
             type="number"
             inputMode="decimal"
             min={0}
+            max={MAX_TIP}
             step="0.01"
-            placeholder="Custom amount"
+            placeholder="e.g. 5.00"
             value={custom}
-            onChange={(e) => setCustom(e.target.value)}
+            onChange={(e) => {
+              setCustom(e.target.value);
+              setError(null);
+            }}
             disabled={locked}
-            className="input pl-7"
+            className={`input pl-7 ${error ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : ''}`}
             aria-invalid={Boolean(error)}
             aria-describedby={error ? `tip-error-${invoice.id}` : undefined}
           />
         </div>
-        <button type="submit" className="btn-secondary" disabled={locked || custom.trim() === ''}>
+        <button type="submit" className="btn-secondary" disabled={locked || custom.trim() === '' || Boolean(error)}>
           {pending === 'tip-custom' ? 'Saving…' : 'Set tip'}
         </button>
       </form>

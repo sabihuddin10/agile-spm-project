@@ -5,6 +5,7 @@ import type { MenuItem, ModifierSelection } from '@/types';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/components/ui/toast';
 import { selectionKey, unitPriceFor } from '@/lib/menu';
+import { MAX_ORDER_LINES, ORDER_LINES_FULL } from '@/lib/validation/fields';
 
 /** One cart line: a dish with a specific set of modifier choices (US2.3). */
 export interface CartLine {
@@ -124,6 +125,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
       const amount = Math.max(1, Math.floor(qty));
       const key = selectionKey(item.id, modifiers);
+      if (!lines.some((l) => l.key === key) && lines.length >= MAX_ORDER_LINES) {
+        toast(ORDER_LINES_FULL, 'error');
+        return false;
+      }
       setLines((prev) =>
         prev.some((l) => l.key === key)
           ? prev.map((l) => (l.key === key ? { ...l, item, qty: Math.min(99, l.qty + amount) } : l))
@@ -132,7 +137,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       toast(`${amount > 1 ? `${amount} × ` : ''}${item.name} added to your order.`, 'success');
       return true;
     },
-    [user, toast],
+    [user, toast, lines],
   );
 
   const setQty = useCallback((key: string, delta: number) => {

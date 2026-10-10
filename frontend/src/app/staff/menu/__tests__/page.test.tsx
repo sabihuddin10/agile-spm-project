@@ -19,12 +19,21 @@ vi.mock('@/lib/api', async () => {
   };
 });
 vi.mock('@/components/menu/menu-item-list', () => ({
-  MenuItemList: ({ categories, onDelete }: { categories: MenuCategory[]; onDelete: (i: MenuItem) => void }) => (
+  MenuItemList: ({
+    categories,
+    onDelete,
+    onMarkOut,
+  }: {
+    categories: MenuCategory[];
+    onDelete: (i: MenuItem) => void;
+    onMarkOut: (i: MenuItem) => void;
+  }) => (
     <div data-testid="menu-item-list">
       {categories.flatMap((c) => c.items ?? []).map((i) => (
         <span key={i.id}>
           <span>{i.name}</span>
           <button onClick={() => onDelete(i)}>{`Delete ${i.name}`}</button>
+          <button onClick={() => onMarkOut(i)}>{`Mark ${i.name} out`}</button>
         </span>
       ))}
     </div>
@@ -115,6 +124,24 @@ describe('MenuPage', () => {
     // Assert
     await waitFor(() => expect(screen.queryByText('Caesar Salad')).not.toBeInTheDocument());
     expect(screen.getByText('Margherita Pizza')).toBeInTheDocument();
+  });
+
+  it('caps the out-of-stock reason at 200 characters with a live counter', async () => {
+    // Arrange
+    vi.mocked(useAuth).mockReturnValue({ user: makeUser() } as unknown as ReturnType<typeof useAuth>);
+    vi.mocked(menuApi.get).mockResolvedValue({ menu: [makeCategory()], tags: [], allergens: [] });
+    const user = userEvent.setup({ delay: null });
+    render(<MenuPage />);
+    await screen.findByText('Margherita Pizza');
+
+    // Act
+    await user.click(screen.getByRole('button', { name: 'Mark Margherita Pizza out' }));
+    await user.click(screen.getByRole('button', { name: 'Ingredient shortage' }));
+
+    // Assert
+    const reason = screen.getByLabelText('Reason *');
+    expect(reason).toHaveAttribute('maxLength', '200');
+    expect(reason).toHaveAccessibleDescription('19/200');
   });
 
   it('adds a new menu item and reloads', async () => {
