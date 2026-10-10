@@ -51,12 +51,12 @@
   .btn-sm {
     @apply min-h-[32px] px-2.5 py-1 text-xs lg:min-h-[32px] lg:px-3;
   }
-  /* 16px text on phones so iOS does not zoom on focus. */
+  /* 36px with 14px text on phones, 40px from sm. iOS keeps 16px text (see the @supports rule below). */
   .input {
-    @apply min-h-[40px] w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-base shadow-sm placeholder:text-stone-500 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500 sm:text-sm;
+    @apply min-h-[36px] w-full rounded-lg border border-stone-300 bg-white px-2.5 py-1.5 text-sm shadow-sm placeholder:text-stone-500 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500 sm:min-h-[40px] sm:px-3 sm:py-2;
   }
   .label {
-    @apply mb-1 block text-sm font-medium text-stone-700;
+    @apply mb-1 block text-xs font-medium text-stone-700 sm:text-sm;
   }
   .card {
     @apply rounded-xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5;
@@ -199,10 +199,12 @@
   }
 }
 
-/* Touch screens: inputs keep 16px text so iOS does not zoom on focus.
-   Buttons keep the compact Harmic sizes (36–40px); icon-only buttons set their own 36px+ size. */
-@media (pointer: coarse) {
-  .input {
-    font-size: 16px;
+/* iOS Safari zooms the page when a focused input has text under 16px, so only iOS
+   (the only engine with -webkit-touch-callout) keeps 16px input text; the box stays 36px. */
+@supports (-webkit-touch-callout: none) {
+  @media (pointer: coarse) {
+    .input {
+      font-size: 16px;
+    }
   }
 }
