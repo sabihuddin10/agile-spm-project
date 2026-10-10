@@ -5,6 +5,7 @@ import type { InventoryItem, MenuItem } from '@/types';
 import { menuApi } from '@/lib/api';
 import { errorMessage, money, percent } from '@/lib/format';
 import { Modal } from '@/components/ui/modal';
+import { XMarkIcon } from '@/components/ui/icons';
 import { useToast } from '@/components/ui/toast';
 import { HEALTH, qty as fmtQty, recipeCost, toNumber } from './helpers';
 
@@ -102,7 +103,7 @@ export function RecipeEditor({
           </p>
         ) : (
           <div className="space-y-2">
-            <div className="hidden grid-cols-[1fr_8.5rem_5rem_2rem] gap-2 px-1 text-xs font-semibold uppercase tracking-wide text-stone-400 sm:grid">
+            <div className="hidden grid-cols-[1fr_8.5rem_5rem_2.25rem] gap-2 px-1 text-xs font-semibold uppercase tracking-wide text-stone-500 sm:grid">
               <span>Ingredient</span>
               <span>Qty / portion</span>
               <span className="text-right">Cost</span>
@@ -115,7 +116,7 @@ export function RecipeEditor({
               return (
                 <div
                   key={row.key}
-                  className="grid grid-cols-[1fr_auto] items-center gap-2 rounded-lg border border-stone-100 p-2 sm:grid-cols-[1fr_8.5rem_5rem_2rem] sm:border-0 sm:p-0"
+                  className="grid grid-cols-[1fr_auto] items-center gap-2 rounded-lg border border-stone-100 p-2 sm:grid-cols-[1fr_8.5rem_5rem_2.25rem] sm:border-0 sm:p-0"
                 >
                   <select
                     className="input col-span-2 sm:col-span-1"
@@ -148,16 +149,16 @@ export function RecipeEditor({
                     />
                     <span className="w-10 shrink-0 text-xs text-stone-500">{ing?.unit ?? ''}</span>
                   </div>
-                  <span className="hidden text-right text-sm text-stone-500 sm:block">
+                  <span className="hidden text-right text-sm tabular-nums text-stone-500 sm:block">
                     {ing && q > 0 ? money(ing.costPerUnit * q) : '—'}
                   </span>
                   <button
                     type="button"
-                    className="justify-self-end rounded p-1 text-stone-400 hover:bg-red-50 hover:text-red-600"
+                    className="inline-flex h-9 w-9 items-center justify-center justify-self-end rounded-lg text-stone-500 transition hover:bg-red-50 hover:text-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                     aria-label={`Remove ${ing?.name ?? 'row'}`}
                     onClick={() => setRows((prev) => prev.filter((r) => r.key !== row.key))}
                   >
-                    ✕
+                    <XMarkIcon className="h-4 w-4" />
                   </button>
                   {ing && ing.health !== 'ok' ? (
                     <p className={`col-span-2 text-xs sm:col-span-4 ${ing.health === 'low' ? 'text-red-600' : 'text-amber-600'}`}>

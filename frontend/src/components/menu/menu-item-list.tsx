@@ -2,6 +2,7 @@
 
 import type { MenuCategory, MenuItem, Modifier } from '@/types';
 import { Badge } from '@/components/ui/badge';
+import { ExclamationTriangleIcon } from '@/components/ui/icons';
 import { money } from '@/lib/format';
 
 /** "Size: Regular, Large +$4.00" (US2.3). */
@@ -53,7 +54,7 @@ export function MenuItemList({
   const visible = filtered ? categories.filter((c) => (c.items ?? []).length > 0) : categories;
 
   if (visible.length === 0) {
-    return <p className="py-10 text-center text-sm text-stone-400">No menu items match.</p>;
+    return <p className="py-10 text-center text-sm text-stone-500">No menu items match.</p>;
   }
 
   return (
@@ -71,16 +72,16 @@ export function MenuItemList({
               {cat.active && (cat.itemCount ?? items.length) === 0 ? (
                 <Badge tone="stone">Empty · hidden on customer menu</Badge>
               ) : null}
-              <span className="ml-auto text-xs text-stone-400">
+              <span className="ml-auto text-xs tabular-nums text-stone-500">
                 {available}/{items.length} available
               </span>
             </div>
 
             {items.length === 0 ? (
-              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-dashed border-stone-300 px-4 py-5 text-sm text-stone-400">
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-dashed border-stone-300 px-4 py-5 text-sm text-stone-500">
                 <span>No items in this category yet.</span>
                 {permissions.manage && handlers.onAdd ? (
-                  <button className="btn-secondary !px-2.5 !py-1 text-xs" onClick={() => handlers.onAdd?.(cat.id)}>
+                  <button className="btn-sm btn-secondary" onClick={() => handlers.onAdd?.(cat.id)}>
                     + Add item to {cat.name}
                   </button>
                 ) : null}
@@ -134,7 +135,7 @@ function MenuItemCard({
           <p className="font-semibold text-stone-800">{item.name}</p>
           <p className="mt-0.5 line-clamp-2 text-sm text-stone-500">{item.description || '—'}</p>
         </div>
-        <p className="shrink-0 font-bold text-brand-700">{money(item.price)}</p>
+        <p className="shrink-0 font-bold tabular-nums text-brand-700">{money(item.price)}</p>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
@@ -145,8 +146,10 @@ function MenuItemCard({
           </Badge>
         ))}
         {item.allergens.map((a) => (
-          <Badge key={a} tone="red" className="font-medium">
-            <span aria-hidden="true">⚠</span> {a}
+          <Badge key={a} tone="red">
+            <ExclamationTriangleIcon className="h-3.5 w-3.5" />
+            <span className="sr-only">Allergy: </span>
+            {a}
           </Badge>
         ))}
       </div>
@@ -162,7 +165,7 @@ function MenuItemCard({
           {item.modifiers.map((m) => (
             <li key={m.id || m.name}>
               <span className="font-medium text-stone-600">{m.name}</span>
-              <span className="text-stone-400"> ({m.type === 'multi' ? 'multi-select' : 'pick one'})</span>:{' '}
+              <span className="text-stone-500"> ({m.type === 'multi' ? 'multi-select' : 'pick one'})</span>:{' '}
               {m.options.map((o, i) => (
                 <span key={o.label}>
                   {i > 0 ? ', ' : ''}
@@ -183,7 +186,7 @@ function MenuItemCard({
           >
             <span className="font-medium text-stone-600">Recipe:</span> {recipe.length} ingredient
             {recipe.length === 1 ? '' : 's'}
-            <span className="text-stone-400"> · {recipe.map((r) => r.name).join(', ')}</span>
+            <span className="text-stone-500"> · {recipe.map((r) => r.name).join(', ')}</span>
           </p>
         ) : (
           <p className="mt-2 rounded-md bg-amber-50 px-2 py-1 text-xs text-amber-800">
@@ -199,7 +202,7 @@ function MenuItemCard({
               <button
                 onClick={() => onMarkOut(item)}
                 disabled={busy}
-                className="btn-secondary !px-2.5 !py-1 text-xs"
+                className="btn-sm btn-secondary"
               >
                 Mark out of stock
               </button>
@@ -207,23 +210,23 @@ function MenuItemCard({
               <button
                 onClick={() => onMarkIn(item)}
                 disabled={busy}
-                className="btn-secondary !border-emerald-300 !px-2.5 !py-1 text-xs !text-emerald-700"
+                className="btn-sm btn-secondary !border-emerald-300 !text-emerald-700"
               >
                 {busy ? 'Updating…' : 'Back in stock'}
               </button>
             )
           ) : null}
           {permissions.recipes ? (
-            <button onClick={() => onRecipe(item)} className="btn-secondary !px-2.5 !py-1 text-xs">
+            <button onClick={() => onRecipe(item)} className="btn-sm btn-secondary">
               Recipe
             </button>
           ) : null}
           {permissions.manage ? (
             <>
-              <button onClick={() => onEdit(item)} className="btn-secondary !px-2.5 !py-1 text-xs">
+              <button onClick={() => onEdit(item)} className="btn-sm btn-secondary">
                 Edit
               </button>
-              <button onClick={() => onDelete(item)} disabled={busy} className="btn-danger !px-2.5 !py-1 text-xs">
+              <button onClick={() => onDelete(item)} disabled={busy} className="btn-sm btn-danger">
                 Delete
               </button>
             </>

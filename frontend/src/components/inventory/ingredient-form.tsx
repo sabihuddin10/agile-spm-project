@@ -162,7 +162,7 @@ export function IngredientForm({
             />
             <span className="w-12 shrink-0 text-sm text-stone-500">{draft.unit}</span>
           </div>
-          <p className="mt-1 text-xs text-stone-400">At or below this, the item is flagged low and managers are alerted.</p>
+          <p className="mt-1 text-xs text-stone-500">At or below this, the item is flagged low and managers are alerted.</p>
         </div>
         <div>
           <label className="label" htmlFor="ing-cost">
