@@ -195,7 +195,7 @@ export function CheckoutForm({ onBack, onPlaced }: { onBack: () => void; onPlace
             <textarea
               id="checkout-address"
               className="input min-h-[64px] resize-y"
-              placeholder="Street, number, flat, postcode"
+              placeholder="e.g. House 12, Street 5, DHA Phase 2, Lahore"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               disabled={placing}

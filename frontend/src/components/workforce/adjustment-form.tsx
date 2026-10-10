@@ -93,6 +93,7 @@ export function AdjustmentForm({
               type="number"
               inputMode="decimal"
               step={0.01}
+              placeholder="e.g. 25.00"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               aria-invalid={errors.amount ? true : undefined}
@@ -109,7 +110,7 @@ export function AdjustmentForm({
             id="adj-reason"
             className={fieldClass(errors.reason)}
             maxLength={200}
-            placeholder="Eid bonus"
+            placeholder="e.g. Eid bonus"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             aria-invalid={errors.reason ? true : undefined}

@@ -114,7 +114,7 @@ export function StockAdjust({
               step="any"
               inputMode="decimal"
               autoFocus
-              placeholder="0"
+              placeholder="e.g. 5"
               value={amount}
               onChange={(e) => {
                 setAmount(e.target.value);

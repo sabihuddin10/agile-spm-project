@@ -79,6 +79,7 @@ export function CategoryManager({
                     className="input !py-1"
                     aria-label={`Rename ${c.name}`}
                     maxLength={CATEGORY_NAME_MAX}
+                    placeholder="e.g. Desserts"
                     value={editingName}
                     autoFocus
                     onChange={(e) => setEditingName(e.target.value)}
