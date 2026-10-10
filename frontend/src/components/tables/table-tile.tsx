@@ -59,7 +59,7 @@ export function TableTile({
     >
       <header className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white text-lg font-bold text-stone-800 shadow-sm ring-1 ring-black/5">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-base font-bold sm:h-11 sm:w-11 sm:text-lg text-stone-800 shadow-sm ring-1 ring-black/5">
             {table.number}
           </div>
           <div className="min-w-0">

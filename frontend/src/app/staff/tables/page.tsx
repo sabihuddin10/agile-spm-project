@@ -164,7 +164,7 @@ function FloorPlan() {
           />
         </Card>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           <div className="space-y-2">
             <FloorLegend tables={data.tables} statuses={data.statuses} />
             <p className="text-xs text-stone-500">
