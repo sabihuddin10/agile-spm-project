@@ -11,7 +11,7 @@ function Line({ label, sub, amount, tone = 'default', action }: { label: ReactNo
         <p className="text-sm text-stone-700">{label}</p>
         {sub ? <p className="text-xs text-stone-500">{sub}</p> : null}
       </div>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-2">
         <span className={`text-sm tabular-nums ${tone === 'minus' ? 'text-red-700' : 'text-stone-900'}`}>{amount}</span>
         {action}
       </div>
@@ -36,11 +36,11 @@ export function PayBreakdownCard({
   footer?: ReactNode;
 }) {
   return (
-    <section className="card p-4 sm:p-5" aria-labelledby="pay-heading">
+    <section className="card p-3.5 sm:p-5" aria-labelledby="pay-heading">
       <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 id="pay-heading" className="text-lg font-semibold">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            <h2 id="pay-heading" className="text-base font-semibold sm:text-lg">
               Pay
             </h2>
             {pay.estimated ? <Badge tone="amber">Estimated</Badge> : <Badge tone="stone">Final</Badge>}
@@ -92,7 +92,7 @@ export function PayBreakdownCard({
 
       <div className="mt-2 flex items-baseline justify-between gap-3 border-t border-stone-200 pt-3">
         <p className="font-semibold text-stone-900">{pay.estimated ? 'Estimated net' : 'Net pay'}</p>
-        <p className="text-2xl font-bold tabular-nums text-stone-900" data-testid="pay-net">
+        <p className="text-xl font-bold tabular-nums text-stone-900 sm:text-2xl" data-testid="pay-net">
           {money(pay.net)}
         </p>
       </div>

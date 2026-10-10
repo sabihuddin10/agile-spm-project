@@ -72,9 +72,9 @@ export function SessionsTable({
 
   return (
     <section className="card !p-0" aria-labelledby="sessions-heading">
-      <div className="flex flex-wrap items-start justify-between gap-3 px-4 pb-3 pt-4 sm:px-5 sm:pt-5">
+      <div className="flex flex-wrap items-start justify-between gap-3 px-3.5 pb-3 pt-3.5 sm:px-5 sm:pt-5">
         <div>
-          <h2 id="sessions-heading" className="text-lg font-semibold">
+          <h2 id="sessions-heading" className="text-base font-semibold sm:text-lg">
             Sessions &amp; shifts
           </h2>
           <p className="mt-0.5 text-sm text-stone-500">
@@ -137,22 +137,23 @@ export function SessionsTable({
 
           <ul className="divide-y divide-stone-100 border-t border-stone-100 sm:hidden">
             {visible.map((r) => (
-              <li key={r.key} className="space-y-1 px-4 py-3 text-sm">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="font-medium text-stone-800">{formatDate(r.date)}</p>
-                  <p className="font-semibold tabular-nums">{r.kind === 'missed' ? '0 h' : hoursText(r.session.paidMinutes)}</p>
+              // Date (and Missed badge) on the left of one row, paid hours on the right.
+              <li key={r.key} className="space-y-1 px-3.5 py-2.5 text-sm">
+                <div className="flex items-start justify-between gap-2.5">
+                  <p className="flex min-w-0 flex-wrap items-center gap-1.5">
+                    <span className="font-medium text-stone-800">{formatDate(r.date)}</span>
+                    {r.kind === 'missed' ? <Badge tone="red">Missed</Badge> : null}
+                  </p>
+                  <p className="shrink-0 font-semibold tabular-nums">{r.kind === 'missed' ? '0 h' : hoursText(r.session.paidMinutes)}</p>
                 </div>
-                <p className="tabular-nums text-stone-600">
+                <p className="text-xs tabular-nums text-stone-600">
                   Shift {r.shift ? `${r.shift.start}–${r.shift.end}` : 'unscheduled'}
                   {r.kind === 'session'
                     ? ` · ${clockTime(r.session.clockIn)} – ${r.session.clockOut ? clockTime(r.session.clockOut) : 'open'}`
                     : ''}
                 </p>
                 {r.kind === 'missed' ? (
-                  <p>
-                    <Badge tone="red">Missed</Badge>
-                    <span className="ml-2 text-stone-600">{hoursText(shiftMinutes(r.shift))} not worked (unpaid)</span>
-                  </p>
+                  <p className="text-xs text-stone-600">{hoursText(shiftMinutes(r.shift))} not worked (unpaid)</p>
                 ) : (
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                     <Late session={r.session} />
@@ -166,7 +167,7 @@ export function SessionsTable({
           </ul>
 
           {rows.length > shown ? (
-            <div className="border-t border-stone-100 px-4 py-3 sm:px-5">
+            <div className="border-t border-stone-100 px-3.5 py-3 sm:px-5">
               <button type="button" className="btn-secondary w-full sm:w-auto" onClick={() => setShown((n) => n + pageSize)}>
                 Show more ({rows.length - shown} older)
               </button>

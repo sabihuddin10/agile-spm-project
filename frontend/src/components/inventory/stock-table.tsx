@@ -216,16 +216,17 @@ export function StockTable({
             {shown.map((item) => {
               const busy = busyId === item.id;
               return (
-                <li key={item.id} className={`space-y-3 px-4 py-4 ${ROW_TINT[item.health]}`}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="font-medium text-stone-900">{item.name}</p>
-                      <p className="text-xs text-stone-500">
-                        {item.category}
-                        {item.supplier ? ` · ${item.supplier}` : ''}
-                      </p>
+                <li key={item.id} className={`space-y-2.5 px-3.5 py-3 sm:space-y-3 sm:px-4 sm:py-4 ${ROW_TINT[item.health]}`}>
+                  {/* Name and health badge share one wrapping row; meta underneath. */}
+                  <div className="min-w-0 space-y-0.5">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <p className="text-sm font-medium text-stone-900 sm:text-base">{item.name}</p>
+                      <Badge tone={HEALTH[item.health].tone}>{HEALTH[item.health].label}</Badge>
                     </div>
-                    <Badge tone={HEALTH[item.health].tone}>{HEALTH[item.health].label}</Badge>
+                    <p className="text-xs text-stone-500">
+                      {item.category}
+                      {item.supplier ? ` · ${item.supplier}` : ''}
+                    </p>
                   </div>
                   <div className="flex items-end justify-between gap-3 text-sm">
                     <div>
@@ -244,11 +245,11 @@ export function StockTable({
                   <p className="text-xs text-stone-500">
                     <UsedBy item={item} />
                   </p>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="flex flex-wrap gap-1.5 sm:grid sm:grid-cols-2 sm:gap-2">
                     {canAdjust ? (
                       <button
                         type="button"
-                        className="btn-sm btn-secondary w-full"
+                        className="btn-sm btn-secondary flex-1 sm:w-full"
                         disabled={busy}
                         onClick={() => onAdjust(item)}
                         aria-label={`Adjust ${item.name}`}
@@ -258,7 +259,7 @@ export function StockTable({
                     ) : null}
                     <button
                       type="button"
-                      className="btn-sm btn-secondary w-full"
+                      className="btn-sm btn-secondary flex-1 sm:w-full"
                       onClick={() => onHistory(item)}
                       aria-label={`Stock history for ${item.name}`}
                     >
@@ -268,7 +269,7 @@ export function StockTable({
                       <>
                         <button
                           type="button"
-                          className="btn-sm btn-secondary w-full"
+                          className="btn-sm btn-secondary flex-1 sm:w-full"
                           disabled={busy}
                           onClick={() => onEdit(item)}
                           aria-label={`Edit ${item.name}`}
@@ -277,7 +278,7 @@ export function StockTable({
                         </button>
                         <button
                           type="button"
-                          className="btn-sm btn-secondary w-full text-red-600 hover:bg-red-50"
+                          className="btn-sm btn-secondary flex-1 sm:w-full text-red-600 hover:bg-red-50"
                           disabled={busy}
                           onClick={() => onDelete(item)}
                           aria-label={`Delete ${item.name}`}

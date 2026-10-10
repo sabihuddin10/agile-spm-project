@@ -227,9 +227,9 @@ export function ShiftPlanner({ roster }: { roster: User[] }) {
             {days.map((day) => {
               const list = dayShifts(day);
               return (
-                <Card key={day} className={`p-4 ${day === today ? 'border-brand-300 ring-1 ring-brand-200' : ''}`}>
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <p className="font-semibold text-stone-800">
+                <Card key={day} className={`p-3.5 sm:p-4 ${day === today ? 'border-brand-300 ring-1 ring-brand-200' : ''}`}>
+                  <div className="mb-1.5 flex items-center justify-between gap-2 sm:mb-2">
+                    <p className="text-sm font-semibold text-stone-800 sm:text-base">
                       {formatDate(day)}
                       {day === today ? <Badge tone="brand" className="ml-2">Today</Badge> : null}
                     </p>

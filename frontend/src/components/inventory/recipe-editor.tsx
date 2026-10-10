@@ -90,8 +90,8 @@ export function RecipeEditor({
 
   return (
     <Modal title={`Recipe · ${item.name}`} onClose={onClose} wide>
-      <form onSubmit={save} noValidate className="space-y-4">
-        <p className="text-sm text-stone-500">
+      <form onSubmit={save} noValidate className="space-y-3 sm:space-y-4">
+        <p className="text-xs text-stone-500 sm:text-sm">
           Quantities are for <span className="font-medium text-stone-700">one portion</span>. When an order with this
           dish is closed, these amounts are deducted from inventory automatically.
         </p>

@@ -41,18 +41,19 @@ export function MyAccount() {
         </div>
       ) : null}
 
-      <div className="card mb-4 flex flex-col gap-3 p-4 sm:mb-5 sm:flex-row sm:gap-4 sm:p-5 sm:items-center">
+      {/* Phones: avatar beside the name, badges on one wrapping row below. */}
+      <div className="card mb-4 flex flex-wrap items-center gap-x-3 gap-y-2.5 p-4 sm:mb-5 sm:flex-nowrap sm:gap-4 sm:p-5">
         <span
-          className="flex h-10 w-10 shrink-0 items-center sm:h-12 sm:w-12 justify-center rounded-full bg-brand-50 text-base font-bold text-brand-700"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-50 text-sm font-bold text-brand-700 sm:h-12 sm:w-12 sm:text-base"
           aria-hidden="true"
         >
           {initials(user.name)}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-lg font-semibold text-stone-900">{user.name}</p>
-          <p className="truncate text-sm text-stone-500">{user.email}</p>
+          <p className="truncate text-base font-semibold text-stone-900 sm:text-lg">{user.name}</p>
+          <p className="truncate text-xs text-stone-500 sm:text-sm">{user.email}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 text-xs text-stone-500">
+        <div className="flex w-full flex-wrap items-center gap-1.5 text-xs text-stone-500 sm:w-auto sm:gap-2">
           <Badge tone={ROLE_META[role].tone}>{ROLE_META[role].label}</Badge>
           <Badge tone={user.active ? 'emerald' : 'red'}>{user.active ? 'Active' : 'Suspended'}</Badge>
           {since ? <span>Member since {since}</span> : null}

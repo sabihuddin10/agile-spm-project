@@ -30,7 +30,7 @@ export function ReservationStats({
       ) : (
         <>
           <div>
-            <p className="text-4xl font-semibold tracking-tight text-stone-900">{pct(stats.noShowRate)}</p>
+            <p className="text-xl font-semibold tracking-tight text-stone-900 sm:text-4xl">{pct(stats.noShowRate)}</p>
             <p className="mt-1 text-sm text-stone-500">
               {due > 0
                 ? `no-show rate — ${count(stats.noShows)} of ${count(due)} bookings due to arrive didn’t show.`
@@ -39,7 +39,7 @@ export function ReservationStats({
           </div>
 
           <div
-            className="mt-5 flex h-2.5 gap-0.5 overflow-hidden rounded-full"
+            className="mt-4 flex h-2.5 sm:mt-5 gap-0.5 overflow-hidden rounded-full"
             role="img"
             aria-label={`Of ${stats.total} bookings: ${segments.map((s) => `${s.value} ${s.label.toLowerCase()}`).join(', ')}.`}
           >

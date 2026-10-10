@@ -89,30 +89,33 @@ export function CustomerTable({
             <li
               key={c.id}
               aria-current={selected ? 'true' : undefined}
-              className={`space-y-3 px-4 py-4 ${selected ? 'bg-brand-50 shadow-[inset_3px_0_0_theme(colors.brand.600)]' : ''}`}
+              className={`space-y-2.5 px-3.5 py-3 sm:space-y-3 sm:px-4 sm:py-4 ${selected ? 'bg-brand-50 shadow-[inset_3px_0_0_theme(colors.brand.600)]' : ''}`}
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <button
-                    type="button"
-                    onClick={() => onSelect(c)}
-                    className={`-mx-1 rounded px-1 py-0.5 text-left font-medium hover:text-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
-                      selected ? 'text-brand-800' : 'text-stone-900'
-                    }`}
-                  >
-                    {c.name}
-                  </button>
+              {/* Name, type and contact on the left; spend over points and orders on the right. */}
+              <div className="flex items-start gap-2.5 sm:gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => onSelect(c)}
+                      className={`-mx-1 rounded px-1 py-0.5 text-left text-sm font-medium hover:text-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 sm:text-base ${
+                        selected ? 'text-brand-800' : 'text-stone-900'
+                      }`}
+                    >
+                      {c.name}
+                    </button>
+                    <Badge tone={c.type === 'online' ? 'blue' : 'stone'}>{titleCase(c.type)}</Badge>
+                  </div>
                   <p className="truncate text-xs text-stone-500">{c.email || '—'}</p>
                   {c.phone ? <p className="text-xs text-stone-500">{c.phone}</p> : null}
                 </div>
-                <Badge tone={c.type === 'online' ? 'blue' : 'stone'}>{titleCase(c.type)}</Badge>
-              </div>
-              <div className="flex items-end justify-between gap-3 text-sm">
-                <span className="font-semibold tabular-nums">{money(c.totalSpend)}</span>
-                <p className="text-right text-xs tabular-nums text-stone-500">
-                  {c.loyaltyPoints} points
-                  <span className="block">{c.orderCount ?? c.orderHistory?.length ?? 0} orders</span>
-                </p>
+                <div className="flex shrink-0 flex-col items-end text-right">
+                  <span className="text-sm font-semibold tabular-nums">{money(c.totalSpend)}</span>
+                  <p className="text-xs tabular-nums text-stone-500">
+                    {c.loyaltyPoints} points
+                    <span className="block">{c.orderCount ?? c.orderHistory?.length ?? 0} orders</span>
+                  </p>
+                </div>
               </div>
               <PreferencePills dietary={c.preferences?.dietary ?? []} allergies={c.preferences?.allergies ?? []} />
             </li>

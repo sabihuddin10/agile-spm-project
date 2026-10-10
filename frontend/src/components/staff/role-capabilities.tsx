@@ -37,7 +37,7 @@ export function RoleCapabilities({ role }: { role: StaffRole }) {
           ))}
         </ul>
       </section>
-      <section aria-labelledby="caps-cannot" className="mt-5 border-t border-stone-100 pt-4">
+      <section aria-labelledby="caps-cannot" className="mt-4 border-t border-stone-100 pt-3.5 sm:mt-5 sm:pt-4">
         <h3 id="caps-cannot" className="text-xs font-semibold uppercase tracking-wide text-stone-500">
           You can&apos;t
         </h3>

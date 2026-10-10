@@ -44,14 +44,14 @@ export function TableUtilization({
         <>
           <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {zones.map((z) => (
-              <li key={z.zone} className="rounded-lg border border-stone-200 bg-stone-50/60 p-4">
+              <li key={z.zone} className="rounded-lg border border-stone-200 bg-stone-50/60 p-3.5 sm:p-4">
                 <div className="flex items-baseline justify-between gap-2">
-                  <p className="font-semibold text-stone-900">{z.zone}</p>
+                  <p className="text-sm font-semibold text-stone-900 sm:text-base">{z.zone}</p>
                   <p className="text-xs text-stone-500">
                     {z.tables} table{z.tables === 1 ? '' : 's'}
                   </p>
                 </div>
-                <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                <dl className="mt-2.5 grid grid-cols-2 gap-2 text-sm sm:mt-3">
                   <div>
                     <dt className="text-xs text-stone-500">Turns</dt>
                     <dd className="text-lg font-semibold text-stone-900">{count(z.turns)}</dd>
@@ -67,7 +67,7 @@ export function TableUtilization({
             ))}
           </ul>
 
-          <div className="mt-5 overflow-x-auto">
+          <div className="mt-4 overflow-x-auto sm:mt-5">
             <table className="table-base min-w-[36rem]">
               <caption className="sr-only">Turnover and occupancy per table</caption>
               <thead>

@@ -121,17 +121,17 @@ export function PerformancePanel() {
         {data ? <p className="text-sm text-stone-500">{rangeLabel(data.from, data.to)}</p> : null}
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4">
         {[
           { label: 'Revenue handled', value: money(totals.revenue) },
           { label: 'Tips', value: money(totals.tips) },
           { label: 'Items prepared', value: count(totals.items) },
           { label: 'Hours worked', value: formatHours(totals.hours), sub: totals.missed ? `${totals.missed} missed shift${totals.missed === 1 ? '' : 's'}` : 'No missed shifts' },
         ].map((k) => (
-          <div key={k.label} className="card p-4">
+          <div key={k.label} className="card grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 p-3 sm:block sm:p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">{k.label}</p>
-            <p className="mt-1 text-2xl font-bold tabular-nums text-stone-800">{loading && !data ? '–' : k.value}</p>
-            {k.sub ? <p className="text-xs text-stone-500">{k.sub}</p> : null}
+            <p className="text-xl font-bold tabular-nums text-stone-800 sm:mt-1 sm:text-2xl">{loading && !data ? '–' : k.value}</p>
+            {k.sub ? <p className="col-span-2 text-xs text-stone-500">{k.sub}</p> : null}
           </div>
         ))}
       </div>
@@ -146,9 +146,9 @@ export function PerformancePanel() {
           {/* Phones: one card per person, showing only the columns that apply to their role. */}
           <ul className="divide-y divide-stone-100 sm:hidden" aria-label="Staff performance">
             {rows.map((r) => (
-              <li key={r.userId} className="px-4 py-3">
+              <li key={r.userId} className="px-3.5 py-2.5">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-medium text-stone-800">{r.name}</span>
+                  <span className="text-sm font-medium text-stone-800">{r.name}</span>
                   <Badge tone={ROLE_META[r.role].tone}>{ROLE_META[r.role].label}</Badge>
                   {!r.active ? <Badge tone="red">Suspended</Badge> : null}
                 </div>

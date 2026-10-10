@@ -24,7 +24,7 @@ function chartPlaceholder(className: string) {
       <div className={`card animate-pulse motion-reduce:animate-none ${className}`} aria-hidden="true">
         <div className="h-4 w-40 rounded bg-stone-100" />
         <div className="mt-2 h-3 w-64 max-w-full rounded bg-stone-100" />
-        <div className="mt-5 h-56 rounded-lg bg-stone-50 sm:h-64" />
+        <div className="mt-4 h-48 rounded-lg bg-stone-50 sm:mt-5 sm:h-64" />
       </div>
     );
   }
@@ -153,14 +153,17 @@ export function AnalyticsDashboard() {
           </Card>
         )
       ) : (
-        <div className={`space-y-5 transition-opacity ${refreshing ? 'pointer-events-none opacity-60' : ''}`} aria-busy={refreshing}>
+        <div
+          className={`space-y-3 transition-opacity sm:space-y-5 ${refreshing ? 'pointer-events-none opacity-60' : ''}`}
+          aria-busy={refreshing}
+        >
           <KpiTiles kpis={data.kpis} />
           <RevenueTrendChart data={data} />
-          <div className="grid gap-5 lg:grid-cols-3">
+          <div className="grid gap-3 sm:gap-5 lg:grid-cols-3">
             <TopDishes dishes={data.dishes} className="lg:col-span-2" />
             <ReservationStats stats={data.reservations} />
           </div>
-          <div className="grid gap-5 lg:grid-cols-3">
+          <div className="grid gap-3 sm:gap-5 lg:grid-cols-3">
             <PeakHoursChart hours={data.peakHours} className="lg:col-span-2" />
             <InventoryHealth items={data.inventory} />
           </div>

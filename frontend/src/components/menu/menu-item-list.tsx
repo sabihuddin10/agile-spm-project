@@ -126,19 +126,19 @@ function MenuItemCard({
 
   return (
     <article
-      className={`flex flex-col rounded-xl border p-4 transition ${
+      className={`flex flex-col rounded-xl border p-3.5 transition sm:p-4 ${
         item.available ? 'border-stone-200 bg-white' : 'border-dashed border-red-200 bg-red-50/30'
       }`}
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-2.5 sm:gap-3">
         <div className="min-w-0">
-          <p className="font-semibold text-stone-800">{item.name}</p>
-          <p className="mt-0.5 line-clamp-2 text-sm text-stone-500">{item.description || '—'}</p>
+          <p className="text-sm font-semibold text-stone-800 sm:text-base">{item.name}</p>
+          <p className="mt-0.5 line-clamp-2 text-xs text-stone-500 sm:text-sm">{item.description || '—'}</p>
         </div>
-        <p className="shrink-0 font-bold tabular-nums text-brand-700">{money(item.price)}</p>
+        <p className="shrink-0 text-sm font-bold tabular-nums text-brand-700 sm:text-base">{money(item.price)}</p>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+      <div className="mt-2.5 flex flex-wrap items-center gap-1.5 sm:mt-3">
         {item.available ? <Badge tone="emerald">Available</Badge> : <Badge tone="red">Out of stock</Badge>}
         {item.dietaryTags.map((t) => (
           <Badge key={t} tone="emerald" className="font-medium">
@@ -196,7 +196,7 @@ function MenuItemCard({
       ) : null}
 
       {hasActions ? (
-        <div className="mt-auto flex flex-wrap gap-1.5 pt-3">
+        <div className="mt-auto flex flex-wrap gap-1.5 pt-2.5 sm:pt-3">
           {permissions.toggle ? (
             item.available ? (
               <button

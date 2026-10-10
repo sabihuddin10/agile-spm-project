@@ -120,7 +120,7 @@ export function RevenueTrendChart({ data }: { data: AnalyticsDashboard }) {
         <EmptyState title="No orders in this period" hint="Pick a wider range — the demo data covers the last 60 days." />
       ) : (
         <>
-          <div className="relative h-64 sm:h-80" role="img" aria-label={description}>
+          <div className="relative h-48 sm:h-80" role="img" aria-label={description}>
             <Chart type="bar" data={chartData} options={options} />
           </div>
           {best ? (

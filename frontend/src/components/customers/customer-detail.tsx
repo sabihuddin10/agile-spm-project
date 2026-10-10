@@ -28,12 +28,12 @@ export function CustomerDetail({
   const avgOrder = totalOrders > 0 ? customer.totalSpend / totalOrders : 0;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 sm:space-y-5">
       <div>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="text-lg font-semibold text-stone-900">{customer.name}</h3>
-            <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-stone-500">
+            <h3 className="text-base font-semibold text-stone-900 sm:text-lg">{customer.name}</h3>
+            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-sm text-stone-500 sm:gap-2">
               <Badge tone={customer.type === 'online' ? 'blue' : 'stone'}>{titleCase(customer.type)}</Badge>
               {customer.email ? <span className="break-all">{customer.email}</span> : null}
               {customer.phone ? <span>· {customer.phone}</span> : null}
@@ -66,7 +66,7 @@ export function CustomerDetail({
         ) : null}
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4 xl:grid-cols-2">
         <Stat label="Total spend" value={money(customer.totalSpend)} />
         <Stat label="Orders" value={String(totalOrders)} />
         <Stat label="Avg / order" value={money(avgOrder)} />
@@ -95,7 +95,7 @@ export function CustomerDetail({
               const status = ORDER_STATUS[o.status];
               const payment = PAYMENT_STATUS[o.paymentStatus];
               return (
-                <li key={o.id} className="px-4 py-3 text-sm">
+                <li key={o.id} className="px-2.5 py-2 text-sm sm:px-4 sm:py-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="font-medium text-stone-800">
@@ -131,8 +131,9 @@ export function CustomerDetail({
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg bg-stone-50 px-3 py-2.5 text-center">
-      <p className="text-lg font-bold tabular-nums text-stone-800">{value}</p>
+    // Phones: one short row, label left and value right; from sm a centred tile.
+    <div className="flex flex-row-reverse items-baseline justify-between gap-3 rounded-lg bg-stone-50 p-3 sm:block sm:px-3 sm:py-2.5 sm:text-center">
+      <p className="text-xl font-bold tabular-nums text-stone-800 sm:text-lg">{value}</p>
       <p className="text-xs font-medium uppercase tracking-wide text-stone-500">{label}</p>
     </div>
   );

@@ -64,7 +64,7 @@ export function StockAdjust({
 
   return (
     <Modal title={`Adjust stock · ${item.name}`} onClose={onClose}>
-      <form onSubmit={submit} className="space-y-4">
+      <form onSubmit={submit} className="space-y-3 sm:space-y-4">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg bg-stone-50 px-3 py-2 text-sm">
           <span>
             In stock: <span className="font-semibold">{fmt(item.stock)} {item.unit}</span>

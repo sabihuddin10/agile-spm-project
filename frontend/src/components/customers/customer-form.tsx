@@ -99,8 +99,8 @@ export function CustomerForm({
   }
 
   return (
-    <form onSubmit={submit} noValidate className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-2">
+    <form onSubmit={submit} noValidate className="space-y-3 sm:space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
         <div>
           <label htmlFor="customer-name" className="label">
             Full name *
@@ -187,7 +187,7 @@ export function CustomerForm({
         )}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
         <div>
           <p className="label">Dietary preferences</p>
           <div className="flex flex-wrap gap-2">

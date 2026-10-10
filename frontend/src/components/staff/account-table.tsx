@@ -188,11 +188,11 @@ export function AccountTable({
             return (
               <li
                 key={u.id}
-                className={`flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:gap-4 ${u.active ? '' : 'bg-stone-50'}`}
+                className={`flex flex-col gap-2 px-3.5 py-2.5 sm:flex-row sm:items-center sm:gap-4 sm:px-4 sm:py-3 ${u.active ? '' : 'bg-stone-50'}`}
               >
                 <div className="flex min-w-0 flex-1 items-center gap-3">
                   <span
-                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold sm:h-9 sm:w-9 ${
                       u.active ? 'bg-brand-50 text-brand-700' : 'bg-stone-200 text-stone-500'
                     }`}
                     aria-hidden="true"
@@ -200,7 +200,7 @@ export function AccountTable({
                     {initials(u.name)}
                   </span>
                   <div className="min-w-0">
-                    <p className={`truncate font-medium ${u.active ? 'text-stone-800' : 'text-stone-500'}`}>
+                    <p className={`truncate text-sm font-medium sm:text-base ${u.active ? 'text-stone-800' : 'text-stone-500'}`}>
                       {u.name}
                       {isSelf ? <span className="ml-1.5 text-xs font-normal text-stone-500">(you)</span> : null}
                     </p>
@@ -208,10 +208,10 @@ export function AccountTable({
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 pl-12 sm:justify-end sm:pl-0">
+                <div className="flex flex-wrap items-center gap-1.5 pl-11 sm:justify-end sm:gap-2 sm:pl-0">
                   {canAssign && showAdminControls ? (
                     <select
-                      className="input w-auto py-1.5"
+                      className="input w-auto"
                       aria-label={`Role for ${u.name}`}
                       value={u.role}
                       disabled={isSelf || busy}

@@ -51,7 +51,7 @@ export function RangeControls({
 
   return (
     <div>
-      <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-end 2xl:justify-between">
+      <div className="flex flex-col gap-3 sm:gap-4 2xl:flex-row 2xl:items-end 2xl:justify-between">
         <div className="min-w-0">
           <p className="label">Period</p>
           <div className="flex flex-wrap gap-1.5" role="group" aria-label="Date range presets">
@@ -82,7 +82,7 @@ export function RangeControls({
               <span className="label">From</span>
               <input
                 type="date"
-                className={`input !py-1.5 ${error ? '!border-red-400' : ''}`}
+                className={`input ${error ? '!border-red-400' : ''}`}
                 value={value.from}
                 max={value.to || today}
                 aria-invalid={Boolean(error)}
@@ -93,7 +93,7 @@ export function RangeControls({
               <span className="label">To</span>
               <input
                 type="date"
-                className={`input !py-1.5 ${error ? '!border-red-400' : ''}`}
+                className={`input ${error ? '!border-red-400' : ''}`}
                 value={value.to}
                 min={value.from}
                 max={today}

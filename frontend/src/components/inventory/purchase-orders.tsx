@@ -65,10 +65,10 @@ export function PurchaseOrders({
             const open = expanded === po.id;
             const suppliers = Array.from(new Set(po.lines.map((l) => l.supplier || 'No supplier')));
             return (
-              <li key={po.id} className="p-4">
-                <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
+              <li key={po.id} className="px-3.5 py-3 sm:p-4">
+                <div className="flex flex-wrap items-start gap-x-4 gap-y-2.5">
                   <div className="min-w-0 flex-1">
-                    <p className="flex flex-wrap items-center gap-2">
+                    <p className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                       <span className="font-mono text-sm font-semibold text-stone-800">{po.number}</span>
                       {po.status === 'received' ? (
                         <Badge tone="emerald">Received</Badge>
@@ -84,7 +84,7 @@ export function PurchaseOrders({
                       {po.lines.length} line{po.lines.length === 1 ? '' : 's'} · {suppliers.join(', ')}
                     </p>
                   </div>
-                  <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+                  <div className="flex w-full flex-wrap items-center gap-1.5 sm:w-auto sm:gap-2">
                     <span className="mr-auto text-sm font-bold tabular-nums text-stone-900 sm:mr-0">{money(po.total)}</span>
                     <button
                       type="button"
@@ -108,17 +108,21 @@ export function PurchaseOrders({
                 </div>
 
                 {open ? (
-                  <div className="mt-3 rounded-lg border border-stone-100 bg-stone-50/60">
+                  <div className="mt-2.5 rounded-lg border border-stone-100 bg-stone-50/60 sm:mt-3">
                     <ul className="divide-y divide-stone-100 text-sm">
                       {po.lines.map((l) => (
-                        <li key={l.inventoryId} className="flex flex-wrap justify-between gap-2 px-3 py-1.5">
-                          <span className="text-stone-700">
-                            {l.name} <span className="text-xs text-stone-500">· {l.supplier || 'No supplier'}</span>
-                          </span>
-                          <span className="tabular-nums text-stone-500">
-                            {qty(l.qty)} {l.unit} × {money(l.costPerUnit)} ={' '}
-                            <span className="font-medium text-stone-700">{money(l.cost)}</span>
-                          </span>
+                        // Ingredient and supplier on the left; line cost over qty × unit price on the right.
+                        <li key={l.inventoryId} className="flex items-start gap-2.5 px-2.5 py-2 sm:px-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-stone-700">{l.name}</p>
+                            <p className="text-xs text-stone-500">{l.supplier || 'No supplier'}</p>
+                          </div>
+                          <div className="flex shrink-0 flex-col items-end">
+                            <span className="font-medium tabular-nums text-stone-700">{money(l.cost)}</span>
+                            <span className="text-xs tabular-nums text-stone-500">
+                              {qty(l.qty)} {l.unit} × {money(l.costPerUnit)}
+                            </span>
+                          </div>
                         </li>
                       ))}
                     </ul>
