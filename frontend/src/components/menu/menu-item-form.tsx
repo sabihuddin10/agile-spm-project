@@ -3,7 +3,15 @@
 import { useState } from 'react';
 import type { MenuCategory, MenuItem, Modifier } from '@/types';
 import { XMarkIcon } from '@/components/ui/icons';
+import { FieldError, SubmitHint, describedBy } from '@/components/forms/field-error';
+import { TONES } from '@/components/forms/tone';
+import { validateMaxLength, validateNumberInRange } from '@/lib/validation/fields';
+import { useFormValidation, type Rules } from '@/lib/validation/use-form-validation';
 import { modifierSummary } from './menu-item-list';
+
+/** Limits from server/src/routes/menu.js. */
+export const MENU_LIMITS = { name: 80, description: 500, reason: 200, groupName: 60, optionLabel: 60, price: 10000 } as const;
+const ERR = TONES.light.inputError;
 
 /** Icon-only remove button for modifier groups and options. */
 const REMOVE_BTN =
@@ -38,6 +46,26 @@ interface Draft {
   available: boolean;
   outOfStockReason: string;
 }
+
+/** What the validation hook watches: the draft's checked fields, with the modifier rows serialised. */
+interface Values {
+  name: string;
+  categoryId: string;
+  price: string;
+  description: string;
+  available: boolean;
+  outOfStockReason: string;
+  modifiers: string;
+}
+
+const LABELS = {
+  name: 'Item name',
+  categoryId: 'Category',
+  price: 'Price',
+  description: 'Description',
+  outOfStockReason: 'Out-of-stock reason',
+  modifiers: 'Modifiers',
+};
 
 let keySeq = 0;
 const nextKey = () => ++keySeq;
@@ -87,10 +115,19 @@ function buildModifiers(groups: GroupDraft[]): { modifiers: Modifier[] } | { err
       .map((o) => ({ label: o.label.trim(), priceDelta: o.priceDelta.trim() === '' ? 0 : Number(o.priceDelta) }));
     if (!name && options.length === 0) continue; // untouched blank group
     if (!name) return { error: 'Give every modifier group a name (e.g. "Size").' };
+    if (name.length > MENU_LIMITS.groupName) {
+      return { error: `Modifier group names can be at most ${MENU_LIMITS.groupName} characters.` };
+    }
     if (options.length === 0) return { error: `Modifier group "${name}" needs at least one option.` };
     if (options.some((o) => !o.label)) return { error: `Every option in "${name}" needs a label.` };
+    if (options.some((o) => o.label.length > MENU_LIMITS.optionLabel)) {
+      return { error: `Option labels in "${name}" can be at most ${MENU_LIMITS.optionLabel} characters.` };
+    }
     if (options.some((o) => !Number.isFinite(o.priceDelta) || o.priceDelta < 0)) {
       return { error: `Price changes in "${name}" must be zero or more.` };
+    }
+    if (options.some((o) => o.priceDelta > MENU_LIMITS.price)) {
+      return { error: `Price changes in "${name}" can be at most ${MENU_LIMITS.price.toLocaleString('en-US')}.` };
     }
     const labels = options.map((o) => o.label.toLowerCase());
     if (new Set(labels).size !== labels.length) return { error: `Option labels in "${name}" must be unique.` };
@@ -130,11 +167,37 @@ export function MenuItemForm({
   submitting?: boolean;
 }) {
   const [draft, setDraft] = useState<Draft>(() => draftFrom(initial, categories, defaultCategoryId));
-  const [error, setError] = useState('');
+  const preview = buildModifiers(draft.modifiers);
+
+  const rules: Rules<Values> = {
+    name: (v) => (v.trim() ? validateMaxLength(v.trim(), MENU_LIMITS.name, 'Item name') : 'Item name is required.'),
+    categoryId: (v) => (v ? undefined : 'Choose a category.'),
+    price: (v) => validateNumberInRange(v, 0, MENU_LIMITS.price, 'Price'),
+    description: (v) => validateMaxLength(v.trim(), MENU_LIMITS.description, 'Description'),
+    outOfStockReason: (v, f) => {
+      if (f.available) return undefined;
+      if (!v.trim()) return 'Add a reason for marking it out of stock.';
+      return validateMaxLength(v.trim(), MENU_LIMITS.reason, 'Reason');
+    },
+    modifiers: () => ('error' in preview ? preview.error : undefined),
+  };
+  const v = useFormValidation<Values>(
+    {
+      name: draft.name,
+      categoryId: draft.categoryId,
+      price: draft.price,
+      description: draft.description,
+      available: draft.available,
+      outOfStockReason: draft.outOfStockReason,
+      modifiers: JSON.stringify(draft.modifiers),
+    },
+    rules,
+    { labels: LABELS },
+  );
+  const errors = v.errors;
 
   function set<K extends keyof Draft>(key: K, value: Draft[K]) {
     setDraft((d) => ({ ...d, [key]: value }));
-    setError('');
   }
 
   function toggle(list: 'dietaryTags' | 'allergens', value: string) {
@@ -146,7 +209,6 @@ export function MenuItemForm({
 
   function patchGroup(key: number, patch: Partial<GroupDraft>) {
     setDraft((d) => ({ ...d, modifiers: d.modifiers.map((g) => (g.key === key ? { ...g, ...patch } : g)) }));
-    setError('');
   }
 
   function patchOption(groupKey: number, optionKey: number, patch: Partial<OptionDraft>) {
@@ -156,36 +218,27 @@ export function MenuItemForm({
         g.key === groupKey ? { ...g, options: g.options.map((o) => (o.key === optionKey ? { ...o, ...patch } : o)) } : g,
       ),
     }));
-    setError('');
   }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    const price = Number(draft.price);
-    if (!draft.name.trim()) return setError('Item name is required.');
-    if (!draft.categoryId) return setError('Choose a category.');
-    if (draft.price.trim() === '' || !(price >= 0)) return setError('Price must be zero or more.');
-    if (!draft.available && !draft.outOfStockReason.trim()) return setError('Add a reason for marking it out of stock.');
-    const built = buildModifiers(draft.modifiers);
-    if ('error' in built) return setError(built.error);
+    if (!v.touchAll() || 'error' in preview) return;
 
     onSubmit({
       name: draft.name.trim(),
       categoryId: draft.categoryId,
-      price,
+      price: Number(draft.price),
       description: draft.description.trim(),
       dietaryTags: draft.dietaryTags,
       allergens: draft.allergens,
-      modifiers: built.modifiers,
+      modifiers: preview.modifiers,
       available: draft.available,
       outOfStockReason: draft.available ? '' : draft.outOfStockReason.trim(),
     });
   }
 
-  const preview = buildModifiers(draft.modifiers);
-
   return (
-    <form onSubmit={submit} className="space-y-4">
+    <form onSubmit={submit} noValidate className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className="label" htmlFor="mi-name">
@@ -193,11 +246,17 @@ export function MenuItemForm({
           </label>
           <input
             id="mi-name"
-            className="input"
+            className={`input ${errors.name ? ERR : ''}`}
             required
+            maxLength={MENU_LIMITS.name}
+            placeholder="e.g. Margherita pizza"
             value={draft.name}
+            aria-invalid={Boolean(errors.name) || undefined}
+            aria-describedby={describedBy(errors.name && 'mi-name-err')}
             onChange={(e) => set('name', e.target.value)}
+            onBlur={() => v.blur('name')}
           />
+          <FieldError id="mi-name-err" message={errors.name} />
         </div>
         <div>
           <label className="label" htmlFor="mi-category">
@@ -205,10 +264,13 @@ export function MenuItemForm({
           </label>
           <select
             id="mi-category"
-            className="input"
+            className={`input ${errors.categoryId ? ERR : ''}`}
             required
             value={draft.categoryId}
+            aria-invalid={Boolean(errors.categoryId) || undefined}
+            aria-describedby={describedBy(errors.categoryId && 'mi-category-err')}
             onChange={(e) => set('categoryId', e.target.value)}
+            onBlur={() => v.blur('categoryId')}
           >
             <option value="" disabled>
               Select category…
@@ -220,6 +282,7 @@ export function MenuItemForm({
               </option>
             ))}
           </select>
+          <FieldError id="mi-category-err" message={errors.categoryId} />
         </div>
         <div>
           <label className="label" htmlFor="mi-price">
@@ -227,15 +290,21 @@ export function MenuItemForm({
           </label>
           <input
             id="mi-price"
-            className="input"
+            className={`input ${errors.price ? ERR : ''}`}
             required
             type="number"
             min="0"
+            max={MENU_LIMITS.price}
             step="0.01"
             inputMode="decimal"
+            placeholder="12.50"
             value={draft.price}
+            aria-invalid={Boolean(errors.price) || undefined}
+            aria-describedby={describedBy(errors.price && 'mi-price-err')}
             onChange={(e) => set('price', e.target.value)}
+            onBlur={() => v.blur('price')}
           />
+          <FieldError id="mi-price-err" message={errors.price} />
         </div>
         <div className="flex items-end">
           <label className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg border border-stone-200 px-3 py-2">
@@ -257,11 +326,16 @@ export function MenuItemForm({
           </label>
           <input
             id="mi-reason"
-            className="input"
-            placeholder="e.g. Bakery delivery delayed"
+            className={`input ${errors.outOfStockReason ? ERR : ''}`}
+            maxLength={MENU_LIMITS.reason}
+            placeholder="e.g. supplier delivery late"
             value={draft.outOfStockReason}
+            aria-invalid={Boolean(errors.outOfStockReason) || undefined}
+            aria-describedby={describedBy(errors.outOfStockReason && 'mi-reason-err')}
             onChange={(e) => set('outOfStockReason', e.target.value)}
+            onBlur={() => v.blur('outOfStockReason')}
           />
+          <FieldError id="mi-reason-err" message={errors.outOfStockReason} />
         </div>
       ) : null}
 
@@ -271,10 +345,19 @@ export function MenuItemForm({
         </label>
         <textarea
           id="mi-description"
-          className="input min-h-[64px]"
+          className={`input min-h-[64px] ${errors.description ? ERR : ''}`}
+          maxLength={MENU_LIMITS.description}
+          placeholder="e.g. San Marzano tomato, fior di latte, fresh basil"
           value={draft.description}
+          aria-invalid={Boolean(errors.description) || undefined}
+          aria-describedby={describedBy('mi-description-count', errors.description && 'mi-description-err')}
           onChange={(e) => set('description', e.target.value)}
+          onBlur={() => v.blur('description')}
         />
+        <p id="mi-description-count" className="mt-1 text-right text-xs text-stone-500">
+          {draft.description.length}/{MENU_LIMITS.description}
+        </p>
+        <FieldError id="mi-description-err" message={errors.description} />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -331,6 +414,7 @@ export function MenuItemForm({
                 <div className="flex flex-wrap items-center gap-2">
                   <input
                     className="input min-w-0 flex-1 basis-40"
+                    maxLength={MENU_LIMITS.groupName}
                     placeholder="Group name (e.g. Size)"
                     aria-label={`Modifier group ${gi + 1} name`}
                     value={g.name}
@@ -360,7 +444,8 @@ export function MenuItemForm({
                     <div key={o.key} className="grid grid-cols-[1fr_6.5rem_auto] items-center gap-2">
                       <input
                         className="input"
-                        placeholder={oi === 0 ? 'Option (e.g. Regular)' : 'Option'}
+                        maxLength={MENU_LIMITS.optionLabel}
+                        placeholder={oi === 0 ? 'Option (e.g. Regular)' : 'e.g. Large'}
                         aria-label={`${g.name || 'Group'} option ${oi + 1} label`}
                         value={o.label}
                         onChange={(e) => patchOption(g.key, o.key, { label: e.target.value })}
@@ -373,6 +458,7 @@ export function MenuItemForm({
                           className="input pl-7"
                           type="number"
                           min="0"
+                          max={MENU_LIMITS.price}
                           step="0.01"
                           inputMode="decimal"
                           placeholder="0.00"
@@ -411,21 +497,29 @@ export function MenuItemForm({
             {preview.modifiers.map(modifierSummary).join(' · ')}
           </div>
         ) : null}
+        {errors.modifiers ? (
+          <p id="mi-modifiers-err" role="alert" className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            {errors.modifiers}
+          </p>
+        ) : null}
       </fieldset>
 
-      {error ? (
-        <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
-        </p>
-      ) : null}
-
-      <div className="flex justify-end gap-2">
-        <button type="button" onClick={onCancel} className="btn-secondary">
-          Cancel
-        </button>
-        <button type="submit" className="btn-primary" disabled={submitting}>
-          {submitting ? 'Saving…' : initial ? 'Save changes' : 'Add item'}
-        </button>
+      <div className="space-y-2">
+        <SubmitHint id="mi-submit-hint" fields={v.invalidLabels} className="text-right" />
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={onCancel} className="btn-secondary">
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={submitting || !v.isValid}
+            aria-disabled={submitting || !v.isValid}
+            aria-describedby={v.isValid ? undefined : 'mi-submit-hint'}
+          >
+            {submitting ? 'Saving…' : initial ? 'Save changes' : 'Add item'}
+          </button>
+        </div>
       </div>
     </form>
   );

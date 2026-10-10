@@ -86,6 +86,38 @@ describe('CartProvider', () => {
     expect(result.current.lines).toEqual([]);
   });
 
+  it('refuses a 51st different line with a friendly message, but still adds to an existing line', async () => {
+    // Arrange — fill the cart with 50 different dishes
+    const { result } = renderCart();
+    await waitFor(() => expect(result.current.lines).toEqual([]));
+    for (let i = 0; i < 50; i += 1) {
+      act(() => {
+        result.current.add(makeItem({ id: `item_${i}`, name: `Dish ${i}` }));
+      });
+    }
+    toast.mockReset();
+
+    // Act
+    let added: boolean;
+    act(() => {
+      added = result.current.add(makeItem({ id: 'item_51', name: 'One too many' }));
+    });
+
+    // Assert
+    expect(added!).toBe(false);
+    expect(result.current.lines).toHaveLength(50);
+    expect(toast).toHaveBeenCalledWith(expect.stringMatching(/at most 50 different dishes/), 'error');
+
+    // Act
+    act(() => {
+      added = result.current.add(makeItem({ id: 'item_0', name: 'Dish 0' }));
+    });
+
+    // Assert
+    expect(added!).toBe(true);
+    expect(result.current.lines[0].qty).toBe(2);
+  });
+
   it('merges the same item and modifiers into one line instead of duplicating it', async () => {
     // Arrange
     const item = makeItem();

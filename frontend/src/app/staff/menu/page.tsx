@@ -21,6 +21,8 @@ import { RecipeEditor } from '@/components/inventory/recipe-editor';
 type AvailabilityFilter = 'all' | 'available' | 'out' | 'no-recipe';
 
 const OUT_REASONS = ['Sold out for today', 'Ingredient shortage', 'Supplier delivery delayed', 'Equipment issue'];
+/** Out-of-stock reasons are at most 200 characters (REASON_MAX in server/src/routes/menu.js). */
+const OOS_REASON_MAX = 200;
 
 /**
  * Staff menu (Sprint 2): waiters browse read-only, chefs toggle availability
@@ -428,10 +430,15 @@ function OutOfStockDialog({
             className="input"
             autoFocus
             required
+            maxLength={OOS_REASON_MAX}
             placeholder="e.g. Sold out for today"
             value={reason}
+            aria-describedby="oos-reason-count"
             onChange={(e) => setReason(e.target.value)}
           />
+          <p id="oos-reason-count" className="mt-1 text-right text-xs text-stone-500">
+            {reason.length}/{OOS_REASON_MAX}
+          </p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {OUT_REASONS.map((r) => (
               <button

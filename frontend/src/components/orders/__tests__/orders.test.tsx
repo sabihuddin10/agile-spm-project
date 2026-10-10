@@ -1034,6 +1034,26 @@ describe('OrderLineEditor', () => {
     expect(screen.getByText('$6.00', { selector: '.text-base' })).toBeInTheDocument();
   });
 
+  it('refuses a 51st different dish (server limit) with a friendly message', async () => {
+    // Arrange — 50 distinct pizza lines, one per extras combination
+    const user = userEvent.setup({ delay: null });
+    const full: DraftLine[] = Array.from({ length: 50 }, (_, i) => ({
+      key: `l${i}`,
+      menuItemId: 'pizza',
+      qty: 1,
+      modifiers: [{ group: 'Size', label: `Variant ${i}` }],
+    }));
+    render(<Harness initial={full} />);
+
+    // Act
+    await user.click(screen.getByRole('button', { name: /^Lemonade/ }));
+
+    // Assert
+    expect(payload()).toHaveLength(50);
+    expect(screen.getByText(/An order can have at most 50 different dishes./)).toHaveAttribute('role', 'status');
+    expect(payload().some((l: { menuItemId: string }) => l.menuItemId === 'lemonade')).toBe(false);
+  });
+
   it('opens the modifier picker with defaults pre-selected for a dish with options', async () => {
     // Arrange
     const user = userEvent.setup({ delay: null });

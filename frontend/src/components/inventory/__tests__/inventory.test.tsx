@@ -147,7 +147,11 @@ describe('IngredientForm', () => {
     await user.click(screen.getByRole('button', { name: 'Add ingredient' }));
 
     // Assert
-    expect(screen.getByRole('alert')).toHaveTextContent('Ingredient name is required.');
+    expect(screen.getByLabelText('Name *')).toHaveAccessibleDescription('Ingredient name is required.');
+    expect(screen.getByRole('button', { name: 'Add ingredient' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Add ingredient' })).toHaveAccessibleDescription(
+      'Complete these fields to continue: Name.',
+    );
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
@@ -163,8 +167,26 @@ describe('IngredientForm', () => {
     await user.click(screen.getByRole('button', { name: 'Add ingredient' }));
 
     // Assert
-    expect(screen.getByRole('alert')).toHaveTextContent('Category is required.');
+    expect(screen.getByLabelText('Category *')).toHaveAccessibleDescription('Category is required.');
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('caps text at the server limits and amounts at 1,000,000', async () => {
+    // Arrange
+    const user = userEvent.setup({ delay: null });
+    render(<IngredientForm {...baseProps} onSubmit={vi.fn()} onCancel={vi.fn()} />);
+
+    // Act
+    await user.type(screen.getByLabelText('Opening stock'), '1000001');
+    await user.type(screen.getByLabelText(/cost per kg/i), '1000000.5');
+
+    // Assert
+    expect(screen.getByLabelText('Name *')).toHaveAttribute('maxLength', '80');
+    expect(screen.getByLabelText('Category *')).toHaveAttribute('maxLength', '60');
+    expect(screen.getByLabelText('Supplier')).toHaveAttribute('maxLength', '120');
+    expect(screen.getByLabelText('Opening stock')).toHaveAccessibleDescription('Stock must be between 0 and 1,000,000.');
+    expect(screen.getByLabelText(/cost per kg/i)).toHaveAccessibleDescription('Cost per unit must be between 0 and 1,000,000.');
+    expect(screen.getByLabelText('Reorder level')).toHaveAttribute('max', '1000000');
   });
 
   it('rejects a negative reorder level', async () => {
@@ -180,7 +202,9 @@ describe('IngredientForm', () => {
     fireEvent.submit(screen.getByRole('button', { name: 'Add ingredient' }).closest('form')!);
 
     // Assert
-    expect(screen.getByRole('alert')).toHaveTextContent('Reorder level must be zero or more.');
+    expect(screen.getByLabelText('Reorder level')).toHaveAccessibleDescription(
+      'At or below this, the item is flagged low and managers are alerted. Reorder level must be between 0 and 1,000,000.',
+    );
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
@@ -470,6 +494,21 @@ describe('ReorderForm', () => {
     expect(screen.getByText('Estimated total $16.00')).toBeInTheDocument();
     expect(screen.getByText('1 line · 1 supplier')).toBeInTheDocument();
     expect(await screen.findByText('Test Bistro')).toBeInTheDocument();
+  });
+
+  it('caps supplier notes at 1000 characters with a live counter', async () => {
+    // Arrange
+    vi.mocked(inventoryApi.reorder).mockResolvedValue({ lines: [makeReorderLine()], estimatedTotal: 16 });
+    const user = userEvent.setup({ delay: null });
+    render(<ReorderForm inventory={[makeItem({ stock: 2 })]} onSubmitted={vi.fn()} />);
+    const notes = await screen.findByLabelText('Notes for suppliers');
+
+    // Act
+    await user.type(notes, 'Call on arrival');
+
+    // Assert
+    expect(notes).toHaveAttribute('maxLength', '1000');
+    expect(notes).toHaveAccessibleDescription('15/1000');
   });
 
   it('adds another ingredient at the documented suggestion (twice the reorder level minus stock)', async () => {

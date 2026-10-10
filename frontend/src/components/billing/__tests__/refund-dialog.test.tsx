@@ -31,7 +31,21 @@ describe('RefundDialog', () => {
 
     // Assert
     expect(screen.getByText(/give a reason/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^refund/i })).toBeDisabled();
     expect(billingApi.refund).not.toHaveBeenCalled();
+  });
+
+  it('caps the reason at 500 characters with a counter, and says why the button is disabled', () => {
+    // Arrange / Act
+    render(<RefundDialog invoice={makeInvoice()} onClose={vi.fn()} onUpdated={vi.fn()} />);
+
+    // Assert
+    const reason = screen.getByLabelText(/reason/i);
+    expect(reason).toHaveAttribute('maxLength', '500');
+    expect(reason).toHaveAccessibleDescription('0/500');
+    expect(screen.getByRole('button', { name: /^refund/i })).toHaveAccessibleDescription(
+      'Complete these fields to continue: Reason.',
+    );
   });
 
   it('rejects an amount above what remains refundable', async () => {

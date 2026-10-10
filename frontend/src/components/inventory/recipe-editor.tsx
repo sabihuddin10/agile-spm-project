@@ -17,6 +17,8 @@ interface Row {
 
 let rowSeq = 0;
 const newRow = (inventoryId = '', qty = ''): Row => ({ key: ++rowSeq, inventoryId, qty });
+/** Largest quantity per portion the server accepts (server/src/routes/menu.js). */
+const RECIPE_QTY_MAX = 100000;
 
 /**
  * Modal editor for a dish's bill of materials — which ingredients, and how much
@@ -64,6 +66,9 @@ export function RecipeEditor({
     const filled = rows.filter((r) => r.inventoryId || r.qty.trim());
     if (filled.some((r) => !r.inventoryId)) return setError('Choose an ingredient for every row (or remove the row).');
     if (filled.some((r) => !(toNumber(r.qty) > 0))) return setError('Each ingredient quantity must be greater than zero.');
+    if (filled.some((r) => toNumber(r.qty) > RECIPE_QTY_MAX)) {
+      return setError(`Each ingredient quantity can be at most ${RECIPE_QTY_MAX.toLocaleString('en-US')}.`);
+    }
 
     setSaving(true);
     try {
@@ -85,7 +90,7 @@ export function RecipeEditor({
 
   return (
     <Modal title={`Recipe · ${item.name}`} onClose={onClose} wide>
-      <form onSubmit={save} className="space-y-4">
+      <form onSubmit={save} noValidate className="space-y-4">
         <p className="text-sm text-stone-500">
           Quantities are for <span className="font-medium text-stone-700">one portion</span>. When an order with this
           dish is closed, these amounts are deducted from inventory automatically.
@@ -140,10 +145,12 @@ export function RecipeEditor({
                       className="input"
                       type="number"
                       min="0"
+                      max={RECIPE_QTY_MAX}
                       step="any"
                       inputMode="decimal"
                       aria-label={`Quantity${ing ? ` of ${ing.name}` : ''}`}
-                      placeholder="0"
+                      aria-invalid={toNumber(row.qty) > RECIPE_QTY_MAX || undefined}
+                      placeholder="e.g. 0.25"
                       value={row.qty}
                       onChange={(e) => patch(row.key, { qty: e.target.value })}
                     />
