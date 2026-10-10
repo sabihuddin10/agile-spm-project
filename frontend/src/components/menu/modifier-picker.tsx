@@ -54,7 +54,7 @@ export function ModifierPicker({
                   role={g.type === 'single' ? 'radio' : 'checkbox'}
                   aria-checked={on}
                   onClick={() => pick(g.name, o.label, g.type)}
-                  className={`rounded-full border px-3.5 py-1.5 text-sm transition ${
+                  className={`rounded-full border px-3 py-1.5 text-sm transition ${
                     on
                       ? dark
                         ? 'border-ember bg-ember/15 text-bone'

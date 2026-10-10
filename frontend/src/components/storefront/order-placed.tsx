@@ -25,8 +25,8 @@ export function paymentText(order: Pick<Order, 'paymentStatus' | 'paymentMethod'
  */
 export function OrderPlaced({ order, onDone }: { order: Order; onDone: () => void }) {
   return (
-    <div className="flex flex-1 flex-col items-center overflow-y-auto px-6 py-10 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-ember/15 text-ember-soft">
+    <div className="flex flex-1 flex-col items-center overflow-y-auto px-4 py-8 text-center sm:px-6 sm:py-10">
+      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-ember/15 text-ember-soft">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-7 w-7" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
         </svg>
@@ -51,10 +51,10 @@ export function OrderPlaced({ order, onDone }: { order: Order; onDone: () => voi
       </dl>
 
       <div className="mt-6 flex w-full max-w-xs flex-col gap-2">
-        <Link href="/account#orders" onClick={onDone} className="btn-secondary w-full !py-2.5 text-sm">
+        <Link href="/account#orders" onClick={onDone} className="btn-secondary h-10 w-full lg:h-12">
           Track it in My account
         </Link>
-        <button type="button" className="btn-primary w-full !py-2.5 text-sm" onClick={onDone}>
+        <button type="button" className="btn-primary h-10 w-full lg:h-12" onClick={onDone}>
           Done
         </button>
       </div>

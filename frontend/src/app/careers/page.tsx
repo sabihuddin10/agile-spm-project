@@ -14,11 +14,11 @@ const PERKS = [
 export default function CareersPage() {
   return (
     <StorefrontShell>
-      <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-14">
-        <div className="grid gap-10 lg:grid-cols-[1fr_minmax(0,28rem)] lg:gap-14">
+      <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-12 lg:py-14">
+        <div className="grid gap-8 lg:grid-cols-[1fr_minmax(0,28rem)] lg:gap-14">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ember-soft">Careers</p>
-            <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight text-bone sm:text-5xl">
+            <h1 className="mt-2 font-display text-5xl font-semibold tracking-tight text-bone">
               Join our team
             </h1>
             <p className="mt-4 max-w-xl text-bone-dim">
@@ -31,7 +31,7 @@ export default function CareersPage() {
               your staff account so you can see your shifts from day one.
             </p>
 
-            <ul className="mt-8 space-y-4">
+            <ul className="mt-6 space-y-4 md:mt-8">
               {PERKS.map((p) => (
                 <li key={p.title} className="flex gap-3">
                   <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-ember" aria-hidden="true" />

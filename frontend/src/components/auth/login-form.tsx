@@ -127,7 +127,7 @@ export function LoginForm() {
 
           <button
             type="submit"
-            className="btn-primary w-full"
+            className="btn-primary h-10 w-full lg:h-12"
             disabled={submitting || !v.isValid}
             aria-disabled={submitting || !v.isValid}
             aria-describedby={v.isValid ? undefined : 'login-submit-hint'}

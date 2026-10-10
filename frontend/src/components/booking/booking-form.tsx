@@ -180,7 +180,7 @@ export function BookingForm() {
   if (done) {
     const inAccount = user?.role === 'customer';
     return (
-      <Card className="w-full max-w-xl p-6 text-center sm:p-8">
+      <Card className="w-full max-w-xl p-5 text-center sm:p-8">
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-ember/15 text-ember-soft">
           <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -404,7 +404,7 @@ export function BookingForm() {
           {summary ? <p className="text-center text-sm text-bone-dim">{summary}</p> : null}
           <button
             type="submit"
-            className="btn-primary w-full"
+            className="btn-primary h-10 w-full lg:h-12"
             disabled={submitting || !v.isValid}
             aria-disabled={submitting || !v.isValid}
             aria-describedby={v.isValid ? undefined : 'bk-submit-hint'}

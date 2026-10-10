@@ -56,14 +56,14 @@ export default function AccountPage() {
 
   return (
     <StorefrontShell>
-      <section className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
-        <header className="mb-8 border-b border-char-hairline pb-8">
+      <section className="mx-auto max-w-4xl px-4 py-8 sm:px-6 md:py-10">
+        <header className="mb-6 border-b border-char-hairline pb-6 md:mb-8 md:pb-8">
           <h1 className="font-display text-4xl font-semibold tracking-tight text-bone">Your account</h1>
           <p className="mt-3 text-sm text-bone-dim">
             Track your orders, and keep your allergies and contact details up to date so the kitchen cooks for you.
           </p>
           {customer ? (
-            <dl className="mt-6 grid grid-cols-3 gap-3">
+            <dl className="mt-5 grid grid-cols-3 gap-2 sm:gap-3 md:mt-6">
               <Stat label="Flame Points" value={String(customer.loyaltyPoints)} accent />
               <Stat label="Orders" value={String(customer.orderCount ?? customer.orderHistory?.length ?? 0)} />
               <Stat label="Total spend" value={money(customer.totalSpend)} />
@@ -71,7 +71,7 @@ export default function AccountPage() {
           ) : null}
         </header>
 
-        <div className="space-y-8">
+        <div className="space-y-6 md:space-y-8">
           <MyOrders onActivity={loadCustomer} />
 
           {customer ? (
@@ -100,9 +100,9 @@ export default function AccountPage() {
 
 function Stat({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
   return (
-    <div className="flex flex-col-reverse rounded-xl border border-char-hairline bg-char-raised px-3 py-3 text-center sm:px-4">
-      <dt className="mt-0.5 text-[11px] font-medium uppercase tracking-wide text-bone-faint">{label}</dt>
-      <dd className={`font-display text-xl font-semibold sm:text-2xl ${accent ? 'text-ember-soft' : 'text-bone'}`}>{value}</dd>
+    <div className="flex flex-col-reverse rounded-xl border border-char-hairline bg-char-raised px-2 py-2.5 text-center sm:px-4 sm:py-3">
+      <dt className="mt-0.5 text-2xs font-medium uppercase tracking-wide text-bone-faint">{label}</dt>
+      <dd className={`font-display text-2xl font-semibold ${accent ? 'text-ember-soft' : 'text-bone'}`}>{value}</dd>
     </div>
   );
 }

@@ -24,7 +24,7 @@ export function MenuDrawer({ open, onClose }: { open: boolean; onClose: () => vo
   if (!open) return null;
 
   const linkClass = (href: string) =>
-    `flex items-center justify-between rounded-pill px-4 py-3 text-[15px] font-medium transition ${
+    `flex items-center justify-between rounded-pill px-4 py-2.5 text-sm font-medium transition ${
       pathname === href ? 'bg-ember/10 text-ember' : 'text-bone hover:bg-char-deep hover:text-bone'
     }`;
 
@@ -39,7 +39,7 @@ export function MenuDrawer({ open, onClose }: { open: boolean; onClose: () => vo
           <button
             type="button"
             onClick={onClose}
-            className="rounded-pill border border-char-hairline p-1.5 text-bone-faint transition hover:bg-char-deep hover:text-bone"
+            className="flex h-9 w-9 items-center justify-center rounded-pill border border-char-hairline text-bone-faint transition hover:bg-char-deep hover:text-bone"
             aria-label="Close menu"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4" aria-hidden="true">
@@ -93,7 +93,7 @@ export function MenuDrawer({ open, onClose }: { open: boolean; onClose: () => vo
               <Link
                 href="/login"
                 onClick={onClose}
-                className="flex items-center rounded-pill bg-ember px-4 py-3 text-[15px] font-extrabold text-bone"
+                className="flex items-center rounded-pill bg-ember px-4 py-2.5 text-sm font-bold text-bone"
               >
                 Sign in
               </Link>

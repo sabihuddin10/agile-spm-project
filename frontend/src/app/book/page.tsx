@@ -5,9 +5,9 @@ import { BookingForm } from '@/components/booking/booking-form';
 export default function BookPage() {
   return (
     <StorefrontShell>
-      <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
+      <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-12 lg:py-14">
         <div className="max-w-3xl">
-          <h1 className="font-display text-3xl font-semibold sm:text-4xl tracking-tight text-bone">
+          <h1 className="font-display text-4xl font-semibold tracking-tight text-bone">
             Reserve your evening
           </h1>
           <p className="mt-3 max-w-2xl text-bone-dim">
@@ -16,7 +16,7 @@ export default function BookPage() {
           </p>
         </div>
 
-        <div className="mt-8 sm:mt-9">
+        <div className="mt-6 md:mt-9">
           <BookingForm />
         </div>
       </section>
