@@ -1,0 +1,75 @@
+/**
+ * Field validators for the public, customer and account forms. Each takes the
+ * raw input and returns an error message, or undefined when the value is fine.
+ * The limits match the server's (server/src/lib/validate.js).
+ */
+
+export const NAME_MAX = 80;
+export const EMAIL_MAX = 254;
+export const PHONE_MIN_DIGITS = 7;
+export const PHONE_MAX_DIGITS = 20;
+export const PHONE_MAX = 30;
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_RE = /^[0-9+()\-.\s]*$/;
+// eslint-disable-next-line no-control-regex
+const CONTROL_RE = /[\u0000-\u001F\u007F]/;
+
+export type FieldValidator<T = string> = (value: T) => string | undefined;
+
+export function validateRequired(value: string, message = 'This field is required.'): string | undefined {
+  return value.trim() ? undefined : message;
+}
+
+export function validateName(value: string, { required = true, missing = 'Please enter your name.' } = {}): string | undefined {
+  const clean = value.trim();
+  if (!clean) return required ? missing : undefined;
+  if (clean.length > NAME_MAX) return `Keep it to ${NAME_MAX} characters or fewer.`;
+  if (CONTROL_RE.test(clean)) return 'Remove the unsupported characters.';
+  return undefined;
+}
+
+export function isValidEmail(value: string): boolean {
+  const clean = value.trim();
+  return clean.length <= EMAIL_MAX && EMAIL_RE.test(clean);
+}
+
+export function validateEmail(value: string, { required = true, missing = 'Please enter your email address.' } = {}): string | undefined {
+  const clean = value.trim();
+  if (!clean) return required ? missing : undefined;
+  if (clean.length > EMAIL_MAX) return `Email addresses are at most ${EMAIL_MAX} characters.`;
+  if (!EMAIL_RE.test(clean)) return 'Enter an email address like name@example.com.';
+  return undefined;
+}
+
+/** Digits, spaces, + ( ) - . with 7–20 digits. Optional unless `required`. */
+export function validatePhone(value: string, { required = false } = {}): string | undefined {
+  const clean = value.trim();
+  if (!clean) return required ? 'Please enter a phone number.' : undefined;
+  if (!PHONE_RE.test(clean)) return 'Use digits, spaces and + ( ) - . only.';
+  const digits = clean.replace(/\D/g, '').length;
+  if (digits < PHONE_MIN_DIGITS || digits > PHONE_MAX_DIGITS || clean.length > PHONE_MAX) {
+    return `Phone numbers have ${PHONE_MIN_DIGITS} to ${PHONE_MAX_DIGITS} digits.`;
+  }
+  return undefined;
+}
+
+export function validateMaxLength(value: string, max: number, label = 'This'): string | undefined {
+  return value.length > max ? `${label} can be at most ${max} characters (${value.length} now).` : undefined;
+}
+
+/** A whole number within [min, max]. Accepts numbers or numeric strings. */
+export function validateIntegerInRange(value: number | string, min: number, max: number, label = 'This'): string | undefined {
+  const n = typeof value === 'number' ? value : value.trim() === '' ? NaN : Number(value);
+  if (!Number.isInteger(n)) return `${label} must be a whole number.`;
+  if (n < min || n > max) return `${label} must be between ${min} and ${max}.`;
+  return undefined;
+}
+
+/** A 'YYYY-MM-DD' date that is today (`today`, same format) or later. */
+export function validateFutureDate(value: string, today: string): string | undefined {
+  if (!value) return 'Please choose a date.';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return 'Choose a valid date.';
+  if (today && value < today) return 'Please choose today or a later date.';
+  return undefined;
+}

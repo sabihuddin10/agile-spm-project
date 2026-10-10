@@ -66,7 +66,7 @@ describe('ProfileEditor', () => {
     await user.click(screen.getByRole('button', { name: /save changes/i }));
 
     // Assert
-    expect(screen.getByRole('alert')).toHaveTextContent('Name cannot be empty.');
+    expect(screen.getByLabelText('Name')).toHaveAccessibleDescription('Name cannot be empty.');
     expect(customerApi.updateMe).not.toHaveBeenCalled();
   });
 
@@ -82,7 +82,7 @@ describe('ProfileEditor', () => {
     await user.click(screen.getByRole('button', { name: /save changes/i }));
 
     // Assert
-    expect(screen.getByRole('alert')).toHaveTextContent('Please enter a valid email address.');
+    expect(screen.getByLabelText('Email')).toHaveAccessibleDescription('Enter an email address like name@example.com.');
     expect(customerApi.updateMe).not.toHaveBeenCalled();
   });
 

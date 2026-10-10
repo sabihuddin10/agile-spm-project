@@ -7,7 +7,9 @@ import { errorMessage } from '@/lib/format';
 import { useAuth } from '@/context/auth-context';
 import { Card, CardHeader } from '@/components/ui/card';
 import { useToast } from '@/components/ui/toast';
-import { TextField, isValidEmail } from '@/components/staff/text-field';
+import { TextField } from '@/components/staff/text-field';
+import { validateEmail, validateName, validatePhone, EMAIL_MAX, NAME_MAX, PHONE_MAX } from '@/lib/validation/fields';
+import { useFormValidation, type Rules } from '@/lib/validation/use-form-validation';
 
 interface Draft {
   name: string;
@@ -16,6 +18,19 @@ interface Draft {
 }
 
 type Errors = Partial<Record<keyof Draft | 'currentPassword', string>>;
+
+interface Values extends Draft {
+  currentPassword: string;
+  /** Whether the sign-in email differs from the saved one (then the current password is needed). */
+  emailChanged: boolean;
+}
+
+const RULES: Rules<Values> = {
+  name: (v) => validateName(v, { missing: 'Enter your name.' }),
+  email: (v) => validateEmail(v, { missing: 'Enter a valid email address.' }),
+  phone: (v) => validatePhone(v),
+  currentPassword: (v, all) => (all.emailChanged && !v ? 'Enter your current password to change your email.' : undefined),
+};
 
 const toDraft = (u: User): Draft => ({ name: u.name, email: u.email, phone: u.phone ?? '' });
 
@@ -29,33 +44,31 @@ export function AccountProfileForm({ user }: { user: User }) {
   const [saved, setSaved] = useState<Draft>(() => toDraft(user));
   const [draft, setDraft] = useState<Draft>(saved);
   const [currentPassword, setCurrentPassword] = useState('');
-  const [errors, setErrors] = useState<Errors>({});
+  /** Errors the server sent back (shown until the field is edited). */
+  const [serverErrors, setServerErrors] = useState<Errors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const emailChanged = draft.email.trim().toLowerCase() !== saved.email.toLowerCase();
   const dirty = draft.name !== saved.name || draft.email !== saved.email || draft.phone !== saved.phone;
+  const v = useFormValidation<Values>({ ...draft, currentPassword, emailChanged }, RULES);
+  const errors: Errors = {
+    name: serverErrors.name ?? v.errors.name,
+    email: serverErrors.email ?? v.errors.email,
+    phone: serverErrors.phone ?? v.errors.phone,
+    currentPassword: serverErrors.currentPassword ?? v.errors.currentPassword,
+  };
 
   function set(key: keyof Draft, value: string) {
     setDraft((d) => ({ ...d, [key]: value }));
-    setErrors((e) => ({ ...e, [key]: undefined }));
+    setServerErrors((e) => ({ ...e, [key]: undefined }));
     setFormError(null);
-  }
-
-  function validate(): Errors {
-    const next: Errors = {};
-    if (!draft.name.trim()) next.name = 'Enter your name.';
-    if (!isValidEmail(draft.email)) next.email = 'Enter a valid email address.';
-    if (emailChanged && !currentPassword) next.currentPassword = 'Enter your current password to change your email.';
-    return next;
   }
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    const found = validate();
-    setErrors(found);
     setFormError(null);
-    if (Object.keys(found).length > 0) return;
+    if (!v.touchAll()) return;
 
     setSaving(true);
     try {
@@ -68,12 +81,13 @@ export function AccountProfileForm({ user }: { user: User }) {
       setSaved(next);
       setDraft(next);
       setCurrentPassword('');
+      v.reset();
       updateSession(updated);
       toast('Profile saved.', 'success');
     } catch (err) {
       const message = errorMessage(err, 'Your profile could not be saved.');
-      if (err instanceof ApiError && err.status === 409) setErrors({ email: message });
-      else if (err instanceof ApiError && err.status === 400 && /password/i.test(message)) setErrors({ currentPassword: message });
+      if (err instanceof ApiError && err.status === 409) setServerErrors({ email: message });
+      else if (err instanceof ApiError && err.status === 400 && /password/i.test(message)) setServerErrors({ currentPassword: message });
       else setFormError(message);
     } finally {
       setSaving(false);
@@ -89,8 +103,10 @@ export function AccountProfileForm({ user }: { user: User }) {
             id="account-name"
             label="Name"
             value={draft.name}
-            onChange={(v) => set('name', v)}
+            onChange={(value) => set('name', value)}
+            onBlur={() => v.blur('name')}
             autoComplete="name"
+            maxLength={NAME_MAX + 20}
             error={errors.name}
           />
           <TextField
@@ -98,8 +114,10 @@ export function AccountProfileForm({ user }: { user: User }) {
             label="Email"
             type="email"
             value={draft.email}
-            onChange={(v) => set('email', v)}
+            onChange={(value) => set('email', value)}
+            onBlur={() => v.blur('email')}
             autoComplete="email"
+            maxLength={EMAIL_MAX}
             error={errors.email}
             hint="You sign in with this address."
           />
@@ -108,8 +126,12 @@ export function AccountProfileForm({ user }: { user: User }) {
             label="Phone"
             type="tel"
             value={draft.phone}
-            onChange={(v) => set('phone', v)}
+            onChange={(value) => set('phone', value)}
+            onBlur={() => v.blur('phone')}
             autoComplete="tel"
+            maxLength={PHONE_MAX}
+            error={errors.phone}
+            hint="Digits, spaces and + ( ) - . (7 to 20 digits)."
             optional
           />
           {emailChanged ? (
@@ -118,10 +140,11 @@ export function AccountProfileForm({ user }: { user: User }) {
               label="Current password"
               type="password"
               value={currentPassword}
-              onChange={(v) => {
-                setCurrentPassword(v);
-                setErrors((e) => ({ ...e, currentPassword: undefined }));
+              onChange={(value) => {
+                setCurrentPassword(value);
+                setServerErrors((e) => ({ ...e, currentPassword: undefined }));
               }}
+              onBlur={() => v.blur('currentPassword')}
               autoComplete="current-password"
               error={errors.currentPassword}
               hint="Needed to change the email you sign in with."
@@ -146,7 +169,8 @@ export function AccountProfileForm({ user }: { user: User }) {
               onClick={() => {
                 setDraft(saved);
                 setCurrentPassword('');
-                setErrors({});
+                setServerErrors({});
+                v.reset();
                 setFormError(null);
               }}
             >
