@@ -66,7 +66,7 @@ export function CustomerDetail({
         ) : null}
       </div>
 
-      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4 xl:grid-cols-2">
+      <div className="stat-row grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-2">
         <Stat label="Total spend" value={money(customer.totalSpend)} />
         <Stat label="Orders" value={String(totalOrders)} />
         <Stat label="Avg / order" value={money(avgOrder)} />
@@ -131,10 +131,11 @@ export function CustomerDetail({
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    // Phones: one short row, label left and value right; from sm a centred tile.
-    <div className="flex flex-row-reverse items-baseline justify-between gap-3 rounded-lg bg-stone-50 p-3 sm:block sm:px-3 sm:py-2.5 sm:text-center">
-      <p className="text-xl font-bold tabular-nums text-stone-800 sm:text-lg">{value}</p>
-      <p className="text-xs font-medium uppercase tracking-wide text-stone-500">{label}</p>
+    // A pill like the order filter chips on phones (see .stat in globals.css); from sm a centred
+    // tile with the number above its label. order-first only acts in the (flex) pill, so the label leads there.
+    <div className="stat rounded-lg bg-stone-50 px-3 py-2.5 text-center">
+      <p className="stat-value text-lg font-bold tabular-nums text-stone-800">{value}</p>
+      <p className="stat-label order-first text-xs font-medium uppercase tracking-wide text-stone-500">{label}</p>
     </div>
   );
 }
