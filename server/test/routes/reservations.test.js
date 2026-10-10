@@ -128,3 +128,23 @@ test('/reservations/mine is empty for staff and 401 without a login', async () =
   assert.deepEqual(staff.body.reservations, []);
   assert.equal(anonymous.status, 401);
 });
+
+test('the upcoming list keeps last night\'s late guests after midnight, but not finished bookings', async () => {
+  // Arrange — two of yesterday's late-evening bookings: one still awaiting the guest, one already seated
+  const { reservations } = await import('../../src/data/store.js');
+  const yesterday = inDays(-1);
+  const base = { phone: '', specialRequests: '', tableId: null, customerId: null, partySize: 2, date: yesterday, time: '23:30', createdAt: new Date().toISOString() };
+  reservations.push(
+    { ...base, id: 'res_lastnight_waiting', customerName: 'Late Larry', email: 'larry@example.com', status: 'confirmed' },
+    { ...base, id: 'res_lastnight_seated', customerName: 'Seated Sam', email: 'sam@example.com', status: 'seated' },
+  );
+
+  // Act
+  const { body } = await api.call('GET', '/reservations', { token: waiter });
+
+  // Assert
+  const ids = body.reservations.map((r) => r.id);
+  assert.ok(ids.includes('res_lastnight_waiting'), 'a late confirmed booking from last night still needs action');
+  assert.equal(body.reservations.find((r) => r.id === 'res_lastnight_waiting').late, true);
+  assert.ok(!ids.includes('res_lastnight_seated'), 'finished bookings from yesterday stay in Past');
+});
