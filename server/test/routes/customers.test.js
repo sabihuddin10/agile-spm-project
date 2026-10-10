@@ -14,10 +14,10 @@ test('US1.2 profile edits persist; duplicate emails are refused', async () => {
   const token = await api.login('customer');
 
   // Act
-  const updated = await api.call('PATCH', '/customers/me', { token, body: { phone: '+1 555-7777', notes: 'Booth please' } });
+  const updated = await api.call('PATCH', '/customers/me', { token, body: { phone: '0333 5557777', notes: 'Booth please' } });
 
   // Assert
-  assert.equal(updated.body.customer.phone, '+1 555-7777');
+  assert.equal(updated.body.customer.phone, '+92 333 5557777');
   assert.equal((await api.call('GET', '/customers/me', { token })).body.customer.notes, 'Booth please');
 
   // Act / Assert — email must stay unique
@@ -60,7 +60,7 @@ test('US1.4 order history is listed newest first with totals', async () => {
   assert.ok(body.customer.totalSpend > 0);
 
   // Act / Assert — a brand-new customer has an empty history
-  const fresh = await api.call('POST', '/customers', { token, body: { name: 'No Orders Yet', phone: '+1 555 0150' } });
+  const fresh = await api.call('POST', '/customers', { token, body: { name: 'No Orders Yet', phone: '+92 300 5550150' } });
   assert.deepEqual(fresh.body.customer.orderHistory, []);
 });
 
@@ -77,7 +77,7 @@ test('US1.5 allergies travel with active orders for waiter and chef', async () =
 test('DELETE /customers/:id a manager removes a customer from the ledger; a waiter may not', async () => {
   // Arrange
   const [waiter, token] = await Promise.all([api.login('waiter'), api.login('manager')]);
-  const created = await api.call('POST', '/customers', { token: waiter, body: { name: 'Delete Me Walkin', phone: '+1 555 0151' } });
+  const created = await api.call('POST', '/customers', { token: waiter, body: { name: 'Delete Me Walkin', phone: '+92 300 5550151' } });
   const id = created.body.customer.id;
 
   // Act
@@ -137,7 +137,7 @@ test('DELETE /customers/:id refuses a customer with order history, keeping their
 test('customer records are type-checked, and null preferences no longer crash the request', async () => {
   // Arrange
   const token = await api.login('waiter');
-  const create = (extra) => api.call('POST', '/customers', { token, body: { name: 'Type Check', phone: '+1 555 0152', ...extra } });
+  const create = (extra) => api.call('POST', '/customers', { token, body: { name: 'Type Check', phone: '+92 300 5550152', ...extra } });
 
   // Act
   const nullPrefs = await create({ preferences: null });
@@ -160,7 +160,7 @@ test('loyalty points, id and account link cannot be set through the body', async
   const before = (await api.call('GET', '/customers/me', { token: customer })).body.customer;
 
   // Act
-  const created = await api.call('POST', '/customers', { token: waiter, body: { name: 'Mass Assign', phone: '+1 555 0153', loyaltyPoints: 99999, id: 'cus_hijack', userId: 'usr_admin' } });
+  const created = await api.call('POST', '/customers', { token: waiter, body: { name: 'Mass Assign', phone: '+92 300 5550153', loyaltyPoints: 99999, id: 'cus_hijack', userId: 'usr_admin' } });
   const self = await api.call('PATCH', '/customers/me', { token: customer, body: { loyaltyPoints: 99999, userId: 'usr_admin', id: 'cus_hijack' } });
 
   // Assert

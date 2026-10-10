@@ -62,15 +62,33 @@ export function validateEmail(value: string, { required = true, missing = 'Pleas
   return undefined;
 }
 
-/** Digits, spaces, + ( ) - . with 7–20 digits. Optional unless `required`. */
+/** The one stored format for phone numbers: a Pakistani mobile, e.g. "+92 300 1234567". */
+export const PHONE_FORMAT_RE = /^\+92 3\d{2} \d{7}$/;
+
+/**
+ * Formats a phone field as the user types or pastes: anything but digits is dropped,
+ * and 0300…, 92300…, 0092300… or 300… all become "+92 300 1234567".
+ */
+export function formatPhoneInput(raw: string): string {
+  const text = raw.trim();
+  let digits: string;
+  if (text.startsWith('+92')) {
+    digits = text.slice(3).replace(/\D/g, '');
+  } else {
+    digits = text.replace(/\D/g, '');
+    if (digits.startsWith('0092')) digits = digits.slice(4);
+    else if (digits.length > 10 && digits.startsWith('92')) digits = digits.slice(2);
+  }
+  digits = digits.replace(/^0+/, '').slice(0, 10);
+  if (!digits) return '';
+  return `+92 ${digits.length > 3 ? `${digits.slice(0, 3)} ${digits.slice(3)}` : digits}`;
+}
+
+/** A Pakistani mobile number in the stored format. Optional unless `required`. */
 export function validatePhone(value: string, { required = false } = {}): string | undefined {
   const clean = value.trim();
   if (!clean) return required ? 'Please enter a phone number.' : undefined;
-  if (!PHONE_RE.test(clean)) return 'Use digits, spaces and + ( ) - . only.';
-  const digits = clean.replace(/\D/g, '').length;
-  if (digits < PHONE_MIN_DIGITS || digits > PHONE_MAX_DIGITS || clean.length > PHONE_MAX) {
-    return `Phone numbers have ${PHONE_MIN_DIGITS} to ${PHONE_MAX_DIGITS} digits.`;
-  }
+  if (!PHONE_FORMAT_RE.test(clean)) return 'Enter a mobile number like 0300 1234567.';
   return undefined;
 }
 

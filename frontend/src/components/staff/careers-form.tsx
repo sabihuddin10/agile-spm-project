@@ -7,7 +7,7 @@ import { errorMessage } from '@/lib/format';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/components/ui/toast';
 import {
-  normalizeName, validateEmail, validateMaxLength, validateName, validatePhone, EMAIL_MAX, NAME_MAX, PHONE_MAX,
+  normalizeName, validateEmail, validateMaxLength, validateName, formatPhoneInput, validatePhone, EMAIL_MAX, NAME_MAX, PHONE_MAX,
 } from '@/lib/validation/fields';
 import { useFormValidation, type Rules } from '@/lib/validation/use-form-validation';
 import { FieldError, SubmitHint, describedBy } from '@/components/forms/field-error';
@@ -194,11 +194,11 @@ export function CareersForm() {
               className="input"
               type="tel"
               autoComplete="tel"
-              inputMode="tel"
+              inputMode="numeric"
               maxLength={PHONE_MAX}
               placeholder="+92 300 1234567"
               value={form.phone}
-              onChange={(e) => set('phone', e.target.value)}
+              onChange={(e) => set('phone', formatPhoneInput(e.target.value))}
               onBlur={() => v.blur('phone')}
               aria-invalid={Boolean(v.errors.phone) || undefined}
               aria-describedby={describedBy(v.errors.phone && 'apply-phone-error')}

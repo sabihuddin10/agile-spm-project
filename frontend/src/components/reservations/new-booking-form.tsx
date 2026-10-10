@@ -8,7 +8,7 @@ import { useToast } from '@/components/ui/toast';
 import { FieldError, SubmitHint, describedBy } from '@/components/forms/field-error';
 import { TONES } from '@/components/forms/tone';
 import {
-  normalizeName, validateEmail, validateMaxLength, validateName, validatePhone,
+  normalizeName, validateEmail, validateMaxLength, validateName, formatPhoneInput, validatePhone,
   EMAIL_MAX, NAME_MAX, PHONE_MAX,
 } from '@/lib/validation/fields';
 import { useFormValidation, type Rules } from '@/lib/validation/use-form-validation';
@@ -181,13 +181,13 @@ export function NewBookingForm({
             id="nb-phone"
             className={`input ${errors.phone ? ERR : ''}`}
             type="tel"
-            inputMode="tel"
+            inputMode="numeric"
             maxLength={PHONE_MAX}
             placeholder="+92 300 1234567"
             value={form.phone}
             aria-invalid={Boolean(errors.phone) || undefined}
             aria-describedby={describedBy(errors.phone && 'nb-phone-err')}
-            onChange={(e) => set('phone', e.target.value)}
+            onChange={(e) => set('phone', formatPhoneInput(e.target.value))}
             onBlur={() => v.blur('phone')}
           />
           <FieldError id="nb-phone-err" message={errors.phone} />

@@ -9,7 +9,7 @@ import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/format';
 import { ALLERGY_OPTIONS, DIETARY_OPTIONS, optionsWith, toggleValue } from '@/components/customers/preference-options';
 import {
-  normalizeName, validateEmail, validateMaxLength, validateName, validatePhone, EMAIL_MAX, NAME_MAX, PHONE_MAX,
+  normalizeName, validateEmail, validateMaxLength, validateName, formatPhoneInput, validatePhone, EMAIL_MAX, NAME_MAX, PHONE_MAX,
 } from '@/lib/validation/fields';
 import { useFormValidation, type Rules } from '@/lib/validation/use-form-validation';
 import { FieldError, SubmitHint, describedBy } from '@/components/forms/field-error';
@@ -134,7 +134,7 @@ export function ProfileEditor({ customer, onSaved }: { customer: Customer; onSav
             label="Phone"
             type="tel"
             value={draft.phone}
-            onChange={(value) => set('phone', value)}
+            onChange={(value) => set('phone', formatPhoneInput(value))}
             onBlur={() => v.blur('phone')}
             error={v.errors.phone}
             autoComplete="tel"
