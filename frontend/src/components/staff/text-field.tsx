@@ -47,7 +47,7 @@ export function TextField({
     <div>
       <label htmlFor={id} className="label">
         {label}
-        {optional ? <span className="font-normal text-stone-400"> (optional)</span> : null}
+        {optional ? <span className="font-normal text-stone-500"> (optional)</span> : null}
       </label>
       <input
         id={id}
