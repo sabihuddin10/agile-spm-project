@@ -95,7 +95,7 @@ export function Modal({
 
   return (
     <div
-      className={`fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto p-4 sm:p-8 ${
+      className={`fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto p-3 sm:p-8 ${
         dark ? 'bg-char-deep/75 backdrop-blur-sm' : 'bg-stone-900/40'
       }`}
       onMouseDown={(e) => {
@@ -113,7 +113,7 @@ export function Modal({
         }`}
       >
         <div
-          className={`flex items-center justify-between gap-3 border-b py-3 pl-5 pr-3 ${dark ? 'border-char-hairline' : 'border-stone-200'}`}
+          className={`flex items-center justify-between gap-3 border-b py-2 pl-4 pr-2 sm:py-3 sm:pl-5 sm:pr-3 ${dark ? 'border-char-hairline' : 'border-stone-200'}`}
         >
           <h2 id={titleId} className={`font-semibold ${dark ? 'font-display text-lg text-bone' : ''}`}>
             {title}
@@ -129,7 +129,7 @@ export function Modal({
             <XMarkIcon className="h-5 w-5" />
           </button>
         </div>
-        <div className="p-5" data-modal-body>
+        <div className="p-4 sm:p-5" data-modal-body>
           {children}
         </div>
       </div>

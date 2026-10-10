@@ -113,7 +113,7 @@ export default function KitchenPage() {
             <Stat label="Ready for pickup" value={ready.length} tone={ready.length ? 'emerald' : undefined} />
           </dl>
 
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
+          <div className="grid gap-4 sm:gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
             <section aria-labelledby="queue-heading">
               <h2 id="queue-heading" className="mb-3 text-lg font-semibold text-stone-900">
                 Queue

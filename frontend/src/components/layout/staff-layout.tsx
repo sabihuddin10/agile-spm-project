@@ -40,7 +40,7 @@ export function StaffLayout({ children, section }: { children: React.ReactNode; 
   if (forbidden) {
     return (
       <StaffShell>
-        <div className="mx-auto mt-16 max-w-md rounded-xl border border-red-200 bg-white p-8 text-center shadow-sm">
+        <div className="mx-auto mt-16 max-w-md rounded-xl border border-red-200 bg-white p-5 text-center sm:p-8 shadow-sm">
           <p className="font-mono text-sm font-semibold text-red-600">403 · Forbidden</p>
           <h1 className="mt-2 text-xl font-bold">You don&apos;t have access to this page</h1>
           <p className="mt-2 text-sm text-stone-500">

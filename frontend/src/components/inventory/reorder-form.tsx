@@ -165,7 +165,7 @@ export function ReorderForm({
             Pre-filled with every ingredient at or below its reorder level, topped back up to twice that level.
           </p>
         </div>
-        <button type="button" className="btn-ghost text-xs" onClick={loadSuggestions} disabled={loading || submitting}>
+        <button type="button" className="btn-ghost btn-sm" onClick={loadSuggestions} disabled={loading || submitting}>
           ↻ Reset to suggestions
         </button>
       </div>

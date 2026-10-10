@@ -192,7 +192,7 @@ export function StaffShell({ children }: { children: React.ReactNode }) {
               logout();
               router.push('/login');
             }}
-            className="btn-ghost !px-2 !py-1 text-xs"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-stone-500 transition hover:bg-stone-100 hover:text-stone-800"
             title="Sign out"
             aria-label="Sign out"
           >
@@ -216,7 +216,7 @@ export function StaffShell({ children }: { children: React.ReactNode }) {
         <button
           ref={openerRef}
           onClick={() => setMobileOpen(true)}
-          className="btn-ghost !px-2"
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-stone-600 transition hover:bg-stone-100 hover:text-stone-900"
           aria-label="Open navigation"
           aria-expanded={mobileOpen}
         >
@@ -253,11 +253,11 @@ export function StaffShell({ children }: { children: React.ReactNode }) {
 
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-stone-200 bg-white lg:flex">{sidebar}</aside>
 
-      <main className="px-4 py-6 sm:px-6 lg:ml-64 lg:px-8 lg:py-8">
+      <main className="px-4 py-4 sm:px-6 sm:py-6 lg:ml-64 lg:px-8 lg:py-8">
         {user.mustChangePassword && !pathname.startsWith('/staff/account') ? (
           <div
             role="status"
-            className="mb-5 flex flex-col gap-1 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+            className="mb-4 flex flex-col gap-1 rounded-lg border border-amber-200 sm:mb-5 bg-amber-50 px-4 py-2.5 text-sm text-amber-800 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
           >
             <p>You&apos;re using a temporary password. Set your own to keep your account secure.</p>
             <Link href="/staff/account" className="shrink-0 font-medium underline underline-offset-2 hover:text-amber-900">

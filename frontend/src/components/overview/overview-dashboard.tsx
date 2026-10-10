@@ -37,7 +37,7 @@ export function OverviewDashboard({ user }: { user: User }) {
   const firstName = user.name.split(' ')[0] || user.name;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-3">
@@ -62,7 +62,7 @@ export function OverviewDashboard({ user }: { user: User }) {
       {access.summary ? <TodaySummary summary={data.summary} loading={loading} /> : null}
 
       {access.floor || access.kitchen ? (
-        <div className={`grid gap-6 ${access.floor && access.kitchen ? '2xl:grid-cols-2' : ''}`}>
+        <div className={`grid gap-4 sm:gap-6 ${access.floor && access.kitchen ? '2xl:grid-cols-2' : ''}`}>
           {access.floor ? (
             <FloorWidgets user={user} placed={data.placed} ready={data.ready} tables={data.tables} loading={loading} now={now} />
           ) : null}
@@ -70,7 +70,7 @@ export function OverviewDashboard({ user }: { user: User }) {
         </div>
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
         <NextShiftCard shifts={data.shifts} loading={loading} now={now} />
         <div className="lg:col-span-2">
           <QuickLinks role={user.role} />
