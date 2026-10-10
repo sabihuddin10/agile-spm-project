@@ -33,8 +33,8 @@ export function TeamPanel({
           const suspended = members.filter((u) => !u.active).length;
           return (
             <div key={role} className="card p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-400">{ROLE_META[role].plural}</p>
-              <p className="mt-1 text-2xl font-bold text-stone-800">{loading ? '–' : members.length}</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">{ROLE_META[role].plural}</p>
+              <p className="mt-1 text-2xl font-bold tabular-nums text-stone-800">{loading ? '–' : members.length}</p>
               <p className="text-xs text-stone-500">{suspended ? `${suspended} suspended` : 'All active'}</p>
             </div>
           );

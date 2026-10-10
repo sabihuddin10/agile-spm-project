@@ -6,6 +6,7 @@ import { workforceApi } from '@/lib/workforce-api';
 import { errorMessage } from '@/lib/format';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Spinner } from '@/components/ui/spinner';
 import { useToast } from '@/components/ui/toast';
 import { ConfirmDialog } from '@/components/staff/confirm-dialog';
@@ -39,6 +40,7 @@ export function StaffDrilldown({
   const [trend, setTrend] = useState<StaffAnalytics | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -48,7 +50,9 @@ export function StaffDrilldown({
       ]);
       setData(m);
       setTrend(t);
+      setLoadError(false);
     } catch (err) {
+      setLoadError(true);
       toast(errorMessage(err), 'error');
     }
   }, [userId, month, toast]);
@@ -113,7 +117,19 @@ export function StaffDrilldown({
         ) : null}
       </div>
 
-      {!data ? (
+      {!data && loadError ? (
+        <Card>
+          <EmptyState
+            title="Couldn't load this work record"
+            hint="Check your connection, then try again."
+            action={
+              <button type="button" className="btn-secondary" onClick={() => load()}>
+                Try again
+              </button>
+            }
+          />
+        </Card>
+      ) : !data ? (
         <Card>
           <Spinner label="Loading work record…" />
         </Card>

@@ -108,6 +108,11 @@ afterEach(() => {
 
 /* ------------------------------------------------------------ account-table */
 
+/** Opens a row's "More" menu (secondary account actions). */
+async function openMore(user: ReturnType<typeof userEvent.setup>, name: string) {
+  await user.click(screen.getByRole('button', { name: `More actions for ${name}` }));
+}
+
 describe('AccountTable', () => {
   it('lists accounts by role rank, marks the signed-in admin and locks their own controls', () => {
     // Arrange
@@ -125,11 +130,11 @@ describe('AccountTable', () => {
     ]);
     expect(within(items[0]).getByText('(you)')).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Role for Ada Admin' })).toBeDisabled();
-    expect(within(items[0]).getByRole('button', { name: 'Suspend' })).toBeDisabled();
+    expect(within(items[0]).getByRole('button', { name: 'More actions for Ada Admin' })).toBeDisabled();
     expect(screen.getByRole('combobox', { name: 'Role for Will Waiter' })).toBeEnabled();
   });
 
-  it('changes a user\'s role and reports the new permissions', async () => {
+  it('asks for confirmation before changing a role, then reports the new permissions', async () => {
     // Arrange
     auth.user = admin;
     const onChanged = vi.fn();
@@ -139,30 +144,88 @@ describe('AccountTable', () => {
 
     // Act
     await user.selectOptions(screen.getByRole('combobox', { name: 'Role for Will Waiter' }), 'chef');
+    // Assert — staged, not applied
+    const dialog = screen.getByRole('dialog', { name: 'Make Will Waiter a chef?' });
+    expect(dialog).toHaveTextContent(/kitchen queue/i);
+    expect(authApi.updateUser).not.toHaveBeenCalled();
 
+    // Act
+    await user.click(within(dialog).getByRole('button', { name: 'Make chef' }));
     // Assert
     expect(authApi.updateUser).toHaveBeenCalledWith('usr_waiter', { role: 'chef' });
     expect(toastMock).toHaveBeenCalledWith(expect.stringContaining('Will Waiter is now a chef'), 'success');
     expect(onChanged).toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
-  it('suspends an active user and offers to reactivate a suspended one', async () => {
+  it('leaves the role unchanged when the role change is cancelled', async () => {
+    // Arrange
+    auth.user = admin;
+    const user = userEvent.setup({ delay: null });
+    render(<AccountTable users={[admin, waiter]} onChanged={vi.fn()} />);
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Role for Will Waiter' }), 'manager');
+
+    // Act
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    // Assert
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(authApi.updateUser).not.toHaveBeenCalled();
+    expect(screen.getByRole('combobox', { name: 'Role for Will Waiter' })).toHaveValue('waiter');
+  });
+
+  it('suspends an active user only after confirming, and offers to reactivate a suspended one', async () => {
     // Arrange
     auth.user = admin;
     vi.mocked(authApi.updateUser).mockResolvedValue({ user: waiter } as never);
     const user = userEvent.setup({ delay: null });
     render(<AccountTable users={[admin, waiter, suspendedWaiter]} onChanged={vi.fn()} />);
-    const willRow = screen.getByText('Will Waiter').closest('li')!;
     const ginaRow = screen.getByText('Gina Gone').closest('li')!;
 
     // Act
-    await user.click(within(willRow).getByRole('button', { name: 'Suspend' }));
+    await openMore(user, 'Will Waiter');
+    await user.click(screen.getByRole('menuitem', { name: 'Suspend' }));
+    // Assert — confirmation first
+    expect(screen.getByRole('dialog', { name: 'Suspend Will Waiter?' })).toBeInTheDocument();
+    expect(authApi.updateUser).not.toHaveBeenCalled();
 
+    // Act
+    await user.click(screen.getByRole('button', { name: 'Suspend account' }));
     // Assert
     expect(authApi.updateUser).toHaveBeenCalledWith('usr_waiter', { active: false });
     expect(toastMock).toHaveBeenCalledWith(expect.stringMatching(/will waiter suspended/i), 'success');
     expect(within(ginaRow).getByText('Suspended')).toBeInTheDocument();
-    expect(within(ginaRow).getByRole('button', { name: 'Reactivate' })).toBeInTheDocument();
+
+    // Act
+    await openMore(user, 'Gina Gone');
+    // Assert
+    expect(screen.getByRole('menuitem', { name: 'Reactivate' })).toBeInTheDocument();
+  });
+
+  it('opens the More menu accessibly and closes it with Escape', async () => {
+    // Arrange
+    auth.user = admin;
+    const user = userEvent.setup({ delay: null });
+    render(<AccountTable users={[admin, waiter]} onChanged={vi.fn()} />);
+    const trigger = screen.getByRole('button', { name: 'More actions for Will Waiter' });
+    expect(trigger).toHaveAttribute('aria-haspopup', 'menu');
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+
+    // Act
+    await user.click(trigger);
+    // Assert — Remove sits last, after a divider
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    const items = within(screen.getByRole('menu')).getAllByRole('menuitem');
+    expect(items.map((i) => i.textContent)).toEqual(['Reset password', 'Set password', 'Suspend', 'Remove']);
+    expect(screen.getByRole('separator')).toBeInTheDocument();
+    expect(items[0]).toHaveFocus();
+
+    // Act
+    await user.keyboard('{Escape}');
+    // Assert
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(trigger).toHaveFocus();
   });
 
   it('removes an account only after the confirm dialog', async () => {
@@ -172,10 +235,10 @@ describe('AccountTable', () => {
     const onChanged = vi.fn();
     const user = userEvent.setup({ delay: null });
     render(<AccountTable users={[admin, waiter]} onChanged={onChanged} />);
-    const willRow = screen.getByText('Will Waiter').closest('li')!;
 
     // Act
-    await user.click(within(willRow).getByRole('button', { name: 'Remove' }));
+    await openMore(user, 'Will Waiter');
+    await user.click(screen.getByRole('menuitem', { name: 'Remove' }));
     // Assert — confirmation first, nothing removed yet
     expect(screen.getByRole('dialog', { name: 'Remove Will Waiter?' })).toBeInTheDocument();
     expect(authApi.removeUser).not.toHaveBeenCalled();
@@ -188,55 +251,62 @@ describe('AccountTable', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
-  it('shows roles read-only with no suspend/remove actions for a manager', () => {
+  it('shows roles read-only with no suspend/remove actions for a manager', async () => {
     // Arrange
     auth.user = manager;
+    const user = userEvent.setup({ delay: null });
+    render(<AccountTable users={[manager, waiter]} onChanged={vi.fn()} />);
 
     // Act
-    render(<AccountTable users={[manager, waiter]} onChanged={vi.fn()} />);
+    await openMore(user, 'Will Waiter');
 
     // Assert
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Suspend' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Remove' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Suspend' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Remove' })).not.toBeInTheDocument();
     expect(screen.getByText('Waiter')).toBeInTheDocument();
   });
 
-  it('gives a manager Edit details / Reset password on waiters and chefs only', () => {
+  it('gives a manager Edit details / Reset password on waiters and chefs only', async () => {
     // Arrange
     auth.user = manager;
     const otherManager: User = { ...manager, id: 'usr_manager2', name: 'Max Manager', email: 'max@rest.test' };
-
-    // Act
+    const user = userEvent.setup({ delay: null });
     render(<AccountTable users={[admin, manager, otherManager, chef, waiter]} onChanged={vi.fn()} />);
 
+    // Act
+    await openMore(user, 'Will Waiter');
+
     // Assert
+    expect(screen.getByRole('menuitem', { name: 'Reset password for Will Waiter' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: /^Set password for/ })).not.toBeInTheDocument();
     for (const name of ['Will Waiter', 'Carlos Chef']) {
       expect(screen.getByRole('button', { name: `Edit details for ${name}` })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: `Reset password for ${name}` })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: `More actions for ${name}` })).toBeInTheDocument();
     }
     for (const name of ['Ada Admin', 'Mia Manager', 'Max Manager']) {
       expect(screen.queryByRole('button', { name: `Edit details for ${name}` })).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: `Reset password for ${name}` })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: `More actions for ${name}` })).not.toBeInTheDocument();
     }
-    expect(screen.queryByRole('button', { name: /^Set password for/ })).not.toBeInTheDocument();
   });
 
-  it('gives an admin every control on a manager but none on another admin', () => {
+  it('gives an admin every control on a manager but none on another admin', async () => {
     // Arrange
     auth.user = admin;
     const otherAdmin: User = { ...admin, id: 'usr_admin2', name: 'Abe Admin', email: 'abe@rest.test' };
+    const user = userEvent.setup({ delay: null });
+    render(<AccountTable users={[admin, otherAdmin, manager]} onChanged={vi.fn()} />);
 
     // Act
-    render(<AccountTable users={[admin, otherAdmin, manager]} onChanged={vi.fn()} />);
+    await openMore(user, 'Mia Manager');
 
     // Assert — manager row: full controls
     const miaRow = screen.getByText('Mia Manager').closest('li')!;
     expect(within(miaRow).getByRole('button', { name: 'Edit details for Mia Manager' })).toBeInTheDocument();
-    expect(within(miaRow).getByRole('button', { name: 'Reset password for Mia Manager' })).toBeInTheDocument();
-    expect(within(miaRow).getByRole('button', { name: 'Set password for Mia Manager' })).toBeInTheDocument();
+    expect(within(miaRow).getByRole('menuitem', { name: 'Reset password for Mia Manager' })).toBeInTheDocument();
+    expect(within(miaRow).getByRole('menuitem', { name: 'Set password for Mia Manager' })).toBeInTheDocument();
     expect(within(miaRow).getByRole('combobox', { name: 'Role for Mia Manager' })).toBeEnabled();
-    expect(within(miaRow).getByRole('button', { name: 'Suspend' })).toBeEnabled();
+    expect(within(miaRow).getByRole('menuitem', { name: 'Suspend' })).toBeEnabled();
 
     // Assert — other admin row: read-only
     const abeRow = screen.getByText('Abe Admin').closest('li')!;
@@ -257,7 +327,8 @@ describe('AccountTable', () => {
     render(<AccountTable users={[manager, waiter]} onChanged={onChanged} />);
 
     // Act
-    await user.click(screen.getByRole('button', { name: 'Reset password for Will Waiter' }));
+    await openMore(user, 'Will Waiter');
+    await user.click(screen.getByRole('menuitem', { name: 'Reset password for Will Waiter' }));
     // Assert — nothing happens until confirmed
     expect(screen.getByRole('dialog', { name: "Reset Will Waiter's password?" })).toBeInTheDocument();
     expect(authApi.resetPassword).not.toHaveBeenCalled();
@@ -283,7 +354,8 @@ describe('AccountTable', () => {
     vi.mocked(authApi.resetPassword).mockRejectedValue(new Error('You can only manage accounts below your own rank.'));
     const user = userEvent.setup({ delay: null });
     render(<AccountTable users={[manager, waiter]} onChanged={vi.fn()} />);
-    await user.click(screen.getByRole('button', { name: 'Reset password for Will Waiter' }));
+    await openMore(user, 'Will Waiter');
+    await user.click(screen.getByRole('menuitem', { name: 'Reset password for Will Waiter' }));
 
     // Act
     await user.click(screen.getByRole('button', { name: 'Reset password' }));
@@ -371,6 +443,7 @@ describe('AllAccountsPanel', () => {
 
     // Act
     await user.selectOptions(screen.getByRole('combobox', { name: 'Role for Cora Customer' }), 'waiter');
+    await user.click(screen.getByRole('button', { name: 'Make waiter' }));
 
     // Assert
     await waitFor(() => expect(authApi.users).toHaveBeenCalledTimes(2));
@@ -757,7 +830,7 @@ describe('PerformancePanel', () => {
     vi.mocked(staffApi.performance).mockResolvedValue({ from: '2026-09-08', to: '2026-10-07', staff } as never);
     const user = userEvent.setup({ delay: null });
     render(<PerformancePanel />);
-    await screen.findByText('Will Waiter');
+    await screen.findAllByText('Will Waiter');
 
     // Act
     await user.click(screen.getByRole('button', { name: 'Last 7 days' }));
@@ -765,6 +838,25 @@ describe('PerformancePanel', () => {
     // Assert
     expect(staffApi.performance).toHaveBeenLastCalledWith({ from: '2026-10-01', to: '2026-10-07' });
     expect(screen.getByRole('button', { name: 'Last 7 days' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('stacks one card per person for phones, with only the figures that apply to their role', async () => {
+    // Arrange
+    pinNow();
+    vi.mocked(staffApi.performance).mockResolvedValue({ from: '2026-09-08', to: '2026-10-07', staff } as never);
+
+    // Act
+    render(<PerformancePanel />);
+
+    // Assert
+    const list = await screen.findByRole('list', { name: 'Staff performance' });
+    expect(list).toHaveClass('sm:hidden');
+    const [chefCard, waiterCard] = within(list).getAllByRole('listitem');
+    expect(chefCard).toHaveTextContent('Carlos Chef');
+    expect(within(chefCard).getByText('Avg prep').nextSibling).toHaveTextContent('12 min');
+    expect(within(chefCard).queryByText('Tips')).not.toBeInTheDocument();
+    expect(within(waiterCard).getByText('Revenue handled').nextSibling).toHaveTextContent('$240.50');
+    expect(within(waiterCard).queryByText('Items prepared')).not.toBeInTheDocument();
   });
 
   it('shows an empty state when there are no staff', async () => {
@@ -942,7 +1034,8 @@ describe('AccountTable — admin sets a password', () => {
     render(<AccountTable users={[admin, waiter]} onChanged={onChanged} />);
 
     // Act
-    await user.click(screen.getByRole('button', { name: 'Set password for Will Waiter' }));
+    await openMore(user, 'Will Waiter');
+    await user.click(screen.getByRole('menuitem', { name: 'Set password for Will Waiter' }));
     await user.type(screen.getByLabelText('New password'), 'Fresh-pass1');
     await user.type(screen.getByLabelText('Confirm new password'), 'Fresh-pass1');
     await user.click(screen.getByRole('button', { name: 'Set password' }));
@@ -960,7 +1053,8 @@ describe('AccountTable — set password policy', () => {
     auth.user = admin;
     const user = userEvent.setup({ delay: null });
     render(<AccountTable users={[admin, waiter]} onChanged={vi.fn()} />);
-    await user.click(screen.getByRole('button', { name: 'Set password for Will Waiter' }));
+    await openMore(user, 'Will Waiter');
+    await user.click(screen.getByRole('menuitem', { name: 'Set password for Will Waiter' }));
 
     // Act
     await user.type(screen.getByLabelText('New password'), 'freshpass');

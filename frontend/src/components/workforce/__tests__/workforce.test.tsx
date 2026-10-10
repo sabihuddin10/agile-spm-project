@@ -4,7 +4,7 @@
  * Every test follows Arrange-Act-Assert.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ChartData } from 'chart.js';
 import type { AttendanceSession, MyStatus, PayBreakdown, PresenceEntry, SeriesPoint, WorkforceOverview, WorkShift, WorkSummary } from '@/types';
@@ -410,6 +410,29 @@ describe('AdjustmentForm and WageEditor', () => {
     // Assert
     expect(errors).toEqual(['Enter an amount (negative for a correction).', 'Give a reason, e.g. "Eid bonus".']);
     expect(onSubmit).toHaveBeenCalledWith({ amount: 40, reason: 'Birthday', date: '2026-10-09' });
+  });
+
+  it('shows each validation error under its own field, tied to the input', async () => {
+    // Arrange
+    const user = userEvent.setup({ delay: null });
+    render(<AdjustmentForm name="Will Waiter" onSubmit={vi.fn()} defaultDate="2026-10-09" />);
+    fireEvent.change(screen.getByLabelText('Date'), { target: { value: '' } });
+
+    // Act
+    await user.click(screen.getByRole('button', { name: 'Add to pay' }));
+
+    // Assert
+    const cases: [string, string][] = [
+      ['Amount', 'Enter an amount (negative for a correction).'],
+      ['Reason', 'Give a reason, e.g. "Eid bonus".'],
+      ['Date', 'Pick a date.'],
+    ];
+    for (const [label, message] of cases) {
+      const input = screen.getByLabelText(label);
+      expect(input).toHaveAttribute('aria-invalid', 'true');
+      expect(input).toHaveAccessibleDescription(message);
+      expect(input.closest('div:not(.relative)')).toHaveTextContent(message);
+    }
   });
 
   it('confirms a wage change before saving', async () => {

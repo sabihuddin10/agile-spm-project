@@ -80,7 +80,7 @@ export function PresenceList({
                   ))}
                 </ul>
               ) : (
-                <p className="py-3 text-sm text-stone-400">Nobody</p>
+                <p className="py-3 text-sm text-stone-500">Nobody</p>
               )}
             </div>
           ))}

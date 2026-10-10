@@ -92,7 +92,7 @@ export function ApplicationsPanel({
           . Approving creates their staff account.
         </p>
         {user?.role !== 'admin' ? (
-          <p className="text-xs text-stone-400">Managers can approve waiters and chefs.</p>
+          <p className="text-xs text-stone-500">Managers can approve waiters and chefs.</p>
         ) : null}
       </div>
 
@@ -123,10 +123,10 @@ export function ApplicationsPanel({
                     </div>
                     <Badge tone={ROLE_META[app.desiredRole].tone}>Applying as {ROLE_META[app.desiredRole].label.toLowerCase()}</Badge>
                   </div>
-                  <p className="mt-1 text-xs text-stone-400">Applied {timeAgo(app.createdAt)}</p>
+                  <p className="mt-1 text-xs text-stone-500">Applied {timeAgo(app.createdAt)}</p>
 
                   <p className="mt-3 flex-1 whitespace-pre-line rounded-lg bg-stone-50 px-3 py-2 text-sm text-stone-700">
-                    {app.experience || <span className="italic text-stone-400">No experience details given.</span>}
+                    {app.experience || <span className="italic text-stone-500">No experience details given.</span>}
                   </p>
 
                   <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -135,7 +135,7 @@ export function ApplicationsPanel({
                     </label>
                     <select
                       id={`role-${app.id}`}
-                      className="input w-auto !py-1.5"
+                      className="input w-auto py-1.5"
                       value={role}
                       disabled={busy}
                       onChange={(e) => setRoles((r) => ({ ...r, [app.id]: e.target.value as StaffRole }))}

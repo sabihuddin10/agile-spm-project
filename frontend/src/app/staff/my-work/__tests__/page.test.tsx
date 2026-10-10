@@ -2,13 +2,13 @@
  * My work page, rendered against the in-browser workforce demo layer
  * (workforce-mock) as the signed-in waiter. Arrange-Act-Assert.
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import MyWorkPage from '@/app/staff/my-work/page';
 import { useAuth } from '@/context/auth-context';
 import { storeAuth } from '@/lib/api';
-import { workforceMock } from '@/lib/workforce-api';
+import { workforceApi, workforceMock } from '@/lib/workforce-api';
 import type { User } from '@/types';
 
 vi.mock('@/components/layout/staff-layout', () => ({
@@ -36,6 +36,10 @@ beforeEach(() => {
   toast.mockClear();
 });
 
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 describe('MyWorkPage', () => {
   it('renders every section for a waiter, including their own pay', async () => {
     // Arrange / Act
@@ -52,7 +56,7 @@ describe('MyWorkPage', () => {
     expect(screen.getByRole('img', { name: /^Pay so far: \$/ })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Pay' })).toBeInTheDocument();
     expect(screen.getByTestId('pay-net')).toHaveTextContent(/^\$\d/);
-    expect(screen.getByRole('heading', { name: 'Hours breakdown' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Hours breakdown' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Sessions & shifts/ })).toBeInTheDocument();
     const colleagues = screen.getByRole('heading', { name: 'Colleagues now' }).closest('section') as HTMLElement;
     expect(await within(colleagues).findByText('Wendy Server')).toBeInTheDocument();
@@ -72,5 +76,28 @@ describe('MyWorkPage', () => {
     expect(await screen.findByRole('button', { name: 'Check out' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Start break' })).toBeInTheDocument();
     expect(toast).toHaveBeenCalledWith('Checked in.', 'success');
+  });
+
+  it('offers Try again instead of spinning forever when the time clock and hours fail to load', async () => {
+    // Arrange
+    vi.spyOn(workforceApi, 'me').mockRejectedValueOnce(new Error('Network down'));
+    const analytics = vi
+      .spyOn(workforceApi, 'myAnalytics')
+      .mockRejectedValueOnce(new Error('Network down'))
+      .mockRejectedValueOnce(new Error('Network down'));
+    const user = userEvent.setup({ delay: null });
+    render(<MyWorkPage />);
+    expect(await screen.findByText("Couldn't load your time clock")).toBeInTheDocument();
+    expect(await screen.findByText("Couldn't load your hours")).toBeInTheDocument();
+    const [retryClock, retryHours] = screen.getAllByRole('button', { name: 'Try again' });
+
+    // Act
+    await user.click(retryClock);
+    await user.click(retryHours);
+
+    // Assert
+    expect(await screen.findByRole('button', { name: 'Check in' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Hours breakdown' })).toBeInTheDocument();
+    expect(analytics).toHaveBeenCalledTimes(4);
   });
 });
