@@ -36,8 +36,8 @@ export function CartLines({
         const options = modifierText(priceSelections(l.item, l.modifiers));
         const isFlagged = flagged.includes(l.key);
         return (
-          <li key={l.key} className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 py-3 sm:py-4">
-            <div className="min-w-0">
+          <li key={l.key} className="flex items-start gap-2.5 py-2.5 sm:gap-3 sm:py-4">
+            <div className="min-w-0 flex-1">
               <p className="text-sm font-bold text-bone">{l.item.name}</p>
               {options ? <p className="mt-0.5 text-xs leading-relaxed text-bone-dim">{options}</p> : null}
               <p className="mt-1 text-xs text-bone-faint">{money(unit)} each</p>
@@ -56,7 +56,9 @@ export function CartLines({
                 </p>
               ) : null}
             </div>
-            <div className="flex flex-col items-end gap-2">
+            {/* Line total over the stepper on the right, so the row never wraps onto a second line. */}
+            <div className="flex shrink-0 flex-col items-end gap-1 sm:gap-1.5">
+              <span className="text-sm font-semibold text-bone">{money(total)}</span>
               <QtyStepper
                 size="sm"
                 value={l.qty}
@@ -65,7 +67,6 @@ export function CartLines({
                 onIncrement={() => onQty(l.key, 1)}
                 disabled={disabled}
               />
-              <span className="text-sm font-semibold text-bone">{money(total)}</span>
             </div>
           </li>
         );

@@ -43,41 +43,48 @@ export function MenuItemCard({
   }
 
   return (
-    <div className={`card flex flex-col p-4 sm:p-5 ${conflicts.length > 0 ? '!border-red-400/40' : ''}`}>
-      <div className="flex items-start justify-between gap-3">
-        <h3 className="font-display text-xl font-semibold tracking-tight text-bone">{item.name}</h3>
-        <span className="shrink-0 text-right font-medium text-ember-soft">
-          {money(item.price)}
-          {hasOptions && item.modifiers.some((g) => g.options.some((o) => o.priceDelta > 0)) ? (
-            <span className="block text-2xs font-normal text-bone-faint">options available</span>
-          ) : null}
-        </span>
-      </div>
+    // Phones: price sits beside the Add button on the last row. From sm: price top right, full-width button.
+    <div
+      className={`card grid grid-cols-[minmax(0,1fr)_auto] grid-rows-[auto_1fr_auto] gap-x-3 p-3.5 sm:p-5 ${
+        conflicts.length > 0 ? '!border-red-400/40' : ''
+      }`}
+    >
+      <h3 className="col-span-2 font-display text-base font-semibold tracking-tight text-bone sm:col-span-1 sm:text-xl">
+        {item.name}
+      </h3>
+      <span className="order-last mt-3 self-center font-medium text-ember-soft sm:order-none sm:mt-0 sm:self-start sm:text-right">
+        {money(item.price)}
+        {hasOptions && item.modifiers.some((g) => g.options.some((o) => o.priceDelta > 0)) ? (
+          <span className="block text-2xs font-normal text-bone-faint">options available</span>
+        ) : null}
+      </span>
 
-      <p className="mt-1.5 line-clamp-2 flex-1 text-sm leading-relaxed text-bone-dim">{item.description}</p>
+      <div className="col-span-2 flex min-w-0 flex-col">
+        <p className="mt-1 line-clamp-2 flex-1 text-sm leading-relaxed text-bone-dim sm:mt-1.5">{item.description}</p>
 
-      {conflicts.length > 0 ? (
-        <div className="mt-3">
-          <AllergyWarning conflicts={conflicts} compact />
+        {conflicts.length > 0 ? (
+          <div className="mt-2.5 sm:mt-3">
+            <AllergyWarning conflicts={conflicts} compact />
+          </div>
+        ) : null}
+
+        <div className="mt-2.5 flex flex-wrap items-center gap-1.5 sm:mt-4">
+          {item.dietaryTags.map((t) => (
+            <span key={t} className="chip chip-diet">
+              {t}
+            </span>
+          ))}
+          {item.allergens.map((a) => (
+            <span
+              key={a}
+              className={`chip ${conflictSet.has(a.toLowerCase()) ? 'border-red-400/40 bg-red-500/15 text-red-200' : 'chip-allergen'}`}
+              title={`Contains ${a}`}
+            >
+              {a}
+            </span>
+          ))}
+          {unavailable ? <span className="chip chip-muted">{item.outOfStockReason || 'Unavailable'}</span> : null}
         </div>
-      ) : null}
-
-      <div className="mt-3 flex flex-wrap items-center gap-1.5 sm:mt-4">
-        {item.dietaryTags.map((t) => (
-          <span key={t} className="chip chip-diet">
-            {t}
-          </span>
-        ))}
-        {item.allergens.map((a) => (
-          <span
-            key={a}
-            className={`chip ${conflictSet.has(a.toLowerCase()) ? 'border-red-400/40 bg-red-500/15 text-red-200' : 'chip-allergen'}`}
-            title={`Contains ${a}`}
-          >
-            {a}
-          </span>
-        ))}
-        {unavailable ? <span className="chip chip-muted">{item.outOfStockReason || 'Unavailable'}</span> : null}
       </div>
 
       <button
@@ -85,7 +92,7 @@ export function MenuItemCard({
         disabled={unavailable}
         title={unavailable ? item.outOfStockReason || 'Temporarily unavailable' : undefined}
         onClick={handleAdd}
-        className="btn-primary mt-4 w-full disabled:opacity-40"
+        className="btn-primary order-last mt-3 disabled:opacity-40 sm:col-span-2 sm:mt-4 sm:w-full"
         aria-label={unavailable ? `${item.name} is unavailable` : `Add ${item.name} to order`}
       >
         {unavailable ? 'Unavailable' : 'Add to order'}

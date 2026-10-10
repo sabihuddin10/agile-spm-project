@@ -32,14 +32,14 @@ export function ItemOptionsModal({
 
   return (
     <Modal title={item.name} onClose={onClose} dark>
-      <div className="space-y-5">
+      <div className="space-y-4 sm:space-y-5">
         {item.description ? <p className="text-sm leading-relaxed text-bone-dim">{item.description}</p> : null}
 
         {conflicts.length > 0 ? <AllergyWarning conflicts={conflicts} /> : null}
 
         <ModifierPicker item={item} value={selections} onChange={setSelections} dark />
 
-        <div className="flex flex-wrap items-center justify-between gap-4 border-t border-char-hairline pt-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-char-hairline pt-3 sm:gap-4 sm:pt-4">
           <div className="flex items-center gap-3">
             <span className="text-sm text-bone-dim">Quantity</span>
             <QtyStepper

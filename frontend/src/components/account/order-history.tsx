@@ -48,49 +48,47 @@ export function OrderHistory({
           const refunded = o.refund?.amount ?? 0;
           const canReceipt = o.paymentStatus !== 'unpaid';
           return (
-            <li key={o.id} className="bg-char-raised px-4 py-3.5">
-              <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+            <li key={o.id} className="bg-char-raised px-2.5 py-2 sm:px-4 sm:py-3.5">
+              {/* Number and badges, date, dishes on the left; total, points and receipt on the right. */}
+              <div className="flex items-start gap-2.5 sm:gap-4">
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-bone">
-                    #{o.number}
-                    <span className="ml-2 font-normal text-bone-faint">
-                      {formatDateTime(o.createdAt)} · {o.tableNumber ? `Table ${o.tableNumber}` : titleCase(o.fulfillment)}
-                    </span>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-sm font-semibold text-bone">#{o.number}</span>
+                    {o.status === 'cancelled' ? <StatusPill tone={ORDER_STATUS.cancelled.tone}>Cancelled</StatusPill> : null}
+                    <StatusPill tone={payment.tone}>
+                      {payment.label}
+                      {o.paymentMethod && o.paymentStatus !== 'unpaid' ? ` · ${o.paymentMethod}` : ''}
+                    </StatusPill>
+                  </div>
+                  <p className="mt-1 text-xs text-bone-faint">
+                    {formatDateTime(o.createdAt)} · {o.tableNumber ? `Table ${o.tableNumber}` : titleCase(o.fulfillment)}
+                    {o.pointsUsed > 0 ? ` · ${o.pointsUsed} points used` : ''}
                   </p>
                   <p className="mt-1 text-sm text-bone-dim">{itemsText(o)}</p>
                 </div>
-                <div className="text-right">
+                <div className="flex shrink-0 flex-col items-end gap-1">
                   <p className={`text-sm font-semibold ${o.status === 'cancelled' ? 'text-bone-faint line-through' : 'text-bone'}`}>
                     {money(o.total)}
                   </p>
                   {o.pointsEarned > 0 && o.paymentStatus === 'paid' ? (
                     <p className="text-xs text-ember-soft">+{o.pointsEarned} pts</p>
                   ) : null}
+                  {canReceipt ? (
+                    <button
+                      type="button"
+                      className="btn-sm btn-secondary"
+                      onClick={() => onReceipt(o)}
+                      disabled={receiptLoadingId === o.id}
+                      aria-label={`Receipt for order ${o.number}`}
+                    >
+                      {receiptLoadingId === o.id ? 'Loading…' : 'Receipt'}
+                    </button>
+                  ) : null}
                 </div>
               </div>
 
-              <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                {o.status === 'cancelled' ? <StatusPill tone={ORDER_STATUS.cancelled.tone}>Cancelled</StatusPill> : null}
-                <StatusPill tone={payment.tone}>
-                  {payment.label}
-                  {o.paymentMethod && o.paymentStatus !== 'unpaid' ? ` · ${o.paymentMethod}` : ''}
-                </StatusPill>
-                {o.pointsUsed > 0 ? <span className="text-xs text-bone-faint">{o.pointsUsed} points used</span> : null}
-                {canReceipt ? (
-                  <button
-                    type="button"
-                    className="ml-auto rounded-pill border border-char-hairline px-3 py-1 text-xs font-medium text-bone-dim transition hover:border-ember/40 hover:text-bone disabled:opacity-50"
-                    onClick={() => onReceipt(o)}
-                    disabled={receiptLoadingId === o.id}
-                    aria-label={`Receipt for order ${o.number}`}
-                  >
-                    {receiptLoadingId === o.id ? 'Loading…' : 'Receipt'}
-                  </button>
-                ) : null}
-              </div>
-
               {refunded > 0 ? (
-                <p className="mt-2 text-xs text-red-300">
+                <p className="mt-1.5 text-xs text-red-300 sm:mt-2">
                   Refunded {money(refunded)}
                   {o.refund?.reason ? ` — ${o.refund.reason}` : ''}
                   {o.refund?.at ? ` · ${formatDateTime(o.refund.at)}` : ''}

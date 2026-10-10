@@ -82,13 +82,13 @@ export function CareersForm() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h2 className="mt-3 font-display text-2xl font-semibold tracking-tight text-bone">
+        <h2 className="mt-3 font-display text-lg font-semibold tracking-tight text-bone sm:text-2xl">
           Thanks, {submitted.name.split(' ')[0]}
         </h2>
         <p className="mx-auto mt-2 max-w-sm text-sm text-bone-dim" role="status">
           Thanks — a manager will review your application to join as a {submitted.role} and get back to you by email.
         </p>
-        <div className="mt-5 flex flex-col justify-center gap-2 sm:flex-row">
+        <div className="mt-4 flex flex-col justify-center gap-2 sm:mt-5 sm:flex-row">
           <Link href="/" className="btn-primary">
             Back to home
           </Link>
@@ -102,10 +102,10 @@ export function CareersForm() {
 
   return (
     <Card className="p-4 sm:p-5 lg:p-6">
-      <h2 className="font-display text-2xl font-semibold tracking-tight text-bone">Apply now</h2>
+      <h2 className="font-display text-lg font-semibold tracking-tight text-bone sm:text-2xl">Apply now</h2>
       <p className="mt-1 text-sm text-bone-dim">It takes two minutes. No CV needed.</p>
 
-      <form onSubmit={handleSubmit} className="mt-5 space-y-4" noValidate>
+      <form onSubmit={handleSubmit} className="mt-4 space-y-3 sm:mt-5 sm:space-y-4" noValidate>
         <fieldset className="min-w-0">
           <legend className="label">I&apos;m applying as</legend>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -114,7 +114,7 @@ export function CareersForm() {
               return (
                 <label
                   key={r.id}
-                  className={`cursor-pointer rounded-xl border p-3 transition focus-within:ring-2 focus-within:ring-ember ${
+                  className={`cursor-pointer rounded-xl border p-2.5 transition sm:p-3 focus-within:ring-2 focus-within:ring-ember ${
                     selected ? 'border-ember bg-ember/10' : 'border-char-hairline bg-char-deep hover:border-ember/40'
                   }`}
                 >
@@ -212,7 +212,7 @@ export function CareersForm() {
           </label>
           <textarea
             id="apply-experience"
-            className="input min-h-[120px]"
+            className="input min-h-[96px] sm:min-h-[120px]"
             maxLength={EXPERIENCE_MAX}
             placeholder="Where have you worked? What do you enjoy? Availability (days, evenings, weekends)…"
             value={form.experience}

@@ -25,7 +25,7 @@ export function paymentText(order: Pick<Order, 'paymentStatus' | 'paymentMethod'
  */
 export function OrderPlaced({ order, onDone }: { order: Order; onDone: () => void }) {
   return (
-    <div className="flex flex-1 flex-col items-center overflow-y-auto px-4 py-8 text-center sm:px-6 sm:py-10">
+    <div className="flex flex-1 flex-col items-center overflow-y-auto px-4 py-6 text-center sm:px-6 sm:py-10">
       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-ember/15 text-ember-soft">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-7 w-7" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -36,7 +36,7 @@ export function OrderPlaced({ order, onDone }: { order: Order; onDone: () => voi
         We&apos;ll let you know as soon as the team confirms it and the kitchen starts cooking.
       </p>
 
-      <dl className="mt-6 w-full max-w-xs space-y-2 rounded-xl border border-char-hairline bg-char-deep p-4 text-left text-sm">
+      <dl className="mt-5 w-full max-w-xs space-y-2 rounded-xl border border-char-hairline bg-char-deep p-3.5 text-left text-sm sm:mt-6 sm:p-4">
         <Item label="Status" value="Placed — waiting for staff to confirm" />
         <Item label="Order" value={fulfillmentText(order)} />
         <Item label="Payment" value={paymentText(order)} />
@@ -50,11 +50,11 @@ export function OrderPlaced({ order, onDone }: { order: Order; onDone: () => voi
         ) : null}
       </dl>
 
-      <div className="mt-6 flex w-full max-w-xs flex-col gap-2">
-        <Link href="/account#orders" onClick={onDone} className="btn-secondary h-10 w-full lg:h-12">
+      <div className="mt-5 flex w-full max-w-xs flex-col gap-2 sm:mt-6">
+        <Link href="/account#orders" onClick={onDone} className="btn-secondary w-full sm:h-10 lg:h-12">
           Track it in My account
         </Link>
-        <button type="button" className="btn-primary h-10 w-full lg:h-12" onClick={onDone}>
+        <button type="button" className="btn-primary w-full sm:h-10 lg:h-12" onClick={onDone}>
           Done
         </button>
       </div>
