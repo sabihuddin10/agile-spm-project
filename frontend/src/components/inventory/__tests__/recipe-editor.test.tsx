@@ -33,6 +33,24 @@ describe('RecipeEditor', () => {
     expect(menuApi.setRecipe).not.toHaveBeenCalled();
   });
 
+  it('rejects a quantity above the server limit of 100,000', async () => {
+    // Arrange
+    const user = userEvent.setup({ delay: null });
+    render(<RecipeEditor item={makeMenuItem()} inventory={inventory} onClose={vi.fn()} onSaved={vi.fn()} />);
+    await user.click(screen.getByText(/add ingredient/i));
+    await user.selectOptions(screen.getByLabelText('Ingredient'), 'inv_flour');
+
+    // Act
+    await user.type(screen.getByLabelText('Quantity of Flour'), '100001');
+    await user.click(screen.getByRole('button', { name: /save recipe/i }));
+
+    // Assert
+    expect(screen.getByLabelText('Quantity of Flour')).toHaveAttribute('max', '100000');
+    expect(screen.getByLabelText('Quantity of Flour')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('alert')).toHaveTextContent('Each ingredient quantity can be at most 100,000.');
+    expect(menuApi.setRecipe).not.toHaveBeenCalled();
+  });
+
   it('saves a valid recipe with the chosen ingredients and quantities', async () => {
     // Arrange
     const onSaved = vi.fn();

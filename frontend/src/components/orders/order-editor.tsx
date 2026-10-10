@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { modifierText, money, titleCase } from '@/lib/format';
 import { allergyConflicts, defaultSelections, priceSelections, selectionKey, unitPriceFor } from '@/lib/menu';
 import { lineTotal } from './labels';
+import { MAX_ORDER_LINES, ORDER_LINES_FULL } from '@/lib/validation/fields';
 
 export const MAX_LINE_QTY = 99;
 
@@ -89,6 +90,8 @@ export function OrderLineEditor({
     null,
   );
   const [optionsFor, setOptionsFor] = useState<string | null>(null);
+  /** Shown when a 51st distinct line was refused (the server's limit is 50). */
+  const [lineLimit, setLineLimit] = useState(false);
 
   const visible = categories
     .filter((c) => categoryId === 'all' || c.id === categoryId)
@@ -109,6 +112,8 @@ export function OrderLineEditor({
     const existing = lines.find((l) => selectionKey(l.menuItemId, l.modifiers) === key);
     if (existing) {
       onChange(lines.map((l) => (l === existing ? { ...l, qty: Math.min(MAX_LINE_QTY, l.qty + qty) } : l)));
+    } else if (lines.length >= MAX_ORDER_LINES) {
+      setLineLimit(true);
     } else {
       onChange([...lines, { key: nextKey(), menuItemId: item.id, qty, modifiers: selections }]);
     }
@@ -130,6 +135,7 @@ export function OrderLineEditor({
 
   function remove(key: string) {
     onChange(lines.filter((l) => l.key !== key));
+    setLineLimit(false);
     if (optionsFor === key) setOptionsFor(null);
   }
 
@@ -276,6 +282,11 @@ export function OrderLineEditor({
             ({itemCount} item{itemCount === 1 ? '' : 's'})
           </span>
         </p>
+        {lineLimit && lines.length >= MAX_ORDER_LINES ? (
+          <p role="status" className="mb-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            {ORDER_LINES_FULL}
+          </p>
+        ) : null}
         {lines.length === 0 ? (
           <p className="rounded-lg border border-dashed border-stone-300 px-4 py-5 text-center text-sm text-stone-500">
             Nothing added yet — pick dishes from the menu above.

@@ -159,6 +159,26 @@ describe('TableForm', () => {
     expect(onSubmit).toHaveBeenCalledWith({ number: 3, seats: 8, zone: 'Main' });
   });
 
+  it('caps the table number at 9999 (server limit) and keeps "Add table" disabled', async () => {
+    // Arrange
+    const user = userEvent.setup({ delay: null });
+    const { onSubmit } = renderForm();
+    const number = screen.getByLabelText('Table number');
+
+    // Act
+    await user.clear(number);
+    await user.type(number, '10000');
+
+    // Assert
+    expect(number).toHaveAccessibleDescription('Table numbers go up to 9999.');
+    expect(number).toHaveAttribute('max', '9999');
+    expect(screen.getByRole('button', { name: 'Add table' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Add table' })).toHaveAccessibleDescription(
+      'Complete these fields to continue: Table number.',
+    );
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
   it('validates the number and seat range', async () => {
     // Arrange
     const user = userEvent.setup({ delay: null });

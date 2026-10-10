@@ -32,6 +32,21 @@ describe('CategoryManager', () => {
     expect(screen.getByRole('button', { name: /add/i })).toBeDisabled();
   });
 
+  it('caps new and renamed category names at 60 characters (server limit)', async () => {
+    // Arrange
+    const user = userEvent.setup({ delay: null });
+    render(
+      <CategoryManager categories={[makeCategory()]} onCreate={vi.fn()} onRename={vi.fn()} onToggleActive={vi.fn()} onDelete={vi.fn()} />,
+    );
+
+    // Act
+    await user.click(screen.getByRole('button', { name: 'Rename' }));
+
+    // Assert
+    expect(screen.getByLabelText('New category name')).toHaveAttribute('maxLength', '60');
+    expect(screen.getByLabelText('Rename Mains')).toHaveAttribute('maxLength', '60');
+  });
+
   it('renames a category and exits edit mode on success', async () => {
     // Arrange
     const onRename = vi.fn().mockResolvedValue(true);

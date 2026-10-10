@@ -13,6 +13,8 @@ import { qty, suggestedQty, toNumber } from './helpers';
 
 /** Secondary numeric columns: hidden on phones (shown under the name instead), always printed. */
 const WIDE_COL = 'hidden text-right tabular-nums sm:table-cell print:table-cell';
+/** Purchase-order notes are at most 1000 characters (server/src/routes/inventory.js). */
+const NOTES_MAX = 1000;
 
 interface Line {
   inventoryId: string;
@@ -246,10 +248,15 @@ export function ReorderForm({
           <textarea
             id="reorder-notes"
             className="input min-h-[60px] print:hidden"
+            maxLength={NOTES_MAX}
             placeholder="e.g. Deliver before Friday lunch service; call on arrival."
             value={notes}
+            aria-describedby="reorder-notes-count"
             onChange={(e) => setNotes(e.target.value)}
           />
+          <p id="reorder-notes-count" className="mt-1 text-right text-xs text-stone-500 print:hidden">
+            {notes.length}/{NOTES_MAX}
+          </p>
           <p className="hidden whitespace-pre-wrap text-sm print:block">{notes || '—'}</p>
         </div>
 

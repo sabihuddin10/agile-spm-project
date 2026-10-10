@@ -4,6 +4,9 @@ import { useState } from 'react';
 import type { MenuCategory } from '@/types';
 import { Badge } from '@/components/ui/badge';
 
+/** Category names are at most 60 characters (server/src/routes/menu.js). */
+export const CATEGORY_NAME_MAX = 60;
+
 /**
  * Manager/Admin category editor (US2.2): add, rename, delete (only when empty)
  * and show/hide a category on the customer menu. Each handler resolves `true`
@@ -50,8 +53,9 @@ export function CategoryManager({
       <form onSubmit={submitCreate} className="flex gap-2">
         <input
           className="input"
-          placeholder="New category…"
+          placeholder="e.g. Desserts"
           aria-label="New category name"
+          maxLength={CATEGORY_NAME_MAX}
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
         />
@@ -74,6 +78,7 @@ export function CategoryManager({
                   <input
                     className="input !py-1"
                     aria-label={`Rename ${c.name}`}
+                    maxLength={CATEGORY_NAME_MAX}
                     value={editingName}
                     autoFocus
                     onChange={(e) => setEditingName(e.target.value)}
@@ -81,7 +86,7 @@ export function CategoryManager({
                       if (e.key === 'Escape') setEditingId(null);
                     }}
                   />
-                  <button type="submit" className="text-xs font-medium text-emerald-700" disabled={busy}>
+                  <button type="submit" className="text-xs font-medium text-emerald-700 disabled:text-stone-300" disabled={busy || !editingName.trim()}>
                     Save
                   </button>
                   <button type="button" className="text-xs font-medium text-stone-500" onClick={() => setEditingId(null)}>
