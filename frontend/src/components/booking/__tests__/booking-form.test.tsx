@@ -27,32 +27,40 @@ describe('BookingForm', () => {
     vi.mocked(reservationApi.availability).mockResolvedValue({ date: FUTURE, partySize: 2, slots: [{ time: '19:00', available: true }] });
   });
 
-  it('requires a name, email, date and time before submitting', async () => {
-    // Arrange
-    const user = userEvent.setup({ delay: null });
+  it('keeps "Request booking" disabled until name, email, date and time are filled', async () => {
+    // Arrange / Act
     render(<BookingForm />);
 
-    // Act
-    await user.click(screen.getByRole('button', { name: /request booking/i }));
-
-    // Assert
-    expect(screen.getByText(/please enter your name/i)).toBeInTheDocument();
-    expect(screen.getByText(/please enter your email/i)).toBeInTheDocument();
-    expect(screen.getByText(/please choose a date/i)).toBeInTheDocument();
+    // Assert — no errors on a pristine form, just the hint by the button
+    const submit = screen.getByRole('button', { name: /request booking/i });
+    expect(submit).toBeDisabled();
+    expect(submit).toHaveAccessibleDescription('Complete these fields to continue: Full name, Email, Date, Time.');
+    expect(screen.queryByText(/please enter your name/i)).not.toBeInTheDocument();
     expect(reservationApi.create).not.toHaveBeenCalled();
   });
 
-  it('rejects an invalid email', async () => {
+  it('rejects an invalid email as it is typed', async () => {
     // Arrange
     const user = userEvent.setup({ delay: null });
     render(<BookingForm />);
 
     // Act
     await user.type(screen.getByLabelText(/^email$/i), 'not-an-email');
-    await user.click(screen.getByRole('button', { name: /request booking/i }));
 
     // Assert
     expect(screen.getByText(/doesn.t look right/i)).toBeInTheDocument();
+  });
+
+  it('refuses a two-letter name like "SS"', async () => {
+    // Arrange
+    const user = userEvent.setup({ delay: null });
+    render(<BookingForm />);
+
+    // Act
+    await user.type(screen.getByLabelText(/full name/i), 'SS');
+
+    // Assert
+    expect(screen.getByLabelText(/full name/i)).toHaveAccessibleDescription(/full name: at least 3 letters/);
   });
 
   it('submits a valid booking and shows the confirmation', async () => {

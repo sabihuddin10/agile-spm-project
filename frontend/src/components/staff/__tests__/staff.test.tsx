@@ -1080,7 +1080,11 @@ describe('CareersForm — live field checks', () => {
     await user.click(screen.getByRole('button', { name: 'Send application' }));
 
     // Assert
-    expect(screen.getByLabelText('Full name')).toHaveAccessibleDescription('Please enter your name.');
+    expect(screen.getByRole('button', { name: 'Send application' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Send application' })).toHaveAccessibleDescription(
+      'Complete these fields to continue: Full name, Email, Phone.',
+    );
+    expect(screen.getByLabelText('Full name')).not.toHaveAttribute('aria-invalid');
     expect(screen.getByLabelText('Email')).toHaveAccessibleDescription('Enter an email address like name@example.com.');
     expect(screen.getByLabelText(/phone/i)).toHaveAccessibleDescription('Phone numbers have 7 to 20 digits.');
     expect(staffApi.apply).not.toHaveBeenCalled();

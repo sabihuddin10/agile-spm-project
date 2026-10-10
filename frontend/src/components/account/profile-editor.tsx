@@ -8,9 +8,11 @@ import { Card } from '@/components/ui/card';
 import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/format';
 import { ALLERGY_OPTIONS, DIETARY_OPTIONS, optionsWith, toggleValue } from '@/components/customers/preference-options';
-import { validateEmail, validateMaxLength, validateName, validatePhone, EMAIL_MAX, NAME_MAX, PHONE_MAX } from '@/lib/validation/fields';
+import {
+  normalizeName, validateEmail, validateMaxLength, validateName, validatePhone, EMAIL_MAX, NAME_MAX, PHONE_MAX,
+} from '@/lib/validation/fields';
 import { useFormValidation, type Rules } from '@/lib/validation/use-form-validation';
-import { FieldError, describedBy } from '@/components/forms/field-error';
+import { FieldError, SubmitHint, describedBy } from '@/components/forms/field-error';
 
 const NOTES_MAX = 500;
 
@@ -20,6 +22,7 @@ const RULES: Rules<Draft> = {
   phone: (v) => validatePhone(v),
   notes: (v) => validateMaxLength(v, NOTES_MAX, 'Notes'),
 };
+const LABELS = { name: 'Name', email: 'Email', phone: 'Phone', notes: 'Notes' };
 
 interface Draft {
   name: string;
@@ -54,7 +57,7 @@ export function ProfileEditor({ customer, onSaved }: { customer: Customer; onSav
   const [draft, setDraft] = useState<Draft>(saved);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const v = useFormValidation(draft, RULES);
+  const v = useFormValidation(draft, RULES, { labels: LABELS });
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
 
@@ -70,7 +73,7 @@ export function ProfileEditor({ customer, onSaved }: { customer: Customer; onSav
     setError(null);
     try {
       const { customer: updated } = await customerApi.updateMe({
-        name: draft.name.trim(),
+        name: normalizeName(draft.name),
         email: draft.email.trim(),
         phone: draft.phone.trim(),
         notes: draft.notes,
@@ -110,6 +113,7 @@ export function ProfileEditor({ customer, onSaved }: { customer: Customer; onSav
             error={v.errors.name}
             autoComplete="name"
             maxLength={NAME_MAX + 20}
+            placeholder="e.g. Sara Khan"
             required
           />
           <Field
@@ -122,6 +126,7 @@ export function ProfileEditor({ customer, onSaved }: { customer: Customer; onSav
             error={v.errors.email}
             autoComplete="email"
             maxLength={EMAIL_MAX}
+            placeholder="name@example.com"
             required
           />
           <Field
@@ -134,6 +139,7 @@ export function ProfileEditor({ customer, onSaved }: { customer: Customer; onSav
             error={v.errors.phone}
             autoComplete="tel"
             maxLength={PHONE_MAX}
+            placeholder="+92 300 1234567"
           />
         </div>
 
@@ -183,7 +189,13 @@ export function ProfileEditor({ customer, onSaved }: { customer: Customer; onSav
         ) : null}
 
         <div className="mt-5 flex flex-wrap items-center gap-3">
-          <button type="submit" className="btn-primary" disabled={saving || !dirty}>
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={saving || !dirty || !v.isValid}
+            aria-disabled={saving || !dirty || !v.isValid}
+            aria-describedby={v.isValid ? undefined : 'profile-submit-hint'}
+          >
             {saving ? 'Saving…' : 'Save changes'}
           </button>
           {dirty && !saving ? (
@@ -201,6 +213,7 @@ export function ProfileEditor({ customer, onSaved }: { customer: Customer; onSav
           ) : null}
           {dirty ? <span className="text-xs text-bone-faint">Unsaved changes</span> : null}
         </div>
+        <SubmitHint id="profile-submit-hint" fields={v.invalidLabels} tone="dark" className="mt-2" />
       </form>
     </Card>
   );
@@ -269,6 +282,7 @@ function Field({
   type = 'text',
   autoComplete,
   maxLength,
+  placeholder,
   required = false,
 }: {
   id: string;
@@ -280,6 +294,7 @@ function Field({
   type?: string;
   autoComplete?: string;
   maxLength?: number;
+  placeholder?: string;
   required?: boolean;
 }) {
   return (
@@ -296,6 +311,7 @@ function Field({
         onBlur={onBlur}
         autoComplete={autoComplete}
         maxLength={maxLength}
+        placeholder={placeholder}
         required={required}
         aria-invalid={Boolean(error) || undefined}
         aria-describedby={describedBy(error && `${id}-error`)}

@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/format';
-import { validateEmail, validateName, NAME_MAX, EMAIL_MAX } from '@/lib/validation/fields';
+import { normalizeName, validateEmail, validateName, NAME_MAX, EMAIL_MAX } from '@/lib/validation/fields';
 import { confirmError, passwordError } from '@/lib/validation/password';
 import { useFormValidation, type Rules } from '@/lib/validation/use-form-validation';
-import { FieldError, describedBy } from '@/components/forms/field-error';
+import { FieldError, SubmitHint, describedBy } from '@/components/forms/field-error';
 import { PasswordInput } from '@/components/forms/password-input';
 import { PasswordMatch } from '@/components/forms/password-match';
 import { PasswordRequirements } from '@/components/forms/password-requirements';
@@ -26,6 +26,7 @@ const RULES: Rules<Form> = {
   password: (v, f) => passwordError(v, { email: f.email, name: f.name }),
   confirm: (v, f) => confirmError(f.password, v),
 };
+const LABELS = { name: 'Full name', email: 'Email', password: 'Password', confirm: 'Confirm password' };
 
 /**
  * Customer self-registration (US1.2). Fields are checked when you leave them
@@ -39,7 +40,7 @@ export function RegisterForm() {
   const [form, setForm] = useState<Form>({ name: '', email: '', password: '', confirm: '' });
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const v = useFormValidation(form, RULES);
+  const v = useFormValidation(form, RULES, { labels: LABELS });
 
   function set<K extends keyof Form>(key: K, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -52,7 +53,7 @@ export function RegisterForm() {
     setError(null);
     setSubmitting(true);
     try {
-      const user = await register(form.name.trim(), form.email.trim(), form.password);
+      const user = await register(normalizeName(form.name), form.email.trim(), form.password);
       toast(`Welcome to Plate & Flame, ${user.name.split(' ')[0]}.`, 'success');
       router.push('/');
     } catch (err) {
@@ -80,6 +81,7 @@ export function RegisterForm() {
               required
               autoComplete="name"
               maxLength={NAME_MAX + 20}
+              placeholder="e.g. Sara Khan"
               className="input"
               value={form.name}
               onChange={(e) => set('name', e.target.value)}
@@ -100,6 +102,7 @@ export function RegisterForm() {
               autoComplete="email"
               inputMode="email"
               maxLength={EMAIL_MAX}
+              placeholder="name@example.com"
               className="input"
               value={form.email}
               onChange={(e) => set('email', e.target.value)}
@@ -129,7 +132,7 @@ export function RegisterForm() {
               email={form.email}
               name={form.name}
               tone="dark"
-              showUnmet={v.submitted}
+              showUnmet={v.isTouched('password')}
             />
           </div>
           <div>
@@ -155,9 +158,16 @@ export function RegisterForm() {
             </p>
           ) : null}
 
-          <button type="submit" className="btn-primary w-full" disabled={submitting}>
+          <button
+            type="submit"
+            className="btn-primary w-full"
+            disabled={submitting || !v.isValid}
+            aria-disabled={submitting || !v.isValid}
+            aria-describedby={v.isValid ? undefined : 'register-submit-hint'}
+          >
             {submitting ? 'Creating account…' : 'Create account'}
           </button>
+          <SubmitHint id="register-submit-hint" fields={v.invalidLabels} tone="dark" className="text-center" />
         </form>
       </div>
     </div>

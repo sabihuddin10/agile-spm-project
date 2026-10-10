@@ -59,14 +59,23 @@ describe('AccountProfileForm', () => {
     await user.clear(screen.getByLabelText('Email'));
     await user.type(screen.getByLabelText('Email'), 'will.w@rest.test');
 
-    // Act — submit without the password first
+    // Act — try to submit without the password first
     await user.click(screen.getByRole('button', { name: 'Save profile' }));
 
-    // Assert
+    // Assert — the button is disabled and names the missing field
+    const save = screen.getByRole('button', { name: 'Save profile' });
+    expect(save).toBeDisabled();
+    expect(save).toHaveAccessibleDescription('Complete these fields to continue: Current password.');
+    expect(authApi.updateMe).not.toHaveBeenCalled();
+
+    // Act
     const password = screen.getByLabelText('Current password');
+    await user.click(password);
+    await user.tab();
+
+    // Assert
     expect(password).toHaveAccessibleDescription('Enter your current password to change your email.');
     expect(password).toHaveAttribute('aria-invalid', 'true');
-    expect(authApi.updateMe).not.toHaveBeenCalled();
 
     // Act
     await user.type(password, 'secret1');
@@ -160,20 +169,17 @@ describe('AccountProfileForm', () => {
 });
 
 describe('AccountProfileForm — live validation', () => {
-  it('checks the phone when you leave the field, then live as you fix it', async () => {
+  it('checks the phone as you type, then clears the error live as you fix it', async () => {
     // Arrange
     const user = userEvent.setup({ delay: null });
     render(<AccountProfileForm user={makeUser()} />);
     const phone = screen.getByLabelText('Phone (optional)');
 
-    // Act — typing alone shows no error yet
-    await user.type(phone, '12');
-
-    // Assert
+    // Assert — pristine: nothing shown
     expect(phone).not.toHaveAttribute('aria-invalid');
 
-    // Act — leaving the field reveals it
-    await user.tab();
+    // Act
+    await user.type(phone, '12');
 
     // Assert
     expect(phone).toHaveAttribute('aria-invalid', 'true');

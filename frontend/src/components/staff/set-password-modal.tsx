@@ -8,7 +8,7 @@ import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toast';
 import { confirmError, passwordError } from '@/lib/validation/password';
 import { useFormValidation, type Rules } from '@/lib/validation/use-form-validation';
-import { FieldError, describedBy } from '@/components/forms/field-error';
+import { FieldError, SubmitHint, describedBy } from '@/components/forms/field-error';
 import { PasswordInput } from '@/components/forms/password-input';
 import { PasswordMatch } from '@/components/forms/password-match';
 import { PasswordRequirements } from '@/components/forms/password-requirements';
@@ -42,7 +42,7 @@ export function SetPasswordModal({
     next: (v) => passwordError(v, account),
     confirm: (v, d) => confirmError(d.next, v),
   };
-  const v = useFormValidation(draft, rules);
+  const v = useFormValidation(draft, rules, { labels: { next: 'New password', confirm: 'Confirm new password' } });
 
   function set(key: keyof Draft, value: string) {
     setDraft((d) => ({ ...d, [key]: value }));
@@ -85,7 +85,7 @@ export function SetPasswordModal({
               describedBy={describedBy('set-password-rules', v.errors.next && 'set-password-new-error')}
             />
             <FieldError id="set-password-new-error" message={v.errors.next} />
-            <PasswordRequirements id="set-password-rules" value={draft.next} {...account} showUnmet={v.submitted} />
+            <PasswordRequirements id="set-password-rules" value={draft.next} {...account} showUnmet={v.isTouched('next')} />
           </div>
           <div>
             <label htmlFor="set-password-confirm" className="label">
@@ -110,11 +110,18 @@ export function SetPasswordModal({
           </p>
         ) : null}
 
-        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <SubmitHint id="set-password-submit-hint" fields={v.invalidLabels} className="mt-6 sm:text-right" />
+        <div className="mt-2 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button type="button" className="btn-secondary" onClick={onClose} disabled={saving}>
             Cancel
           </button>
-          <button type="submit" className="btn-primary" disabled={saving}>
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={saving || !v.isValid}
+            aria-disabled={saving || !v.isValid}
+            aria-describedby={v.isValid ? undefined : 'set-password-submit-hint'}
+          >
             {saving ? 'Saving…' : 'Set password'}
           </button>
         </div>
