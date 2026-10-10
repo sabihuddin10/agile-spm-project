@@ -270,10 +270,10 @@ export default function InventoryPage() {
         />
       ) : null}
 
-      <div className="mb-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4">
+      <div className="stat-row mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Ingredients" value={String(items.length)} />
-        <Stat label="Low stock" value={String(low.length)} tone={low.length ? 'text-red-600' : undefined} />
-        <Stat label="Near reorder" value={String(nearCount)} tone={nearCount ? 'text-amber-600' : undefined} />
+        <Stat label="Low stock" value={String(low.length)} tone={low.length ? 'red' : undefined} />
+        <Stat label="Near reorder" value={String(nearCount)} tone={nearCount ? 'amber' : undefined} />
         <Stat label="Stock value" value={money(stockValue)} />
       </div>
 
@@ -435,12 +435,13 @@ export default function InventoryPage() {
   );
 }
 
-function Stat({ label, value, tone }: { label: string; value: string; tone?: string }) {
+function Stat({ label, value, tone }: { label: string; value: string; tone?: 'red' | 'amber' }) {
+  const color = tone === 'red' ? 'text-red-600' : tone === 'amber' ? 'text-amber-600' : 'text-stone-900';
   return (
-    // Phones: one short row, label left and value right; from sm a stacked tile.
-    <div className="flex items-baseline justify-between gap-3 rounded-xl border border-stone-200 bg-white p-3 shadow-sm sm:block sm:px-4 sm:py-3">
-      <p className="text-xs font-medium uppercase tracking-wide text-stone-500">{label}</p>
-      <p className={`text-xl font-bold tabular-nums sm:mt-0.5 ${tone ?? 'text-stone-900'}`}>{value}</p>
+    // A pill like the order filter chips on phones (see .stat in globals.css), a tile from sm.
+    <div className={`stat ${tone ? `stat-${tone}` : ''} rounded-xl border border-stone-200 bg-white px-4 py-3 shadow-sm`}>
+      <p className="stat-label text-xs font-medium uppercase tracking-wide text-stone-500">{label}</p>
+      <p className={`stat-value mt-0.5 text-xl font-bold tabular-nums ${color}`}>{value}</p>
     </div>
   );
 }

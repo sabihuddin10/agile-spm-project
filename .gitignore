@@ -7,10 +7,23 @@ out/
 dist/
 build/
 
-# Environment
+# Environment and secrets: every .env file in any folder, except the committed templates
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+id_rsa*
+secrets/
+*.secret
+*.secrets
+service-account*.json
+credentials*.json
+.npmrc
+.netrc
 
 # Logs
 *.log

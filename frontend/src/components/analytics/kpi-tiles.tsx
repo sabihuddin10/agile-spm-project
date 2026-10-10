@@ -30,16 +30,13 @@ export function KpiTiles({ kpis }: { kpis: AnalyticsDashboard['kpis'] }) {
   ];
 
   return (
-    <dl className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 md:grid-cols-4 2xl:grid-cols-8">
+    // Pills like the order filter chips on phones (see .stat in globals.css), tiles from sm.
+    <dl className="stat-row grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4 2xl:grid-cols-8">
       {tiles.map((t) => (
-        <div key={t.label} className={`card min-w-0 !p-3 sm:!p-4 ${t.wide ? 'sm:col-span-2' : ''}`}>
-          <dt className="text-xs font-medium text-stone-500">{t.label}</dt>
-          <dd
-            className={`mt-0.5 break-words font-semibold text-stone-900 sm:mt-1 ${t.wide ? 'text-xl sm:text-3xl' : 'text-xl'}`}
-          >
-            {t.value}
-          </dd>
-          <dd className="mt-0.5 text-xs text-stone-500">{t.hint}</dd>
+        <div key={t.label} className={`stat card min-w-0 sm:!p-4 ${t.wide ? 'sm:col-span-2' : ''}`}>
+          <dt className="stat-label text-xs font-medium text-stone-500">{t.label}</dt>
+          <dd className={`stat-value mt-1 break-words font-semibold text-stone-900 ${t.wide ? 'text-3xl' : 'text-xl'}`}>{t.value}</dd>
+          <dd className="stat-extra mt-0.5 text-xs text-stone-500">{t.hint}</dd>
         </div>
       ))}
     </dl>

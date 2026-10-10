@@ -121,17 +121,17 @@ export function PerformancePanel() {
         {data ? <p className="text-sm text-stone-500">{rangeLabel(data.from, data.to)}</p> : null}
       </div>
 
-      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4">
+      <div className="stat-row grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4">
         {[
           { label: 'Revenue handled', value: money(totals.revenue) },
           { label: 'Tips', value: money(totals.tips) },
           { label: 'Items prepared', value: count(totals.items) },
           { label: 'Hours worked', value: formatHours(totals.hours), sub: totals.missed ? `${totals.missed} missed shift${totals.missed === 1 ? '' : 's'}` : 'No missed shifts' },
         ].map((k) => (
-          <div key={k.label} className="card grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 p-3 sm:block sm:p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">{k.label}</p>
-            <p className="text-xl font-bold tabular-nums text-stone-800 sm:mt-1 sm:text-2xl">{loading && !data ? '–' : k.value}</p>
-            {k.sub ? <p className="col-span-2 text-xs text-stone-500">{k.sub}</p> : null}
+          <div key={k.label} className="stat card p-4">
+            <p className="stat-label text-xs font-semibold uppercase tracking-wide text-stone-500">{k.label}</p>
+            <p className="stat-value mt-1 text-2xl font-bold tabular-nums text-stone-800">{loading && !data ? '–' : k.value}</p>
+            {k.sub ? <p className="stat-extra text-xs text-stone-500">{k.sub}</p> : null}
           </div>
         ))}
       </div>

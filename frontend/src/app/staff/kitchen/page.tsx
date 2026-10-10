@@ -106,7 +106,7 @@ export default function KitchenPage() {
         </Card>
       ) : (
         <>
-          <dl className="mb-4 grid grid-cols-1 gap-2.5 sm:mb-5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4">
+          <dl className="stat-row mb-4 grid grid-cols-1 gap-2.5 sm:mb-5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4">
             <Stat label="In queue" value={queue.length} />
             <Stat label="Delayed" value={delayedCount} tone={delayedCount ? 'red' : undefined} />
             <Stat label="Rush" value={rushCount} tone={rushCount ? 'amber' : undefined} />
@@ -177,10 +177,10 @@ function Stat({ label, value, tone }: { label: string; value: number; tone?: 're
   const color =
     tone === 'red' ? 'text-red-600' : tone === 'amber' ? 'text-amber-600' : tone === 'emerald' ? 'text-emerald-600' : 'text-stone-900';
   return (
-    // On phones label and number share one line, so the four tiles stay short.
-    <div className="flex items-baseline justify-between gap-3 rounded-xl border border-stone-200 bg-white p-3 shadow-sm sm:block sm:px-4 sm:py-3">
-      <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">{label}</dt>
-      <dd className={`text-xl font-bold tabular-nums sm:mt-1 sm:text-2xl ${color}`}>{value}</dd>
+    // A pill like the order filter chips on phones (see .stat in globals.css), a tile from sm.
+    <div className={`stat ${tone ? `stat-${tone}` : ''} rounded-xl border border-stone-200 bg-white px-4 py-3 shadow-sm`}>
+      <dt className="stat-label text-xs font-medium uppercase tracking-wide text-stone-500">{label}</dt>
+      <dd className={`stat-value mt-1 text-2xl font-bold tabular-nums ${color}`}>{value}</dd>
     </div>
   );
 }

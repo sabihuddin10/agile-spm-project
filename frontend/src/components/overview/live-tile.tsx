@@ -22,15 +22,17 @@ export function LiveTile({
   flag?: { tone: Tone; label: string } | null;
   loading?: boolean;
 }) {
-  // Phones: label and hint on the left, the number (and its flag) on the right, so each tile is one short row.
+  // A tappable pill like the order filter chips on phones (see .stat in globals.css), a tile from sm.
+  // The flag tints the count bubble on phones, where the badge itself is hidden.
+  const pillTone = flag && !loading && flag.tone !== 'stone' ? `stat-${flag.tone}` : '';
   return (
     <Link
       href={href}
-      className="card group grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 !p-3 transition hover:border-brand-300 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 sm:flex sm:flex-col sm:items-stretch sm:!p-4"
+      className={`stat ${pillTone} card group flex min-w-0 flex-col transition hover:border-brand-300 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 sm:!p-4`}
     >
-      <p className="text-xs font-medium text-stone-500">{label}</p>
-      <div className="col-start-2 row-span-2 row-start-1 flex flex-col items-end gap-1 sm:mt-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2 sm:gap-y-1">
-        <p className="text-xl font-semibold tabular-nums text-stone-900 sm:text-2xl">
+      <p className="stat-label text-xs font-medium text-stone-500">{label}</p>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 sm:mt-1">
+        <p className="stat-value text-2xl font-semibold tabular-nums text-stone-900">
           {loading ? (
             <>
               <span className="inline-block h-7 w-12 animate-pulse rounded bg-stone-100 align-middle motion-reduce:animate-none" aria-hidden="true" />
@@ -40,10 +42,14 @@ export function LiveTile({
             value
           )}
         </p>
-        {flag && !loading ? <Badge tone={flag.tone}>{flag.label}</Badge> : null}
+        {flag && !loading ? (
+          <span className="stat-extra">
+            <Badge tone={flag.tone}>{flag.label}</Badge>
+          </span>
+        ) : null}
       </div>
-      {hint ? <p className="mt-0.5 text-xs text-stone-500">{hint}</p> : null}
-      <p className="mt-auto hidden pt-2 text-xs font-medium text-stone-500 group-hover:text-brand-700 sm:block">
+      {hint ? <p className="stat-extra mt-0.5 text-xs text-stone-500">{hint}</p> : null}
+      <p className="stat-extra mt-auto pt-2 text-xs font-medium text-stone-500 group-hover:text-brand-700">
         Open <span aria-hidden="true">→</span>
       </p>
     </Link>
@@ -55,7 +61,7 @@ export function TileGroup({ title, children, cols = 3 }: { title: string; childr
   return (
     <section aria-label={title}>
       <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">{title}</h2>
-      <div className={`grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 ${cols === 6 ? 'lg:grid-cols-3 2xl:grid-cols-6' : 'lg:grid-cols-3'}`}>{children}</div>
+      <div className={`stat-row grid grid-cols-1 gap-3 sm:grid-cols-2 ${cols === 6 ? 'lg:grid-cols-3 2xl:grid-cols-6' : 'lg:grid-cols-3'}`}>{children}</div>
     </section>
   );
 }
