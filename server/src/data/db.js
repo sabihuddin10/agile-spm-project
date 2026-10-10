@@ -9,8 +9,13 @@
  *   over TCP, because Neon's driver cannot talk to a plain Postgres server.
  * Both Pools share the same API, so nothing else changes.
  */
-import { Pool as NeonPool } from '@neondatabase/serverless';
+import { Pool as NeonPool, neonConfig } from '@neondatabase/serverless';
 import pg from 'pg';
+import ws from 'ws';
+
+// Neon's driver needs a WebSocket class. Node 22+ (Vercel) has one built in; Node 20
+// (some dev PCs) does not, and every query would fail with "fetch failed".
+if (typeof globalThis.WebSocket === 'undefined') neonConfig.webSocketConstructor = ws;
 
 /** True when the connection string points at Neon. */
 export function isNeonUrl(url) {
