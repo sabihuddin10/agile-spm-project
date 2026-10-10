@@ -51,7 +51,7 @@ export function WageEditor({
       </label>
       <div className="flex flex-col gap-2 sm:flex-row">
         <div className="relative sm:w-40">
-          <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-stone-400">$</span>
+          <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-stone-500" aria-hidden="true">$</span>
           <input
             id="wage-input"
             className={`input pl-7 ${error ? 'border-red-400' : ''}`}

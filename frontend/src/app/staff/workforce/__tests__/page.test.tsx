@@ -2,15 +2,54 @@
  * Workforce hub page, rendered against the in-browser workforce demo layer
  * (workforce-mock) as an admin and as a manager. Arrange-Act-Assert.
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useSyncExternalStore } from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import WorkforcePage from '@/app/staff/workforce/page';
 import { useAuth } from '@/context/auth-context';
 import { storeAuth } from '@/lib/api';
-import { workforceMock } from '@/lib/workforce-api';
+import { workforceApi, workforceMock } from '@/lib/workforce-api';
 import type { User } from '@/types';
 
+/** A tiny stand-in for the App Router: the query string lives in a store the hooks subscribe to. */
+const nav = vi.hoisted(() => {
+  const listeners = new Set<() => void>();
+  const state = { search: '', history: [] as string[] };
+  const set = (url: string) => {
+    state.search = url.includes('?') ? url.slice(url.indexOf('?')) : '';
+    listeners.forEach((l) => l());
+  };
+  return {
+    state,
+    listeners,
+    reset: () => {
+      state.search = '';
+      state.history = [];
+    },
+    push: vi.fn((url: string) => {
+      state.history.push(state.search);
+      set(url);
+    }),
+    replace: vi.fn((url: string) => set(url)),
+    back: vi.fn(() => set(state.history.pop() ?? '')),
+  };
+});
+
+vi.mock('next/navigation', () => ({
+  usePathname: () => '/staff/workforce',
+  useRouter: () => ({ push: nav.push, replace: nav.replace, back: nav.back }),
+  useSearchParams: () => {
+    const search = useSyncExternalStore(
+      (cb) => {
+        nav.listeners.add(cb);
+        return () => nav.listeners.delete(cb);
+      },
+      () => nav.state.search,
+    );
+    return new URLSearchParams(search);
+  },
+}));
 vi.mock('@/components/layout/staff-layout', () => ({
   StaffLayout: ({ children, section }: { children: React.ReactNode; section?: string }) => (
     <div data-testid="staff-layout" data-section={section}>
@@ -38,6 +77,14 @@ beforeEach(() => {
   localStorage.clear();
   workforceMock.reset();
   toast.mockClear();
+  nav.reset();
+  nav.push.mockClear();
+  nav.replace.mockClear();
+  nav.back.mockClear();
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 describe('WorkforcePage', () => {
@@ -73,9 +120,10 @@ describe('WorkforcePage', () => {
     expect(within(table).getByText('Net pay')).toBeInTheDocument();
     expect(within(table).getByRole('button', { name: 'Alex Admin' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: "Who's in now" })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Team hours' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Hours by role' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Lateness' })).toBeInTheDocument();
+    // Charts load lazily, after the numbers
+    expect(await screen.findByRole('heading', { name: 'Team hours' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Hours by role' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Lateness' })).toBeInTheDocument();
   });
 
   it('shows a manager waiters and chefs with no money anywhere and no pay controls', async () => {
@@ -98,5 +146,59 @@ describe('WorkforcePage', () => {
     expect(screen.queryByLabelText('Hourly wage')).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Pay' })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Add bonus or correction' })).not.toBeInTheDocument();
+  });
+
+  it('puts the open drill-down in the URL so Back closes it', async () => {
+    // Arrange
+    signIn(admin);
+    const user = userEvent.setup({ delay: null });
+    render(<WorkforcePage />);
+    const table = (await screen.findByRole('heading', { name: 'Team' })).closest('section') as HTMLElement;
+
+    // Act
+    await user.click(within(table).getByRole('button', { name: 'Will Waiter' }));
+    // Assert
+    expect(nav.push).toHaveBeenCalledWith('/staff/workforce?staff=usr_waiter');
+    const back = await screen.findByRole('button', { name: /Back to team/ });
+
+    // Act
+    await user.click(back);
+    // Assert — pops the history entry it pushed
+    expect(nav.back).toHaveBeenCalled();
+    expect(await screen.findByRole('heading', { name: 'Team' })).toBeInTheDocument();
+  });
+
+  it('opens a shared ?staff= link straight on the drill-down and closes it in place', async () => {
+    // Arrange
+    signIn(admin);
+    nav.state.search = '?staff=usr_waiter';
+    const user = userEvent.setup({ delay: null });
+    render(<WorkforcePage />);
+    expect(await screen.findByRole('heading', { name: 'Will Waiter' })).toBeInTheDocument();
+
+    // Act
+    await user.click(screen.getByRole('button', { name: /Back to team/ }));
+
+    // Assert — nothing to pop, so the query is replaced
+    expect(nav.replace).toHaveBeenCalledWith('/staff/workforce', { scroll: false });
+    expect(nav.back).not.toHaveBeenCalled();
+    expect(await screen.findByRole('heading', { name: 'Team' })).toBeInTheDocument();
+  });
+
+  it('offers Try again instead of spinning forever when the overview fails', async () => {
+    // Arrange
+    signIn(admin);
+    const overview = vi.spyOn(workforceApi, 'overview').mockRejectedValueOnce(new Error('Network down'));
+    const user = userEvent.setup({ delay: null });
+    render(<WorkforcePage />);
+    const retry = await screen.findByRole('button', { name: 'Try again' });
+    expect(screen.getByText("Couldn't load the workforce overview")).toBeInTheDocument();
+
+    // Act
+    await user.click(retry);
+
+    // Assert
+    expect(await screen.findByRole('heading', { name: 'Team' })).toBeInTheDocument();
+    expect(overview).toHaveBeenCalledTimes(2);
   });
 });

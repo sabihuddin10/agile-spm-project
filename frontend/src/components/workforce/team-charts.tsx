@@ -8,6 +8,7 @@ import { DataTableToggle } from '@/components/analytics/analytics-card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ROLE_META, STAFF_ROLE_ORDER } from '@/components/staff/role-meta';
 import { hoursText } from '@/components/workforce/workforce-format';
+import { WORKFORCE_CHART_COLORS, chartAnimation } from '@/components/workforce/chart-tokens';
 
 const toHours = (m: number) => Math.round((m / 60) * 10) / 10;
 
@@ -39,13 +40,13 @@ export function HoursByRole({ rows }: { rows: WorkforceOverviewRow[] }) {
     indexAxis: 'y',
     responsive: true,
     maintainAspectRatio: false,
-    animation: { duration: 250 },
+    animation: chartAnimation(),
     plugins: {
       legend: { display: false },
       tooltip: { ...TOOLTIP_STYLE, callbacks: { label: (i) => ` ${i.dataset.label}: ${i.raw as number} h` } },
     },
     scales: {
-      x: { beginAtZero: true, grid: { color: CHART_COLORS.grid }, border: { display: false }, title: { display: true, text: 'Hours', color: '#78716c' } },
+      x: { beginAtZero: true, grid: { color: CHART_COLORS.grid }, border: { display: false }, title: { display: true, text: 'Hours', color: WORKFORCE_CHART_COLORS.axisTitle } },
       y: { grid: { display: false }, border: { color: CHART_COLORS.axis } },
     },
   };
@@ -98,8 +99,8 @@ export function LatenessTrend({ days }: { days: SeriesPoint[] }) {
       {
         label: 'Late arrivals',
         data: days.map((d) => d.lateCount),
-        borderColor: '#b91c1c',
-        backgroundColor: '#b91c1c',
+        borderColor: WORKFORCE_CHART_COLORS.danger,
+        backgroundColor: WORKFORCE_CHART_COLORS.danger,
         borderWidth: 2,
         pointRadius: days.map((d) => (d.lateCount > 0 ? 3 : 0)),
         tension: 0.25,
@@ -110,7 +111,7 @@ export function LatenessTrend({ days }: { days: SeriesPoint[] }) {
   const options: ChartOptions<'line'> = {
     responsive: true,
     maintainAspectRatio: false,
-    animation: { duration: 250 },
+    animation: chartAnimation(),
     plugins: { legend: { display: false }, tooltip: { ...(TOOLTIP_STYLE as object) } },
     scales: {
       x: { grid: { display: false }, border: { color: CHART_COLORS.axis }, ticks: { maxRotation: 0, autoSkip: true, autoSkipPadding: 12 } },

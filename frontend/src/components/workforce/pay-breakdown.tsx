@@ -69,7 +69,7 @@ export function PayBreakdownCard({
               onRemoveAdjustment ? (
                 <button
                   type="button"
-                  className="btn-ghost !px-2 !py-1 text-xs text-red-700"
+                  className="btn-sm btn-ghost text-red-700 hover:bg-red-50"
                   onClick={() => onRemoveAdjustment(b.id)}
                   aria-label={`Remove ${b.reason} (${signedMoney(b.amount)})`}
                 >

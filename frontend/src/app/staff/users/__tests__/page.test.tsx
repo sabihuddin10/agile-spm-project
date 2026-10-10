@@ -94,4 +94,32 @@ describe('StaffUsersPage', () => {
     // Assert
     expect(await screen.findByTestId('all-accounts-panel')).toBeInTheDocument();
   });
+
+  it('shows Try again instead of an empty roster when the team fails to load', async () => {
+    // Arrange
+    vi.mocked(staffApi.roster).mockRejectedValueOnce(new Error('Network down'));
+    vi.mocked(useAuth).mockReturnValue({ user: makeUser() } as unknown as ReturnType<typeof useAuth>);
+    const user = userEvent.setup({ delay: null });
+    render(<StaffUsersPage />);
+    const retry = await screen.findByRole('button', { name: 'Try again' });
+    expect(screen.getByText("Couldn't load the team")).toBeInTheDocument();
+    expect(screen.queryByTestId('team-panel')).not.toBeInTheDocument();
+
+    // Act
+    await user.click(retry);
+
+    // Assert
+    expect(await screen.findByTestId('team-panel')).toHaveTextContent('2 staff');
+  });
+
+  it('keeps sprint and story IDs out of the page subtitle', async () => {
+    // Arrange / Act
+    vi.mocked(useAuth).mockReturnValue({ user: makeUser() } as unknown as ReturnType<typeof useAuth>);
+    render(<StaffUsersPage />);
+    await screen.findByTestId('team-panel');
+
+    // Assert
+    expect(screen.getByText('Team roster and roles, hiring, the weekly rota and staff performance.')).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/Sprint \d|US\d/);
+  });
 });

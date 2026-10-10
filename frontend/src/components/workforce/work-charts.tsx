@@ -8,6 +8,7 @@ import { CHART_COLORS, TOOLTIP_STYLE } from '@/components/analytics/chart-setup'
 import { DataTableToggle, Segmented } from '@/components/analytics/analytics-card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { hoursText } from '@/components/workforce/workforce-format';
+import { WORKFORCE_CHART_COLORS, chartAnimation } from '@/components/workforce/chart-tokens';
 
 export type ChartMode = 'day' | 'week' | 'month' | 'hour';
 
@@ -16,8 +17,8 @@ type Mixed = 'bar' | 'line';
 const MODE_LABEL: Record<ChartMode, string> = { day: 'Day', week: 'Week', month: 'Month', hour: 'Hour of day' };
 
 /** Break bars sit in a warm neutral so they read as "time off the clock", not as a state. */
-const BREAK_COLOR = '#d6d3d1'; // stone-300
-const LATE_COLOR = '#b91c1c'; // red-700 — late is a state
+const BREAK_COLOR = WORKFORCE_CHART_COLORS.breakTime;
+const LATE_COLOR = WORKFORCE_CHART_COLORS.danger; // late is a state
 
 const toHours = (m: number) => Math.round((m / 60) * 10) / 10;
 
@@ -109,7 +110,7 @@ export function WorkCharts({
   const options: ChartOptions<Mixed> = {
     responsive: true,
     maintainAspectRatio: false,
-    animation: { duration: 250 },
+    animation: chartAnimation(),
     interaction: { mode: 'index', intersect: false },
     plugins: {
       legend: { display: false },
@@ -132,7 +133,7 @@ export function WorkCharts({
         grid: { color: CHART_COLORS.grid },
         border: { display: false },
         ticks: { maxTicksLimit: 6 },
-        title: { display: true, text: 'Hours', color: '#78716c' },
+        title: { display: true, text: 'Hours', color: WORKFORCE_CHART_COLORS.axisTitle },
       },
       y1: {
         position: 'right',
@@ -140,7 +141,7 @@ export function WorkCharts({
         grid: { display: false },
         border: { display: false },
         ticks: { precision: 0, maxTicksLimit: 4 },
-        title: { display: true, text: 'Late', color: '#78716c' },
+        title: { display: true, text: 'Late', color: WORKFORCE_CHART_COLORS.axisTitle },
       },
     },
   };
@@ -186,7 +187,7 @@ export function WorkCharts({
               Breaks (unpaid)
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <span className="text-[10px] leading-none" style={{ color: LATE_COLOR }}>
+              <span className="text-xs leading-none" style={{ color: LATE_COLOR }} aria-hidden="true">
                 ▲
               </span>
               Late arrivals
