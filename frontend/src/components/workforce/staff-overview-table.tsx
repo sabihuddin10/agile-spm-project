@@ -94,7 +94,7 @@ export function StaffOverviewTable({
                     </td>
                     <td className="text-right">
                       {hoursText(r.summary.paidMinutes)}
-                      <span className="text-stone-400"> / {hoursText(r.summary.scheduledMinutes)}</span>
+                      <span className="text-stone-500"> / {hoursText(r.summary.scheduledMinutes)}</span>
                     </td>
                     <td className="text-right">{r.summary.lateCount}</td>
                     {showPay ? (
@@ -115,7 +115,7 @@ export function StaffOverviewTable({
                   </th>
                   <td className="text-right">
                     {hoursText(totals.paidMinutes)}
-                    <span className="font-normal text-stone-400"> / {hoursText(scheduled)}</span>
+                    <span className="font-normal text-stone-500"> / {hoursText(scheduled)}</span>
                   </td>
                   <td className="text-right">{totals.lateCount}</td>
                   {showPay ? (

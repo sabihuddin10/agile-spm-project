@@ -173,11 +173,11 @@ function Field({
       </label>
       <div className="relative">
         {prefix ? (
-          <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-stone-400">{prefix}</span>
+          <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-stone-500">{prefix}</span>
         ) : null}
         {children}
         {suffix ? (
-          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-stone-400">{suffix}</span>
+          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-stone-500">{suffix}</span>
         ) : null}
       </div>
       {error ? (
@@ -348,7 +348,7 @@ export function SettingsForm() {
         <Card>
           <CardHeader
             title="Billing & loyalty"
-            subtitle="The restaurant-configured rates applied to every bill (US5.2)."
+            subtitle="The restaurant-configured rates applied to every bill."
           />
           <div className="grid gap-4 sm:grid-cols-3">
             <Field id="setting-taxPercent" label="Tax rate" suffix="%" error={errors.taxPercent} hint="0–50%. Charged on the subtotal after any Flame Point discount.">
@@ -376,7 +376,7 @@ export function SettingsForm() {
 
         <div className="grid gap-4 lg:grid-cols-2">
           <Card>
-            <CardHeader title="Kitchen" subtitle="Kitchen display (US4.5)." />
+            <CardHeader title="Kitchen" subtitle="Kitchen display." />
             <Field
               id="setting-kitchenDelayMinutes"
               label="Delay threshold"
@@ -425,7 +425,7 @@ export function SettingsForm() {
         </div>
 
         <Card>
-          <CardHeader title="Reservations" subtitle="Table holds and late arrivals (US7.4)." />
+          <CardHeader title="Reservations" subtitle="Table holds and late arrivals." />
           <div className="grid gap-4 sm:grid-cols-2">
             <Field
               id="setting-reservationDurationMinutes"

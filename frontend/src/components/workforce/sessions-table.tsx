@@ -24,7 +24,7 @@ function Breaks({ session }: { session: AttendanceSession }) {
       </span>
     );
   }
-  if (session.breaks.length === 0) return <span className="text-stone-400">None</span>;
+  if (session.breaks.length === 0) return <span className="text-stone-500">None</span>;
   return (
     <span className="text-stone-600">
       {session.breaks
@@ -35,7 +35,7 @@ function Breaks({ session }: { session: AttendanceSession }) {
 }
 
 function Late({ session }: { session: AttendanceSession }) {
-  return session.late ? <Badge tone="red">{session.lateMinutes} min late</Badge> : <span className="text-stone-400">On time</span>;
+  return session.late ? <Badge tone="red">{session.lateMinutes} min late</Badge> : <span className="text-stone-500">On time</span>;
 }
 
 /**
@@ -112,12 +112,12 @@ export function SessionsTable({
                         <Badge tone="red">Missed</Badge>
                         <span className="ml-2 text-stone-600">{hoursText(shiftMinutes(r.shift))} not worked (unpaid)</span>
                       </td>
-                      <td className="text-right text-stone-400">0 h</td>
+                      <td className="text-right tabular-nums text-stone-500">0 h</td>
                     </tr>
                   ) : (
                     <tr key={r.key}>
                       <td className="whitespace-nowrap font-medium text-stone-800">{formatDate(r.date)}</td>
-                      <td className="whitespace-nowrap">{r.shift ? `${r.shift.start}–${r.shift.end}` : <span className="text-stone-400">Unscheduled</span>}</td>
+                      <td className="whitespace-nowrap">{r.shift ? `${r.shift.start}–${r.shift.end}` : <span className="text-stone-500">Unscheduled</span>}</td>
                       <td className="whitespace-nowrap">
                         {clockTime(r.session.clockIn)} – {r.session.clockOut ? clockTime(r.session.clockOut) : <Badge tone="emerald">Open</Badge>}
                       </td>

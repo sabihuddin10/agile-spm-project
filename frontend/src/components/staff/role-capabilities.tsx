@@ -25,7 +25,7 @@ export function RoleCapabilities({ role }: { role: StaffRole }) {
     <Card>
       <CardHeader title="What your role can do" subtitle={`Access for the ${label} role. An admin can change your role.`} />
       <section aria-labelledby="caps-can">
-        <h3 id="caps-can" className="text-[11px] font-semibold uppercase tracking-wide text-stone-400">
+        <h3 id="caps-can" className="text-xs font-semibold uppercase tracking-wide text-stone-500">
           You can
         </h3>
         <ul className="mt-2 space-y-1.5 text-sm text-stone-700">
@@ -38,7 +38,7 @@ export function RoleCapabilities({ role }: { role: StaffRole }) {
         </ul>
       </section>
       <section aria-labelledby="caps-cannot" className="mt-5 border-t border-stone-100 pt-4">
-        <h3 id="caps-cannot" className="text-[11px] font-semibold uppercase tracking-wide text-stone-400">
+        <h3 id="caps-cannot" className="text-xs font-semibold uppercase tracking-wide text-stone-500">
           You can&apos;t
         </h3>
         <ul className="mt-2 space-y-1.5 text-sm text-stone-500">

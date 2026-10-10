@@ -5,7 +5,7 @@ import type { StaffAnalytics } from '@/types';
 import { PayBreakdownCard } from '@/components/workforce/pay-breakdown';
 import { WorkRings } from '@/components/workforce/progress-ring';
 import { SessionsTable } from '@/components/workforce/sessions-table';
-import { WorkCharts } from '@/components/workforce/work-charts';
+import { LazyWorkCharts } from '@/components/workforce/lazy-charts';
 import { monthLabel } from '@/components/workforce/workforce-format';
 
 /**
@@ -47,7 +47,7 @@ export function StaffWorkView({
           </div>
         ) : null}
         <div className={`min-w-0 ${data.pay ? 'xl:col-span-3' : ''}`}>
-          <WorkCharts
+          <LazyWorkCharts
             series={series}
             title="Hours breakdown"
             subtitle={`Day and hour of day for ${monthLabel(month)}; week and month cover the last three months.`}

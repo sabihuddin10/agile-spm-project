@@ -9,6 +9,7 @@ import { errorMessage } from '@/lib/format';
 import { useAuth } from '@/context/auth-context';
 import { usePolling } from '@/hooks/use-polling';
 import { StaffLayout } from '@/components/layout/staff-layout';
+import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import { useToast } from '@/components/ui/toast';
 import { TeamPanel } from '@/components/staff/team-panel';
@@ -27,7 +28,7 @@ const TAB_LABELS: Record<Tab, string> = {
   accounts: 'All accounts',
 };
 
-/** Staff management console (Sprint 9 · US9.1–US9.5). */
+/** Staff management console: roster and roles, hiring, rota, performance and all accounts. */
 function StaffManagement() {
   const { user } = useAuth();
   const toast = useToast();
@@ -45,6 +46,7 @@ function StaffManagement() {
 
   const [roster, setRoster] = useState<User[]>([]);
   const [rosterLoading, setRosterLoading] = useState(true);
+  const [rosterError, setRosterError] = useState(false);
   const [applications, setApplications] = useState<StaffApplication[]>([]);
   const [appsLoading, setAppsLoading] = useState(true);
   const canReview = can.approveStaff(role);
@@ -53,7 +55,9 @@ function StaffManagement() {
     try {
       const { staff } = await staffApi.roster();
       setRoster(staff);
+      setRosterError(false);
     } catch (err) {
+      setRosterError(true);
       toast(errorMessage(err), 'error');
     } finally {
       setRosterLoading(false);
@@ -109,7 +113,7 @@ function StaffManagement() {
     <>
       <PageHeader
         title="Staff management"
-        subtitle="Sprint 9 · Team roster and roles, hiring, the weekly rota and staff performance (US9.1–US9.5)."
+        subtitle="Team roster and roles, hiring, the weekly rota and staff performance."
       />
 
       <div
@@ -139,14 +143,14 @@ function StaffManagement() {
               {TAB_LABELS[t]}
               {t === 'applications' && pendingCount > 0 ? (
                 <span
-                  className="rounded-full bg-amber-500 px-1.5 py-px text-[10px] font-bold leading-4 text-white"
+                  className="rounded-full bg-amber-500 px-1.5 py-px text-xs font-bold leading-4 tabular-nums text-white"
                   aria-label={`${pendingCount} pending`}
                 >
                   {pendingCount}
                 </span>
               ) : null}
-              {t === 'team' && !rosterLoading ? (
-                <span className="text-xs font-normal text-stone-400">{roster.length}</span>
+              {t === 'team' && !rosterLoading && !rosterError ? (
+                <span className="text-xs font-normal tabular-nums text-stone-500">{roster.length}</span>
               ) : null}
             </button>
           );
@@ -154,7 +158,28 @@ function StaffManagement() {
       </div>
 
       <div role="tabpanel" id={`panel-${active}`} aria-labelledby={`tab-${active}`}>
-        {active === 'team' ? <TeamPanel roster={roster} loading={rosterLoading} onChanged={loadRoster} /> : null}
+        {active === 'team' && rosterError && roster.length === 0 ? (
+          <div className="card">
+            <EmptyState
+              title="Couldn't load the team"
+              hint="Check your connection, then try again."
+              action={
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => {
+                    setRosterLoading(true);
+                    loadRoster();
+                  }}
+                >
+                  Try again
+                </button>
+              }
+            />
+          </div>
+        ) : active === 'team' ? (
+          <TeamPanel roster={roster} loading={rosterLoading} onChanged={loadRoster} />
+        ) : null}
         {active === 'applications' ? (
           <ApplicationsPanel
             applications={applications}

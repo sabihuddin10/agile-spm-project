@@ -112,7 +112,7 @@ export function ShiftPlanner({ roster }: { roster: User[] }) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-1">
-          <button type="button" className="btn-secondary !px-2.5" onClick={() => shiftWeek(-1)} aria-label="Previous week">
+          <button type="button" className="btn-secondary px-2.5" onClick={() => shiftWeek(-1)} aria-label="Previous week">
             ‹
           </button>
           <button
@@ -123,7 +123,7 @@ export function ShiftPlanner({ roster }: { roster: User[] }) {
           >
             This week
           </button>
-          <button type="button" className="btn-secondary !px-2.5" onClick={() => shiftWeek(1)} aria-label="Next week">
+          <button type="button" className="btn-secondary px-2.5" onClick={() => shiftWeek(1)} aria-label="Next week">
             ›
           </button>
         </div>
@@ -172,8 +172,8 @@ export function ShiftPlanner({ roster }: { roster: User[] }) {
                   {rows.map((row) => (
                     <tr key={row.id}>
                       <td className="sticky left-0 z-10 bg-white">
-                        <p className={`truncate font-medium ${row.active ? 'text-stone-800' : 'text-stone-400'}`}>{row.name}</p>
-                        <p className="text-xs text-stone-400">
+                        <p className={`truncate font-medium ${row.active ? 'text-stone-800' : 'text-stone-500'}`}>{row.name}</p>
+                        <p className="text-xs text-stone-500">
                           {row.role ? ROLE_META[row.role].label : 'Former staff'}
                           {!row.active ? ' · inactive' : ''}
                         </p>
@@ -235,7 +235,7 @@ export function ShiftPlanner({ roster }: { roster: User[] }) {
                     </p>
                     <button
                       type="button"
-                      className="btn-ghost !px-2 !py-1 text-xs"
+                      className="btn-sm btn-ghost"
                       onClick={() => setForm({ date: day })}
                       aria-label={`Add shift on ${formatDate(day)}`}
                     >
@@ -243,7 +243,7 @@ export function ShiftPlanner({ roster }: { roster: User[] }) {
                     </button>
                   </div>
                   {list.length === 0 ? (
-                    <p className="text-sm text-stone-400">No shifts</p>
+                    <p className="text-sm text-stone-500">No shifts</p>
                   ) : (
                     <ul className="space-y-1.5">
                       {list.map((s) => (
