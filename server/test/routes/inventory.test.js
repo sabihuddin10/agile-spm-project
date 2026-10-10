@@ -162,3 +162,18 @@ test('ingredient amounts must be finite numbers and text fields short strings', 
   assert.equal(after.stock, item.stock);
   assert.equal(after.supplier, item.supplier);
 });
+
+test('a cleared supplier or category is stored empty, never as the text "null"', async () => {
+  // Arrange
+  const created = await api.call('POST', '/inventory', { token: manager, body: { name: 'Null Check Salt', category: null, supplier: null, unit: 'kg', stock: 1, reorderLevel: 0, costPerUnit: 1 } });
+
+  // Act
+  const edited = await api.call('PATCH', `/inventory/${created.body.item.id}`, { token: manager, body: { supplier: null, category: null } });
+
+  // Assert
+  assert.equal(created.status, 201);
+  assert.equal(created.body.item.supplier, '');
+  assert.equal(created.body.item.category, 'Dry Goods');
+  assert.equal(edited.body.item.supplier, '');
+  assert.equal(edited.body.item.category, 'Dry Goods', 'a cleared category keeps the current one');
+});

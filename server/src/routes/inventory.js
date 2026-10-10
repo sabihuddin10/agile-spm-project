@@ -5,6 +5,9 @@ import { adjustStock } from '../lib/orders.js';
 import { iso } from '../lib/time.js';
 import { text, number } from '../lib/validate.js';
 
+// A cleared field arrives as null; store it as empty, not the text "null".
+const cleanText = (value) => (value == null ? '' : String(value).trim());
+
 const router = Router();
 const kitchenRoles = requireRole('chef', 'manager', 'admin');
 const managerRoles = requireRole('manager', 'admin');
@@ -72,12 +75,12 @@ router.post('/', managerRoles, (req, res) => {
   const item = {
     id: nextId('inv'),
     name: String(name).trim(),
-    category: String(category).trim() || 'Dry Goods',
+    category: cleanText(category) || 'Dry Goods',
     stock: Number(stock),
     unit,
     reorderLevel: Number(reorderLevel),
     costPerUnit: Number(costPerUnit),
-    supplier: String(supplier).trim(),
+    supplier: cleanText(supplier),
   };
   inventory.push(item);
   return res.status(201).json({ item: serialize(item) });
@@ -106,11 +109,11 @@ router.patch('/:id', kitchenRoles, (req, res) => {
     }
     item.name = clean;
   }
-  if (category !== undefined) item.category = String(category).trim() || item.category;
+  if (category !== undefined) item.category = cleanText(category) || item.category;
   if (unit !== undefined) item.unit = unit;
   if (reorderLevel !== undefined) item.reorderLevel = Number(reorderLevel);
   if (costPerUnit !== undefined) item.costPerUnit = Number(costPerUnit);
-  if (supplier !== undefined) item.supplier = String(supplier).trim();
+  if (supplier !== undefined) item.supplier = cleanText(supplier);
   if (stock !== undefined) adjustStock(item, Number(stock) - item.stock, 'count', { userId: req.user.id });
   if (delta !== undefined) {
     if (!Number.isFinite(Number(delta))) return res.status(400).json({ error: 'delta must be a number.' });
