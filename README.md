@@ -116,7 +116,19 @@ cd server && vercel deploy --prod      # API
 cd frontend && vercel deploy --prod    # web
 ```
 
-For local persistence put `DATABASE_URL=...` in `server/.env` (gitignored; `.vercelignore` keeps it out of uploads). Optional `STATE_KEY` picks the `app_state` row (default `main`).
+### Databases: local PostgreSQL in dev, Neon in production
+
+The server picks its Postgres driver from `DATABASE_URL` (`server/src/data/db.js`): a `*.neon.tech` host uses Neon's serverless driver (WebSockets), any other host uses the standard `pg` driver (TCP). So each environment only sets its own URL:
+
+| Where | `DATABASE_URL` |
+|---|---|
+| Local dev (`pnpm dev`) | `server/.env`: a PostgreSQL on your PC, e.g. `postgres://postgres:PASSWORD@localhost:5432/agspm` |
+| Production (`main`, Vercel) | Vercel API project env: the Neon pooled URL |
+| CI and `pnpm test` | not set: in memory |
+
+Local setup, once: install PostgreSQL for Windows (no Docker needed: `winget install PostgreSQL.PostgreSQL.17` or the EDB installer), create the database (`psql -U postgres -c "CREATE DATABASE agspm"` or in pgAdmin), copy `server/.env.example` to `server/.env` and set the URL. The app creates its `app_state` table on the first request. `pnpm --dir server test:db` runs the persistence tests against whichever database `DATABASE_URL` points at.
+
+`server/.env` is gitignored and `.vercelignore` keeps it out of uploads. Optional `STATE_KEY` picks the `app_state` row (default `main`).
 
 ## API reference and status page (`/api/health`)
 

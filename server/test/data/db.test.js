@@ -5,7 +5,9 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { setPool, getPool, ensureTable } from '../../src/data/db.js';
+import pg from 'pg';
+import { Pool as NeonPool } from '@neondatabase/serverless';
+import { setPool, getPool, ensureTable, isNeonUrl, createPool } from '../../src/data/db.js';
 
 /** Fake pool counting CREATE TABLE queries; `failures` makes the first N of them reject. */
 function fakePool({ failures = 0 } = {}) {
@@ -95,4 +97,33 @@ test('setPool resets the memo so the new pool creates the table again', async ()
   // Assert
   assert.equal(oldPool.creates, 1);
   assert.equal(newPool.creates, 1);
+});
+
+test('isNeonUrl is true only for Neon hosts', () => {
+  // Arrange
+  const neon = 'postgres://u:p@ep-cool-name-123456.eu-central-1.aws.neon.tech/neondb?sslmode=require';
+  const local = 'postgres://postgres:secret@localhost:5432/agspm';
+
+  // Act
+  const results = [isNeonUrl(neon), isNeonUrl(local), isNeonUrl('not a url'), isNeonUrl(undefined)];
+
+  // Assert
+  assert.deepEqual(results, [true, false, false, false]);
+});
+
+test('createPool uses the Neon driver for Neon and pg for a local Postgres', async () => {
+  // Arrange
+  const neonUrl = 'postgres://u:p@ep-x.eu-central-1.aws.neon.tech/neondb';
+  const localUrl = 'postgres://postgres:secret@localhost:5432/agspm';
+
+  // Act (pools connect lazily, so nothing is opened here)
+  const neon = createPool(neonUrl);
+  const local = createPool(localUrl, { max: 2 });
+
+  // Assert
+  assert.ok(neon instanceof NeonPool);
+  assert.ok(local instanceof pg.Pool);
+  assert.ok(!(local instanceof NeonPool));
+  assert.equal(local.options.max, 2);
+  await Promise.all([neon.end(), local.end()]);
 });
