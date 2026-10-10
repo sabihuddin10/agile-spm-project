@@ -65,12 +65,12 @@ export function RegisterForm() {
   return (
     <div className="w-full max-w-md">
       <div className="card">
-        <h1 className="font-display text-2xl font-semibold tracking-tight text-bone">Create your account</h1>
+        <h1 className="font-display text-lg font-semibold tracking-tight text-bone sm:text-2xl">Create your account</h1>
         <p className="mt-1 text-sm text-bone-dim">
           Order ahead, track your orders, earn Flame Points and keep your allergies on file.
         </p>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4" noValidate>
+        <form onSubmit={handleSubmit} className="mt-5 space-y-3 sm:mt-6 sm:space-y-4" noValidate>
           <div>
             <label htmlFor="name" className="label">
               Full name
@@ -160,7 +160,7 @@ export function RegisterForm() {
 
           <button
             type="submit"
-            className="btn-primary h-10 w-full lg:h-12"
+            className="btn-primary w-full sm:h-10 lg:h-12"
             disabled={submitting || !v.isValid}
             aria-disabled={submitting || !v.isValid}
             aria-describedby={v.isValid ? undefined : 'register-submit-hint'}

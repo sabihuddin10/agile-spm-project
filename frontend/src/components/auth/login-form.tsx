@@ -71,7 +71,7 @@ export function LoginForm() {
   return (
     <div className="w-full max-w-md">
       <div className="card">
-        <h1 className="font-display text-2xl font-semibold tracking-tight text-bone">Sign in</h1>
+        <h1 className="font-display text-lg font-semibold tracking-tight text-bone sm:text-2xl">Sign in</h1>
         <p className="mt-1 text-sm text-bone-dim">Use your account, or pick a demo account below.</p>
 
         {expired ? (
@@ -80,7 +80,7 @@ export function LoginForm() {
           </p>
         ) : null}
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4" noValidate>
+        <form onSubmit={handleSubmit} className="mt-5 space-y-3 sm:mt-6 sm:space-y-4" noValidate>
           <div>
             <label htmlFor="email" className="label">
               Email
@@ -127,7 +127,7 @@ export function LoginForm() {
 
           <button
             type="submit"
-            className="btn-primary h-10 w-full lg:h-12"
+            className="btn-primary w-full sm:h-10 lg:h-12"
             disabled={submitting || !v.isValid}
             aria-disabled={submitting || !v.isValid}
             aria-describedby={v.isValid ? undefined : 'login-submit-hint'}
@@ -137,7 +137,7 @@ export function LoginForm() {
           <SubmitHint id="login-submit-hint" fields={v.invalidLabels} tone="dark" className="text-center" />
         </form>
 
-        <div className="mt-6 border-t border-char-hairline pt-4">
+        <div className="mt-5 border-t border-char-hairline pt-4 sm:mt-6">
           <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-bone-faint">Quick demo login</p>
           <div className="flex flex-wrap gap-2">
             {DEMO_ACCOUNTS.map((acc) => (

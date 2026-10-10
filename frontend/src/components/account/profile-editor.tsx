@@ -97,13 +97,13 @@ export function ProfileEditor({ customer, onSaved }: { customer: Customer; onSav
     <Card>
       <form onSubmit={save} noValidate>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="font-display text-xl font-semibold tracking-tight text-bone">Your profile</h3>
+          <h3 className="font-display text-base font-semibold tracking-tight text-bone sm:text-xl">Your profile</h3>
           <span className="rounded-full border border-ember/30 bg-ember/10 px-3 py-1 text-xs font-medium text-ember-soft">
             {customer.loyaltyPoints} Flame Points
           </span>
         </div>
 
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        <div className="mt-4 grid gap-3 sm:mt-5 sm:grid-cols-2 sm:gap-4">
           <Field
             id="profile-name"
             label="Name"
@@ -161,7 +161,7 @@ export function ProfileEditor({ customer, onSaved }: { customer: Customer; onSav
           danger
         />
 
-        <div className="mt-5">
+        <div className="mt-4 sm:mt-5">
           <label htmlFor="profile-notes" className="label">
             Notes for the restaurant
           </label>
@@ -188,7 +188,7 @@ export function ProfileEditor({ customer, onSaved }: { customer: Customer; onSav
           </p>
         ) : null}
 
-        <div className="mt-5 flex flex-wrap items-center gap-3">
+        <div className="mt-4 flex flex-wrap items-center gap-3 sm:mt-5">
           <button
             type="submit"
             className="btn-primary"
@@ -238,7 +238,7 @@ function PreferenceChips({
   danger?: boolean;
 }) {
   return (
-    <fieldset className="mt-5">
+    <fieldset className="mt-4 sm:mt-5">
       <legend className="label">{title}</legend>
       <p className="-mt-0.5 mb-2 text-xs text-bone-faint">{hint}</p>
       <div className="flex flex-wrap gap-2">
