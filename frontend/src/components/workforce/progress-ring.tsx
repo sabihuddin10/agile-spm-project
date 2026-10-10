@@ -151,9 +151,9 @@ export function WorkRings({
   const specs = ringSpecs(summary, data);
   return (
     <section aria-label={`Progress for ${periodLabel}`}>
-      <ul className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${specs.length === 4 ? 'xl:grid-cols-4' : 'xl:grid-cols-3'}`}>
+      <ul className={`grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 ${specs.length === 4 ? 'xl:grid-cols-4' : 'xl:grid-cols-3'}`}>
         {specs.map((s) => (
-          <li key={s.key} className="card flex items-center gap-4 !p-4">
+          <li key={s.key} className="card flex items-center gap-3 !p-3 sm:gap-4 sm:!p-4">
             <ProgressRing value={s.value} max={s.max} center={s.center} ariaLabel={s.ariaLabel} tone={s.tone} />
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">{s.title}</p>

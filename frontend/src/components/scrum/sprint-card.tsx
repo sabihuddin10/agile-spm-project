@@ -12,31 +12,28 @@ export function SprintCard({ sprint }: { sprint: SprintBacklog }) {
 
   return (
     <div className={`rounded-xl border bg-white shadow-sm transition ${done ? 'border-emerald-200' : 'border-stone-200'}`}>
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-stone-100 px-4 py-3 sm:px-5 sm:py-4">
-        <div className="flex min-w-0 items-center gap-3">
-          <div
-            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg sm:h-10 sm:w-10 text-sm font-bold ${
-              done ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-100 text-stone-500'
-            }`}
-          >
-            S{sprint.sprint}
-          </div>
-          <div>
-            <p className="font-semibold">{sprint.module}</p>
-            <p className="text-xs text-stone-500">
-              {sprint.goal}
-            </p>
-          </div>
+      {/* Module and both badges share one wrapping row; no separate badge column. */}
+      <div className="flex items-start gap-3 border-b border-stone-100 px-3.5 py-3 sm:px-5 sm:py-4">
+        <div
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-bold sm:h-10 sm:w-10 ${
+            done ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-100 text-stone-500'
+          }`}
+        >
+          S{sprint.sprint}
         </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <Badge tone={sprint.priority === 'Must' ? 'red' : sprint.priority === 'Should' ? 'amber' : 'stone'}>
-            {sprint.priority}
-          </Badge>
-          <Badge tone={done ? 'emerald' : 'stone'}>{done ? 'Delivered' : 'Planned'}</Badge>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            <p className="text-sm font-semibold sm:text-base">{sprint.module}</p>
+            <Badge tone={sprint.priority === 'Must' ? 'red' : sprint.priority === 'Should' ? 'amber' : 'stone'}>
+              {sprint.priority}
+            </Badge>
+            <Badge tone={done ? 'emerald' : 'stone'}>{done ? 'Delivered' : 'Planned'}</Badge>
+          </div>
+          <p className="text-xs text-stone-500">{sprint.goal}</p>
         </div>
       </div>
 
-      <div className="px-4 py-3 text-xs sm:px-5 text-stone-500">
+      <div className="px-3.5 py-2.5 text-xs text-stone-500 sm:px-5 sm:py-3">
         Lead: <span className="font-semibold">{sprint.lead}</span> · Stakeholders:{' '}
         {sprint.stakeholders.join(', ')} · <span className="font-semibold">{total} pts</span> ·{' '}
         {sprint.stories.length} stories

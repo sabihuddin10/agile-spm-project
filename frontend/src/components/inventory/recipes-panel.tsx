@@ -75,15 +75,15 @@ export function RecipesPanel({
       ) : shown.length === 0 ? (
         <p className="py-12 text-center text-sm text-stone-500">No dishes match.</p>
       ) : (
-        <div className="grid gap-3 p-4 md:grid-cols-2 2xl:grid-cols-3">
+        <div className="grid gap-3 p-3 sm:p-4 md:grid-cols-2 2xl:grid-cols-3">
           {shown.map((dish) => {
             const recipe = dish.recipe ?? [];
             const cost = recipeCost(recipe, inventory);
             return (
-              <article key={dish.id} className="flex flex-col rounded-xl border border-stone-200 p-4">
+              <article key={dish.id} className="flex flex-col rounded-xl border border-stone-200 p-3.5 sm:p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="font-semibold text-stone-800">{dish.name}</p>
+                    <p className="text-sm font-semibold text-stone-800 sm:text-base">{dish.name}</p>
                     <p className="text-xs text-stone-500">
                       {dish.category} · {money(dish.price)}
                       {!dish.available ? <span className="text-red-600"> · out of stock</span> : null}

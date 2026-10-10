@@ -238,8 +238,8 @@ export function MenuItemForm({
   }
 
   return (
-    <form onSubmit={submit} noValidate className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-2">
+    <form onSubmit={submit} noValidate className="space-y-3 sm:space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
         <div>
           <label className="label" htmlFor="mi-name">
             Item name *
@@ -360,7 +360,7 @@ export function MenuItemForm({
         <FieldError id="mi-description-err" message={errors.description} />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
         <fieldset>
           <legend className="label">Dietary tags</legend>
           <div className="flex flex-wrap gap-2">

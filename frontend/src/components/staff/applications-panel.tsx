@@ -107,35 +107,34 @@ export function ApplicationsPanel({
             <EmptyState title="No pending applications" hint="New applications from the careers page will appear here." />
           </Card>
         ) : (
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
             {pending.map((app) => {
               const busy = busyId === app.id;
               const role = roles[app.id] ?? app.desiredRole;
               return (
-                <Card key={app.id} className="flex flex-col p-4 sm:p-5">
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="font-semibold text-stone-900">{app.name}</p>
-                      <p className="truncate text-sm text-stone-500">
-                        {app.email}
-                        {app.phone ? ` · ${app.phone}` : ''}
-                      </p>
-                    </div>
+                <Card key={app.id} className="flex flex-col p-3.5 sm:p-5">
+                  {/* Name and role badge in one wrapping row; contact and age underneath. */}
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                    <p className="text-sm font-semibold text-stone-900 sm:text-base">{app.name}</p>
                     <Badge tone={ROLE_META[app.desiredRole].tone}>Applying as {ROLE_META[app.desiredRole].label.toLowerCase()}</Badge>
                   </div>
-                  <p className="mt-1 text-xs text-stone-500">Applied {timeAgo(app.createdAt)}</p>
+                  <p className="mt-0.5 truncate text-xs text-stone-500 sm:text-sm">
+                    {app.email}
+                    {app.phone ? ` · ${app.phone}` : ''}
+                  </p>
+                  <p className="mt-0.5 text-xs text-stone-500 sm:mt-1">Applied {timeAgo(app.createdAt)}</p>
 
-                  <p className="mt-3 flex-1 whitespace-pre-line rounded-lg bg-stone-50 px-3 py-2 text-sm text-stone-700">
+                  <p className="mt-2.5 flex-1 whitespace-pre-line rounded-lg bg-stone-50 px-3 py-2 text-sm text-stone-700 sm:mt-3">
                     {app.experience || <span className="italic text-stone-500">No experience details given.</span>}
                   </p>
 
-                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <div className="mt-3 flex flex-wrap items-center gap-2 sm:mt-4">
                     <label htmlFor={`role-${app.id}`} className="text-sm text-stone-500">
                       Approve as
                     </label>
                     <select
                       id={`role-${app.id}`}
-                      className="input w-auto py-1.5"
+                      className="input w-auto"
                       value={role}
                       disabled={busy}
                       onChange={(e) => setRoles((r) => ({ ...r, [app.id]: e.target.value as StaffRole }))}
@@ -172,9 +171,9 @@ export function ApplicationsPanel({
               {decided.map((app) => {
                 const role = app.status === 'approved' ? app.approvedRole ?? app.desiredRole : app.desiredRole;
                 return (
-                  <li key={app.id} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:gap-4">
+                  <li key={app.id} className="flex flex-col gap-1.5 px-3.5 py-2.5 sm:flex-row sm:items-center sm:gap-4 sm:px-4 sm:py-3">
                     <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium text-stone-800">{app.name}</p>
+                      <p className="truncate text-sm font-medium text-stone-800 sm:text-base">{app.name}</p>
                       <p className="truncate text-xs text-stone-500">{app.email}</p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2 text-xs text-stone-500">

@@ -111,7 +111,7 @@ export function StaffDrilldown({
         </button>
         {data ? (
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-xl font-bold text-stone-900">{data.user.name}</h2>
+            <h2 className="text-lg font-bold text-stone-900 sm:text-xl">{data.user.name}</h2>
             <Badge tone={ROLE_META[data.user.role].tone}>{ROLE_META[data.user.role].label}</Badge>
           </div>
         ) : null}
@@ -141,7 +141,7 @@ export function StaffDrilldown({
           onRemoveAdjustment={canManagePay ? (id) => setRemoving(id) : undefined}
           payFooter={
             canManagePay && data.pay ? (
-              <div className="mt-4 space-y-4 border-t sm:mt-5 sm:space-y-5 border-stone-200 pt-4">
+              <div className="mt-4 space-y-3 border-t border-stone-200 pt-3.5 sm:mt-5 sm:space-y-5 sm:pt-4">
                 <WageEditor name={data.user.name} wage={data.pay.hourlyWage} onSave={saveWage} />
                 <AdjustmentForm
                   name={data.user.name}

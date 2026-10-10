@@ -14,11 +14,11 @@ const toHours = (m: number) => Math.round((m / 60) * 10) / 10;
 
 function CardShell({ id, title, subtitle, children }: { id: string; title: string; subtitle: string; children: React.ReactNode }) {
   return (
-    <section className="card flex min-w-0 flex-col p-4 sm:p-5" aria-labelledby={id}>
-      <h2 id={id} className="text-lg font-semibold">
+    <section className="card flex min-w-0 flex-col p-3.5 sm:p-5" aria-labelledby={id}>
+      <h2 id={id} className="text-base font-semibold sm:text-lg">
         {title}
       </h2>
-      <p className="mb-4 mt-0.5 text-sm text-stone-500">{subtitle}</p>
+      <p className="mb-3 mt-0.5 text-sm text-stone-500 sm:mb-4">{subtitle}</p>
       {children}
     </section>
   );

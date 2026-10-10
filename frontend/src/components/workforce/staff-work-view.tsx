@@ -36,11 +36,11 @@ export function StaffWorkView({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       <h2 className="text-sm font-semibold uppercase tracking-wide text-stone-500">{monthLabel(month)}</h2>
       <WorkRings summary={data.summary} data={data} periodLabel={monthLabel(month)} />
 
-      <div className={`grid grid-cols-1 gap-4 ${data.pay ? 'xl:grid-cols-5' : ''}`}>
+      <div className={`grid grid-cols-1 gap-3 sm:gap-4 ${data.pay ? 'xl:grid-cols-5' : ''}`}>
         {data.pay ? (
           <div className="min-w-0 xl:col-span-2">
             <PayBreakdownCard pay={data.pay} monthPicker={monthPicker} onRemoveAdjustment={onRemoveAdjustment} footer={payFooter} />

@@ -149,10 +149,10 @@ export function WorkCharts({
   const description = describe(points, mode);
 
   return (
-    <section className="card flex min-w-0 flex-col p-4 sm:p-5" aria-labelledby={headingId}>
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+    <section className="card flex min-w-0 flex-col p-3.5 sm:p-5" aria-labelledby={headingId}>
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-3 sm:mb-4">
         <div className="min-w-0">
-          <h2 id={headingId} className="text-lg font-semibold">
+          <h2 id={headingId} className="text-base font-semibold sm:text-lg">
             {title}
           </h2>
           {subtitle ? <p className="mt-0.5 text-sm text-stone-500">{subtitle}</p> : null}
@@ -170,7 +170,7 @@ export function WorkCharts({
       ) : (
         <>
           <p className="mb-3 text-sm text-stone-600">{description}</p>
-          <div className="relative h-60 sm:h-72" role="img" aria-label={`${title} by ${MODE_LABEL[mode].toLowerCase()}. ${description}`}>
+          <div className="relative h-48 sm:h-72" role="img" aria-label={`${title} by ${MODE_LABEL[mode].toLowerCase()}. ${description}`}>
             <Chart type="bar" data={chartData} options={options} />
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-600" aria-hidden="true">

@@ -20,7 +20,7 @@ export function AnalyticsCard({
   const headingId = `${story.replace(/\W/g, '')}-heading`;
   return (
     <section className={`card flex min-w-0 flex-col ${className}`} aria-labelledby={headingId} data-story={story}>
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-2.5 sm:mb-4 sm:gap-3">
         <div className="min-w-0">
           <h2 id={headingId} className="text-base font-semibold text-stone-900">
             {title}

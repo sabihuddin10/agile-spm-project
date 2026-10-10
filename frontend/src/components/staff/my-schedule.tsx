@@ -32,10 +32,11 @@ function relativeDay(date: string, today: string): string {
 
 function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="card p-4">
+    // Phones: label and value share a row, note underneath; from sm a stacked tile.
+    <div className="card grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 p-3 sm:block sm:p-4">
       <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">{label}</p>
-      <p className="mt-1 text-2xl font-bold tabular-nums text-stone-800">{value}</p>
-      {sub ? <p className="text-xs text-stone-500">{sub}</p> : null}
+      <p className="text-xl font-bold tabular-nums text-stone-800 sm:mt-1 sm:text-2xl">{value}</p>
+      {sub ? <p className="col-span-2 text-xs text-stone-500">{sub}</p> : null}
     </div>
   );
 }
@@ -121,7 +122,7 @@ export function MySchedule() {
         <div className="space-y-4 sm:space-y-6">
           {next ? (
             <div
-              className={`rounded-xl border p-4 shadow-sm sm:p-5 ${
+              className={`rounded-xl border p-3.5 shadow-sm sm:p-5 ${
                 onShiftNow ? 'border-emerald-300 bg-emerald-50' : 'border-brand-200 bg-brand-50'
               }`}
             >
@@ -129,10 +130,10 @@ export function MySchedule() {
                 {onShiftNow ? 'Current shift' : 'Next shift'}
               </p>
               <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <p className="text-2xl font-bold text-stone-900">
+                <p className="text-xl font-bold text-stone-900 sm:text-2xl">
                   {next.start}–{next.end}
                 </p>
-                <p className="text-lg font-medium text-stone-700">{formatDate(next.date)}</p>
+                <p className="text-base font-medium text-stone-700 sm:text-lg">{formatDate(next.date)}</p>
                 <p className="text-sm text-stone-500">{formatHours(next.hours)}</p>
               </div>
               <p className={`mt-1 text-sm font-medium ${onShiftNow ? 'text-emerald-800' : 'text-brand-800'}`}>{nextDetail}</p>
@@ -140,7 +141,7 @@ export function MySchedule() {
             </div>
           ) : null}
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4">
             <Stat
               label="This week"
               value={formatHours(weekHours)}
@@ -171,22 +172,27 @@ export function MySchedule() {
                 {groups.map(([date, list]) => {
                   const isToday = date === today;
                   return (
-                    <Card key={date} className={`p-4 ${isToday ? 'border-brand-300 ring-1 ring-brand-200' : ''}`}>
-                      <div className="mb-2 flex items-center justify-between gap-2">
-                        <p className="font-semibold text-stone-800">{formatDate(date)}</p>
+                    <Card key={date} className={`p-3.5 sm:p-4 ${isToday ? 'border-brand-300 ring-1 ring-brand-200' : ''}`}>
+                      <div className="mb-1.5 flex items-center justify-between gap-2 sm:mb-2">
+                        <p className="text-sm font-semibold text-stone-800 sm:text-base">{formatDate(date)}</p>
                         <Badge tone={isToday ? 'brand' : 'stone'}>{relativeDay(date, today)}</Badge>
                       </div>
                       <ul className="divide-y divide-stone-100">
                         {list.map((s) => (
-                          <li key={s.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
-                            <span className="font-medium tabular-nums text-stone-900">
-                              {s.start}–{s.end}
-                            </span>
-                            <span className="text-sm text-stone-500">{formatHours(s.hours)}</span>
-                            <Badge tone={SHIFT_STATUS[s.status].tone} className="ml-auto">
+                          // Time, hours and note on the left; status on the right.
+                          <li key={s.id} className="flex items-start gap-2.5 py-2">
+                            <div className="min-w-0 flex-1">
+                              <p className="flex flex-wrap items-baseline gap-x-2.5">
+                                <span className="text-sm font-medium tabular-nums text-stone-900 sm:text-base">
+                                  {s.start}–{s.end}
+                                </span>
+                                <span className="text-xs text-stone-500 sm:text-sm">{formatHours(s.hours)}</span>
+                              </p>
+                              {s.notes ? <p className="text-xs text-stone-600 sm:text-sm">{s.notes}</p> : null}
+                            </div>
+                            <Badge tone={SHIFT_STATUS[s.status].tone} className="shrink-0">
                               {SHIFT_STATUS[s.status].label}
                             </Badge>
-                            {s.notes ? <p className="w-full text-sm text-stone-600">{s.notes}</p> : null}
                           </li>
                         ))}
                       </ul>
@@ -207,16 +213,21 @@ export function MySchedule() {
               ) : (
                 <ul className="divide-y divide-stone-100">
                   {past.map((s) => (
-                    <li key={s.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3">
-                      <span className="w-28 font-medium text-stone-800">{formatDate(s.date)}</span>
-                      <span className="tabular-nums text-stone-700">
-                        {s.start}–{s.end}
-                      </span>
-                      <span className="text-sm text-stone-500">{formatHours(s.hours)}</span>
-                      <Badge tone={SHIFT_STATUS[s.status].tone} className="ml-auto">
+                    // Date, time and hours on the left (one line from sm); status on the right.
+                    <li key={s.id} className="flex items-start gap-2.5 px-3.5 py-2.5 sm:gap-4 sm:px-4 sm:py-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="flex flex-wrap items-baseline gap-x-2.5 sm:gap-x-4">
+                          <span className="w-full text-sm font-medium text-stone-800 sm:w-28 sm:text-base">{formatDate(s.date)}</span>
+                          <span className="text-xs tabular-nums text-stone-700 sm:text-base">
+                            {s.start}–{s.end}
+                          </span>
+                          <span className="text-xs text-stone-500 sm:text-sm">{formatHours(s.hours)}</span>
+                        </p>
+                        {s.notes ? <p className="text-xs text-stone-500 sm:text-sm">{s.notes}</p> : null}
+                      </div>
+                      <Badge tone={SHIFT_STATUS[s.status].tone} className="shrink-0">
                         {s.status === 'scheduled' ? 'Awaiting sign-off' : SHIFT_STATUS[s.status].label}
                       </Badge>
-                      {s.notes ? <p className="w-full text-sm text-stone-500">{s.notes}</p> : null}
                     </li>
                   ))}
                 </ul>

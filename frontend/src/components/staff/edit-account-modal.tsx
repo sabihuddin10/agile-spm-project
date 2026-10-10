@@ -83,7 +83,7 @@ export function EditAccountModal({
   return (
     <Modal title={`Edit ${user.name}'s details`} onClose={saving ? () => undefined : onClose}>
       <form onSubmit={save} noValidate>
-        <fieldset disabled={saving} className="space-y-4">
+        <fieldset disabled={saving} className="space-y-3 sm:space-y-4">
           <TextField
             id="edit-account-name"
             label="Name"

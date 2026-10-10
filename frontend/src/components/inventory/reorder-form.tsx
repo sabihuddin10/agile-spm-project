@@ -161,7 +161,7 @@ export function ReorderForm({
       <div className="no-print mb-3 flex flex-wrap items-center gap-2">
         <div className="flex-1">
           <h2 className="font-semibold text-stone-800">Supplier reorder form</h2>
-          <p className="text-sm text-stone-500">
+          <p className="text-xs text-stone-500 sm:text-sm">
             Pre-filled with every ingredient at or below its reorder level, topped back up to twice that level.
           </p>
         </div>
@@ -170,10 +170,10 @@ export function ReorderForm({
         </button>
       </div>
 
-      <div className="print-area rounded-xl border border-stone-200 bg-white p-4 sm:p-5">
+      <div className="print-area rounded-xl border border-stone-200 bg-white p-3.5 sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-stone-200 pb-3">
           <div>
-            <p className="text-lg font-bold text-stone-900">{restaurant.name}</p>
+            <p className="text-base font-bold text-stone-900 sm:text-lg">{restaurant.name}</p>
             {restaurant.address ? <p className="text-xs text-stone-500">{restaurant.address}</p> : null}
             <p className="mt-1 text-xs font-semibold uppercase tracking-widest text-stone-500">Purchase order request</p>
           </div>
@@ -264,7 +264,7 @@ export function ReorderForm({
           <span className="text-sm text-stone-500">
             {lines.length} line{lines.length === 1 ? '' : 's'} · {groups.length} supplier{groups.length === 1 ? '' : 's'}
           </span>
-          <span className="text-lg font-bold text-stone-900">Estimated total {money(total)}</span>
+          <span className="text-base font-bold text-stone-900 sm:text-lg">Estimated total {money(total)}</span>
         </div>
       </div>
 

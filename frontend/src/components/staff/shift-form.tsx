@@ -110,7 +110,7 @@ export function ShiftForm({
 
   return (
     <Modal title={shift ? `Edit shift · ${shift.userName}` : 'Add shift'} onClose={saving ? () => undefined : onClose}>
-      <form onSubmit={submit} className="space-y-4">
+      <form onSubmit={submit} className="space-y-3 sm:space-y-4">
         {shift ? (
           <p className="text-sm text-stone-600">
             {shift.userName}

@@ -35,7 +35,7 @@ function CopyField({ label, value, mono = false }: { label: string; value: strin
           value={value}
           aria-label={label}
           onFocus={(e) => e.currentTarget.select()}
-          className={`input flex-1 bg-stone-50 ${mono ? 'font-mono text-base tracking-wide' : ''}`}
+          className={`input flex-1 bg-stone-50 ${mono ? 'font-mono tracking-wide sm:text-base' : ''}`}
         />
         <button type="button" onClick={copy} className="btn-secondary shrink-0" aria-label={`Copy ${label.toLowerCase()}`}>
           {copied ? 'Copied ✓' : 'Copy'}
@@ -65,7 +65,7 @@ export function CredentialsModal({
   const roleBadge = <Badge tone={ROLE_META[user.role].tone}>{ROLE_META[user.role].label}</Badge>;
   return (
     <Modal title={variant === 'reset' ? 'Password reset' : 'Staff account created'} onClose={onClose}>
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         {variant === 'reset' ? (
           <p className="text-sm text-stone-600">
             <span className="font-medium text-stone-800">{user.name}</span> has been signed out everywhere. They can
