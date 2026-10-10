@@ -95,3 +95,46 @@ describe('BookingForm', () => {
     expect(screen.getByRole('button', { name: /19:30/i })).toBeInTheDocument();
   });
 });
+
+describe('BookingForm — live field checks', () => {
+  beforeEach(() => {
+    vi.mocked(useAuth).mockReturnValue({ user: null } as unknown as ReturnType<typeof useAuth>);
+    vi.mocked(reservationApi.availability).mockResolvedValue({ date: FUTURE, partySize: 2, slots: [{ time: '19:00', available: true }] });
+  });
+
+  it('checks the phone on blur and ties the error to the field', async () => {
+    // Arrange
+    const user = userEvent.setup({ delay: null });
+    render(<BookingForm />);
+    const phone = screen.getByLabelText(/phone/i);
+
+    // Act
+    await user.type(phone, 'call me');
+    await user.tab();
+
+    // Assert
+    expect(phone).toHaveAttribute('aria-invalid', 'true');
+    expect(phone).toHaveAccessibleDescription('Use digits, spaces and + ( ) - . only.');
+
+    // Act
+    await user.clear(phone);
+    await user.type(phone, '+44 20 7946 0958');
+
+    // Assert
+    expect(phone).toHaveAttribute('aria-invalid', 'false');
+  });
+
+  it('flags a name that is too long when you leave the field', async () => {
+    // Arrange
+    const user = userEvent.setup({ delay: null });
+    render(<BookingForm />);
+    const name = screen.getByLabelText(/full name/i);
+
+    // Act
+    await user.type(name, 'x'.repeat(85));
+    await user.tab();
+
+    // Assert
+    expect(name).toHaveAccessibleDescription(/80 characters or fewer/);
+  });
+});

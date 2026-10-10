@@ -10,10 +10,16 @@ import { Card } from '@/components/ui/card';
 import { SlotGrid } from '@/components/reservations/slot-grid';
 import { useAvailability } from '@/components/reservations/use-availability';
 import { addDaysISO, errorMessage, formatDate, localDateISO } from '@/lib/format';
+import {
+  validateEmail, validateFutureDate, validateIntegerInRange, validateMaxLength, validateName, validatePhone,
+  EMAIL_MAX, NAME_MAX, PHONE_MAX,
+} from '@/lib/validation/fields';
+import { useFormValidation, type Rules } from '@/lib/validation/use-form-validation';
+import { describedBy } from '@/components/forms/field-error';
 
 const MAX_PARTY = 12;
+const REQUESTS_MAX = 500;
 const PARTY_SIZES = Array.from({ length: MAX_PARTY }, (_, i) => i + 1);
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 interface FormState {
   customerName: string;
@@ -25,7 +31,6 @@ interface FormState {
   specialRequests: string;
 }
 
-type Field = 'customerName' | 'email' | 'date' | 'time';
 
 const EMPTY: FormState = {
   customerName: '',
@@ -47,15 +52,20 @@ function dayLabel(date: string): string {
   return formatDate(date);
 }
 
-function validate(form: FormState, today: string): Partial<Record<Field, string>> {
-  const errors: Partial<Record<Field, string>> = {};
-  if (!form.customerName.trim()) errors.customerName = 'Please enter your name.';
-  if (!form.email.trim()) errors.email = 'Please enter your email so we can confirm.';
-  else if (!EMAIL_RE.test(form.email.trim())) errors.email = 'That email address doesn’t look right.';
-  if (!form.date) errors.date = 'Please choose a date.';
-  else if (today && form.date < today) errors.date = 'Please choose today or a later date.';
-  if (!form.time) errors.time = form.date ? 'Please pick a time.' : 'Choose a date first, then pick a time.';
-  return errors;
+/** Field rules; `today` is only known after mount, so the date rule is built per render. */
+function bookingRules(today: string): Rules<FormState> {
+  return {
+    customerName: (v) => validateName(v),
+    email: (v) => {
+      const problem = validateEmail(v, { missing: 'Please enter your email so we can confirm.' });
+      return problem && v.trim() ? 'That email address doesn’t look right.' : problem;
+    },
+    phone: (v) => validatePhone(v),
+    partySize: (v) => validateIntegerInRange(v, 1, MAX_PARTY, 'Party size'),
+    date: (v) => validateFutureDate(v, today),
+    time: (v, f) => (v ? undefined : f.date ? 'Please pick a time.' : 'Choose a date first, then pick a time.'),
+    specialRequests: (v) => validateMaxLength(v, REQUESTS_MAX, 'Special requests'),
+  };
 }
 
 function FieldError({ id, message }: { id: string; message?: string }) {
@@ -76,7 +86,6 @@ export function BookingForm() {
   const toast = useToast();
   const { user } = useAuth();
   const [form, setForm] = useState<FormState>(EMPTY);
-  const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
   const [conflict, setConflict] = useState<BookingConflict | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState<Reservation | null>(null);
@@ -87,6 +96,9 @@ export function BookingForm() {
 
   // Computed after mount so the server-rendered markup never disagrees about "today".
   useEffect(() => setToday(localDateISO()), []);
+
+  const v = useFormValidation(form, bookingRules(today));
+  const errors = v.errors;
 
   // Signed-in guests get their details filled in; they can still edit them.
   useEffect(() => {
@@ -108,22 +120,19 @@ export function BookingForm() {
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
-    if (key in errors) setErrors((e) => ({ ...e, [key]: undefined }));
-    if (key === 'date' || key === 'partySize') setErrors((e) => ({ ...e, time: undefined }));
+    // Picking a date or a slot is a complete choice, so check it straight away.
+    if (key === 'date' || key === 'time' || key === 'partySize') v.blur(key);
   }
 
   function pickAlternative(alt: AlternativeSlot) {
     setConflict(null);
-    setErrors((e) => ({ ...e, date: undefined, time: undefined }));
     if (alt.date === form.date) availability.reload();
     setForm((f) => ({ ...f, date: alt.date, time: alt.time }));
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const found = validate(form, today);
-    setErrors(found);
-    if (Object.keys(found).length > 0) return;
+    if (!v.touchAll()) return;
 
     setSubmitting(true);
     setConflict(null);
@@ -154,7 +163,7 @@ export function BookingForm() {
   function startAgain() {
     setDone(null);
     setConflict(null);
-    setErrors({});
+    v.reset();
     setForm((f) => ({ ...EMPTY, customerName: f.customerName, email: f.email, phone: f.phone }));
   }
 
@@ -227,10 +236,12 @@ export function BookingForm() {
               id="bk-name"
               className="input"
               autoComplete="name"
+              maxLength={NAME_MAX + 20}
               value={form.customerName}
               aria-invalid={Boolean(errors.customerName)}
               aria-describedby={errors.customerName ? 'bk-name-err' : undefined}
               onChange={(e) => set('customerName', e.target.value)}
+              onBlur={() => v.blur('customerName')}
             />
             <FieldError id="bk-name-err" message={errors.customerName} />
           </div>
@@ -243,10 +254,13 @@ export function BookingForm() {
               className="input"
               type="email"
               autoComplete="email"
+              inputMode="email"
+              maxLength={EMAIL_MAX}
               value={form.email}
               aria-invalid={Boolean(errors.email)}
               aria-describedby={errors.email ? 'bk-email-err' : undefined}
               onChange={(e) => set('email', e.target.value)}
+              onBlur={() => v.blur('email')}
             />
             <FieldError id="bk-email-err" message={errors.email} />
           </div>
@@ -259,9 +273,15 @@ export function BookingForm() {
               className="input"
               type="tel"
               autoComplete="tel"
+              inputMode="tel"
+              maxLength={PHONE_MAX}
               value={form.phone}
+              aria-invalid={Boolean(errors.phone)}
+              aria-describedby={errors.phone ? 'bk-phone-err' : undefined}
               onChange={(e) => set('phone', e.target.value)}
+              onBlur={() => v.blur('phone')}
             />
+            <FieldError id="bk-phone-err" message={errors.phone} />
           </div>
           <div>
             <label className="label" htmlFor="bk-party">
@@ -271,6 +291,8 @@ export function BookingForm() {
               id="bk-party"
               className="input"
               value={form.partySize}
+              aria-invalid={Boolean(errors.partySize)}
+              aria-describedby={describedBy('bk-party-hint', errors.partySize && 'bk-party-err')}
               onChange={(e) => set('partySize', Number(e.target.value))}
             >
               {PARTY_SIZES.map((n) => (
@@ -279,7 +301,8 @@ export function BookingForm() {
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-xs text-bone-faint">More than {MAX_PARTY}? Please give us a call.</p>
+            <p id="bk-party-hint" className="mt-1 text-xs text-bone-faint">More than {MAX_PARTY}? Please give us a call.</p>
+            <FieldError id="bk-party-err" message={errors.partySize} />
           </div>
           <div>
             <label className="label" htmlFor="bk-date">
@@ -350,11 +373,18 @@ export function BookingForm() {
           <textarea
             id="bk-requests"
             className="input min-h-[64px]"
-            maxLength={500}
+            maxLength={REQUESTS_MAX}
             value={form.specialRequests}
+            aria-invalid={Boolean(errors.specialRequests)}
+            aria-describedby={describedBy('bk-requests-count', errors.specialRequests && 'bk-requests-err')}
             onChange={(e) => set('specialRequests', e.target.value)}
+            onBlur={() => v.blur('specialRequests')}
             placeholder="Birthdays, window seat, allergies…"
           />
+          <p id="bk-requests-count" className="mt-1 text-right text-xs text-bone-faint">
+            {form.specialRequests.length}/{REQUESTS_MAX}
+          </p>
+          <FieldError id="bk-requests-err" message={errors.specialRequests} />
         </div>
 
         <div className="space-y-2">

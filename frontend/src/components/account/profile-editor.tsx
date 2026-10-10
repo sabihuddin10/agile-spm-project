@@ -8,6 +8,18 @@ import { Card } from '@/components/ui/card';
 import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/format';
 import { ALLERGY_OPTIONS, DIETARY_OPTIONS, optionsWith, toggleValue } from '@/components/customers/preference-options';
+import { validateEmail, validateMaxLength, validateName, validatePhone, EMAIL_MAX, NAME_MAX, PHONE_MAX } from '@/lib/validation/fields';
+import { useFormValidation, type Rules } from '@/lib/validation/use-form-validation';
+import { FieldError, describedBy } from '@/components/forms/field-error';
+
+const NOTES_MAX = 500;
+
+const RULES: Rules<Draft> = {
+  name: (v) => validateName(v, { missing: 'Name cannot be empty.' }),
+  email: (v) => validateEmail(v),
+  phone: (v) => validatePhone(v),
+  notes: (v) => validateMaxLength(v, NOTES_MAX, 'Notes'),
+};
 
 interface Draft {
   name: string;
@@ -29,7 +41,6 @@ function toDraft(c: Customer): Draft {
   };
 }
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * Self-service profile (US1.2): contact details, notes, and dietary preferences
@@ -43,6 +54,7 @@ export function ProfileEditor({ customer, onSaved }: { customer: Customer; onSav
   const [draft, setDraft] = useState<Draft>(saved);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const v = useFormValidation(draft, RULES);
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
 
@@ -53,8 +65,7 @@ export function ProfileEditor({ customer, onSaved }: { customer: Customer; onSav
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    if (!draft.name.trim()) return setError('Name cannot be empty.');
-    if (!EMAIL_RE.test(draft.email.trim())) return setError('Please enter a valid email address.');
+    if (!v.touchAll()) return;
     setSaving(true);
     setError(null);
     try {
@@ -68,6 +79,7 @@ export function ProfileEditor({ customer, onSaved }: { customer: Customer; onSav
       const next = toDraft(updated);
       setSaved(next);
       setDraft(next);
+      v.reset();
       onSaved(updated);
       toast('Profile saved.', 'success');
       refreshUser().catch(() => undefined); // keep the header's name/email in step
@@ -89,17 +101,40 @@ export function ProfileEditor({ customer, onSaved }: { customer: Customer; onSav
         </div>
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          <Field id="profile-name" label="Name" value={draft.name} onChange={(v) => set('name', v)} autoComplete="name" required />
+          <Field
+            id="profile-name"
+            label="Name"
+            value={draft.name}
+            onChange={(value) => set('name', value)}
+            onBlur={() => v.blur('name')}
+            error={v.errors.name}
+            autoComplete="name"
+            maxLength={NAME_MAX + 20}
+            required
+          />
           <Field
             id="profile-email"
             label="Email"
             type="email"
             value={draft.email}
-            onChange={(v) => set('email', v)}
+            onChange={(value) => set('email', value)}
+            onBlur={() => v.blur('email')}
+            error={v.errors.email}
             autoComplete="email"
+            maxLength={EMAIL_MAX}
             required
           />
-          <Field id="profile-phone" label="Phone" type="tel" value={draft.phone} onChange={(v) => set('phone', v)} autoComplete="tel" />
+          <Field
+            id="profile-phone"
+            label="Phone"
+            type="tel"
+            value={draft.phone}
+            onChange={(value) => set('phone', value)}
+            onBlur={() => v.blur('phone')}
+            error={v.errors.phone}
+            autoComplete="tel"
+            maxLength={PHONE_MAX}
+          />
         </div>
 
         <PreferenceChips
@@ -130,8 +165,15 @@ export function ProfileEditor({ customer, onSaved }: { customer: Customer; onSav
             placeholder="e.g. prefers a quiet table, contactless delivery"
             value={draft.notes}
             onChange={(e) => set('notes', e.target.value)}
-            maxLength={500}
+            onBlur={() => v.blur('notes')}
+            maxLength={NOTES_MAX}
+            aria-invalid={Boolean(v.errors.notes) || undefined}
+            aria-describedby={describedBy('profile-notes-count', v.errors.notes && 'profile-notes-error')}
           />
+          <p id="profile-notes-count" className="mt-1 text-right text-xs text-bone-faint">
+            {draft.notes.length}/{NOTES_MAX}
+          </p>
+          <FieldError id="profile-notes-error" message={v.errors.notes} tone="dark" />
         </div>
 
         {error ? (
@@ -151,6 +193,7 @@ export function ProfileEditor({ customer, onSaved }: { customer: Customer; onSav
               onClick={() => {
                 setDraft(saved);
                 setError(null);
+                v.reset();
               }}
             >
               Discard
@@ -221,16 +264,22 @@ function Field({
   label,
   value,
   onChange,
+  onBlur,
+  error,
   type = 'text',
   autoComplete,
+  maxLength,
   required = false,
 }: {
   id: string;
   label: string;
   value: string;
   onChange: (v: string) => void;
+  onBlur?: () => void;
+  error?: string;
   type?: string;
   autoComplete?: string;
+  maxLength?: number;
   required?: boolean;
 }) {
   return (
@@ -244,9 +293,14 @@ function Field({
         className="input"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onBlur={onBlur}
         autoComplete={autoComplete}
+        maxLength={maxLength}
         required={required}
+        aria-invalid={Boolean(error) || undefined}
+        aria-describedby={describedBy(error && `${id}-error`)}
       />
+      <FieldError id={`${id}-error`} message={error} tone="dark" />
     </div>
   );
 }

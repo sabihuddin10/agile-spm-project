@@ -6,6 +6,9 @@ import { staffApi } from '@/lib/api';
 import { errorMessage } from '@/lib/format';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/components/ui/toast';
+import { validateEmail, validateMaxLength, validateName, validatePhone, EMAIL_MAX, NAME_MAX, PHONE_MAX } from '@/lib/validation/fields';
+import { useFormValidation, type Rules } from '@/lib/validation/use-form-validation';
+import { FieldError, describedBy } from '@/components/forms/field-error';
 
 type DesiredRole = 'waiter' | 'chef';
 
@@ -16,6 +19,13 @@ const ROLES: { id: DesiredRole; title: string; blurb: string }[] = [
 
 const EXPERIENCE_MAX = 1000;
 const EMPTY = { name: '', email: '', phone: '', desiredRole: 'waiter' as DesiredRole, experience: '' };
+
+const RULES: Rules<typeof EMPTY> = {
+  name: (v) => validateName(v),
+  email: (v) => validateEmail(v, { missing: 'Please enter your email so we can reply.' }),
+  phone: (v) => validatePhone(v),
+  experience: (v) => validateMaxLength(v, EXPERIENCE_MAX, 'Experience'),
+};
 
 /**
  * Public "join our team" application form (US9.1). Submissions land in the
@@ -28,6 +38,7 @@ export function CareersForm() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState<{ name: string; role: DesiredRole } | null>(null);
+  const v = useFormValidation(form, RULES);
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -36,8 +47,9 @@ export function CareersForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSubmitting(true);
     setError(null);
+    if (!v.touchAll()) return;
+    setSubmitting(true);
     try {
       const { application } = await staffApi.apply({
         name: form.name.trim(),
@@ -48,6 +60,7 @@ export function CareersForm() {
       });
       setSubmitted({ name: application.name, role: application.desiredRole });
       setForm(EMPTY);
+      v.reset();
       toast('Application sent — thank you!', 'success');
     } catch (err) {
       const message = errorMessage(err, 'Could not send your application. Please try again.');
@@ -89,7 +102,7 @@ export function CareersForm() {
       <h2 className="font-display text-2xl font-semibold tracking-tight text-bone">Apply now</h2>
       <p className="mt-1 text-sm text-bone-dim">It takes two minutes. No CV needed.</p>
 
-      <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+      <form onSubmit={handleSubmit} className="mt-5 space-y-4" noValidate>
         <fieldset className="min-w-0">
           <legend className="label">I&apos;m applying as</legend>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -137,9 +150,14 @@ export function CareersForm() {
             className="input"
             required
             autoComplete="name"
+            maxLength={NAME_MAX + 20}
             value={form.name}
             onChange={(e) => set('name', e.target.value)}
+            onBlur={() => v.blur('name')}
+            aria-invalid={Boolean(v.errors.name) || undefined}
+            aria-describedby={describedBy(v.errors.name && 'apply-name-error')}
           />
+          <FieldError id="apply-name-error" message={v.errors.name} tone="dark" />
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
@@ -152,9 +170,15 @@ export function CareersForm() {
               type="email"
               required
               autoComplete="email"
+              inputMode="email"
+              maxLength={EMAIL_MAX}
               value={form.email}
               onChange={(e) => set('email', e.target.value)}
+              onBlur={() => v.blur('email')}
+              aria-invalid={Boolean(v.errors.email) || undefined}
+              aria-describedby={describedBy(v.errors.email && 'apply-email-error')}
             />
+            <FieldError id="apply-email-error" message={v.errors.email} tone="dark" />
           </div>
           <div>
             <label className="label" htmlFor="apply-phone">
@@ -165,9 +189,15 @@ export function CareersForm() {
               className="input"
               type="tel"
               autoComplete="tel"
+              inputMode="tel"
+              maxLength={PHONE_MAX}
               value={form.phone}
               onChange={(e) => set('phone', e.target.value)}
+              onBlur={() => v.blur('phone')}
+              aria-invalid={Boolean(v.errors.phone) || undefined}
+              aria-describedby={describedBy(v.errors.phone && 'apply-phone-error')}
             />
+            <FieldError id="apply-phone-error" message={v.errors.phone} tone="dark" />
           </div>
         </div>
         <div>
@@ -181,8 +211,11 @@ export function CareersForm() {
             placeholder="Where have you worked? What do you enjoy? Availability (days, evenings, weekends)…"
             value={form.experience}
             onChange={(e) => set('experience', e.target.value)}
-            aria-describedby="apply-experience-count"
+            onBlur={() => v.blur('experience')}
+            aria-invalid={Boolean(v.errors.experience) || undefined}
+            aria-describedby={describedBy('apply-experience-count', v.errors.experience && 'apply-experience-error')}
           />
+          <FieldError id="apply-experience-error" message={v.errors.experience} tone="dark" />
           <p id="apply-experience-count" className="mt-1 text-right text-xs text-bone-faint">
             {form.experience.length}/{EXPERIENCE_MAX}
           </p>

@@ -205,3 +205,23 @@ test('DELETE /billing/:id/split is refused with 409 once the bill is paid', asyn
   assert.equal(res.status, 409);
   assert.ok((await api.call('GET', `/billing/${id}`, { token: waiter })).body.invoice.split, 'the split is kept');
 });
+
+test('a tip must be a finite amount, and a refund reason short text', async () => {
+  // Arrange
+  const id = await servedOrder([['Fries', 1]]);
+
+  // Act
+  const infinite = await api.call('POST', `/billing/${id}/tip`, { token: waiter, body: { amount: 'Infinity' } });
+  const enormous = await api.call('POST', `/billing/${id}/tip`, { token: waiter, body: { amount: 1e308 } });
+  const boolTip = await api.call('POST', `/billing/${id}/tip`, { token: waiter, body: { amount: true } });
+  const percentText = await api.call('POST', `/billing/${id}/tip`, { token: waiter, body: { percent: 'ten' } });
+  const invoice = (await api.call('GET', `/billing/${id}`, { token: waiter })).body.invoice;
+  await api.call('POST', `/billing/${id}/pay`, { token: waiter, body: { method: 'card' } });
+  const longReason = await api.call('POST', `/billing/${id}/refund`, { token: manager, body: { reason: 'r'.repeat(501) } });
+  const objectReason = await api.call('POST', `/billing/${id}/refund`, { token: manager, body: { reason: { text: 'nope' } } });
+
+  // Assert
+  for (const res of [infinite, enormous, boolTip, percentText, longReason, objectReason]) assert.equal(res.status, 400);
+  assert.equal(invoice.tip, 0);
+  assert.ok(Number.isFinite(invoice.total));
+});

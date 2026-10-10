@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { customers, orders, users, findCustomerByUserId, nextId } from '../data/store.js';
 import { requireRole } from '../middleware/auth.js';
 import { localDate } from '../lib/time.js';
+import { personName, email as readEmail, phone as readPhone, text, object, stringList, oneOf } from '../lib/validate.js';
 
 const router = Router();
 
@@ -43,8 +44,42 @@ function serialize(customer) {
   return { ...customer, orderHistory: history, orderCount: history.length, totalSpend: round2(totalSpend) };
 }
 
-function cleanList(value, fallback) {
-  return Array.isArray(value) ? value.map((v) => String(v).trim().toLowerCase()).filter(Boolean) : fallback;
+const NOTES_MAX = 500;
+
+/** Validated { dietary, allergies } from a request; missing lists keep `current`. */
+function readPreferences(raw, current) {
+  const prefs = object(raw, 'Preferences');
+  if (prefs === undefined) return undefined;
+  return {
+    dietary: stringList(prefs.dietary, 'Dietary preferences', { lower: true }) ?? current.dietary,
+    allergies: stringList(prefs.allergies, 'Allergies', { lower: true }) ?? current.allergies,
+  };
+}
+
+/**
+ * Validate the editable ledger fields of a request body. Everything is checked
+ * before anything is saved; fields that were not sent come back undefined.
+ */
+function readCustomerFields(body, current, { nameRequired }) {
+  if (body.name !== undefined && (typeof body.name !== 'string' || !body.name.trim())) {
+    return { error: nameRequired };
+  }
+  return {
+    fields: {
+      name: personName(body.name, 'Name', { required: false }),
+      email: readEmail(body.email, { required: false }),
+      phone: readPhone(body.phone),
+      notes: text(body.notes, 'Notes', { max: NOTES_MAX, multiline: true }),
+      preferences: readPreferences(body.preferences, current?.preferences ?? { dietary: [], allergies: [] }),
+    },
+  };
+}
+
+/** Copy the defined fields onto a customer record. */
+function applyFields(customer, fields) {
+  for (const [key, value] of Object.entries(fields)) {
+    if (value !== undefined) customer[key] = value;
+  }
 }
 
 /** Auto-provision a ledger profile for a Customer-role user. */
@@ -84,35 +119,20 @@ router.patch('/me', (req, res) => {
   if (req.user.role !== 'customer') {
     return res.status(403).json({ error: 'Only customers have a self-service profile.' });
   }
-  const customer = provisionForUser(req.user);
-  const { name, email, phone, preferences, notes } = req.body || {};
+  const current = findCustomerByUserId(req.user.id);
+  const body = req.body || {};
+  const { fields, error } = readCustomerFields(body, current, { nameRequired: 'Name cannot be empty.' });
+  if (error) return res.status(400).json({ error });
+  // A customer's sign-in email cannot be blank.
+  if (body.email !== undefined && !fields.email) return res.status(400).json({ error: 'Please enter a valid email address.' });
+  if (fields.email !== undefined && users.some((u) => u.id !== req.user.id && u.email === fields.email)) {
+    return res.status(409).json({ error: 'That email is already used by another account.' });
+  }
 
-  if (name !== undefined && !String(name).trim()) {
-    return res.status(400).json({ error: 'Name cannot be empty.' });
-  }
-  if (email !== undefined) {
-    const normalized = String(email).toLowerCase().trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
-      return res.status(400).json({ error: 'Please enter a valid email address.' });
-    }
-    if (users.some((u) => u.id !== req.user.id && u.email === normalized)) {
-      return res.status(409).json({ error: 'That email is already used by another account.' });
-    }
-    customer.email = normalized;
-    req.user.email = normalized;
-  }
-  if (name !== undefined) {
-    customer.name = String(name).trim();
-    req.user.name = customer.name;
-  }
-  if (phone !== undefined) customer.phone = String(phone);
-  if (preferences !== undefined) {
-    customer.preferences = {
-      dietary: cleanList(preferences?.dietary, customer.preferences.dietary),
-      allergies: cleanList(preferences?.allergies, customer.preferences.allergies),
-    };
-  }
-  if (notes !== undefined) customer.notes = String(notes);
+  const customer = provisionForUser(req.user);
+  applyFields(customer, fields);
+  if (fields.email !== undefined) req.user.email = fields.email;
+  if (fields.name !== undefined) req.user.name = fields.name;
 
   return res.json({ customer: serialize(customer) });
 });
@@ -148,23 +168,22 @@ router.get('/:id', staffOnly, (req, res) => {
 
 /** POST /api/customers — create a customer record. */
 router.post('/', staffOnly, (req, res) => {
-  const { name, email = '', phone = '', type = 'walk-in', preferences = {}, notes = '' } = req.body || {};
+  const body = req.body || {};
+  if (typeof body.name !== 'string' || !body.name.trim()) return res.status(400).json({ error: 'Customer name is required.' });
+  const { fields } = readCustomerFields(body, null, { nameRequired: 'Customer name is required.' });
+  const type = oneOf(body.type, 'Type', ['walk-in', 'online']) ?? 'walk-in';
 
-  if (!String(name || '').trim()) return res.status(400).json({ error: 'Customer name is required.' });
-
+  // id, userId, loyaltyPoints and createdAt are always set here, never taken from the body.
   const customer = {
     id: nextId('cus'),
     userId: null,
-    name: String(name).trim(),
-    email: String(email).trim(),
-    phone: String(phone),
-    type: ['walk-in', 'online'].includes(type) ? type : 'walk-in',
+    name: fields.name,
+    email: fields.email ?? '',
+    phone: fields.phone ?? '',
+    type,
     loyaltyPoints: 0,
-    preferences: {
-      dietary: cleanList(preferences.dietary, []),
-      allergies: cleanList(preferences.allergies, []),
-    },
-    notes: String(notes),
+    preferences: fields.preferences ?? { dietary: [], allergies: [] },
+    notes: fields.notes ?? '',
     createdAt: new Date().toISOString(),
   };
   customers.push(customer);
@@ -177,22 +196,13 @@ router.patch('/:id', staffOnly, (req, res) => {
   const customer = customers.find((c) => c.id === req.params.id);
   if (!customer) return res.status(404).json({ error: 'Customer not found.' });
 
-  const { name, email, phone, type, preferences, notes } = req.body || {};
+  const body = req.body || {};
+  const { fields, error } = readCustomerFields(body, customer, { nameRequired: 'Customer name is required.' });
+  if (error) return res.status(400).json({ error });
+  const type = oneOf(body.type, 'Type', ['walk-in', 'online']);
 
-  if (name !== undefined) {
-    if (!String(name).trim()) return res.status(400).json({ error: 'Customer name is required.' });
-    customer.name = String(name).trim();
-  }
-  if (email !== undefined) customer.email = String(email).trim();
-  if (phone !== undefined) customer.phone = String(phone);
-  if (type !== undefined && ['walk-in', 'online'].includes(type)) customer.type = type;
-  if (preferences !== undefined) {
-    customer.preferences = {
-      dietary: cleanList(preferences?.dietary, customer.preferences.dietary),
-      allergies: cleanList(preferences?.allergies, customer.preferences.allergies),
-    };
-  }
-  if (notes !== undefined) customer.notes = String(notes);
+  applyFields(customer, fields);
+  if (type !== undefined) customer.type = type;
 
   return res.json({ customer: serialize(customer) });
 });

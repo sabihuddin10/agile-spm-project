@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { settings, TIME_SLOTS } from '../data/store.js';
 import { requireRole } from '../middleware/auth.js';
+import { text } from '../lib/validate.js';
 
 const router = Router();
 
@@ -46,7 +47,7 @@ router.patch('/', requireRole('manager', 'admin'), (req, res) => {
     if (typeof body[field] !== 'string' || !body[field].trim()) {
       return res.status(400).json({ error: `${field} cannot be empty.` });
     }
-    next[field] = String(body[field]).trim();
+    next[field] = text(body[field], field, { max: 200 });
   }
   if (next.openingHour >= next.closingHour) {
     return res.status(400).json({ error: 'Opening hour must be before closing hour.' });

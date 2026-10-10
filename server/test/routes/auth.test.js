@@ -50,13 +50,13 @@ test('US1.1 only an admin can change roles, and not their own', async () => {
 
 test('US1.2 registration validates input and creates a logged-in customer', async () => {
   // Act / Assert — invalid input is rejected
-  const bad = await api.call('POST', '/auth/register', { body: { name: 'A', email: 'not-an-email', password: 'secret1' } });
+  const bad = await api.call('POST', '/auth/register', { body: { name: 'A', email: 'not-an-email', password: 'Secret-pass1' } });
   assert.equal(bad.status, 400);
   const short = await api.call('POST', '/auth/register', { body: { name: 'A', email: 'a@b.co', password: '123' } });
   assert.equal(short.status, 400);
 
   // Act — valid registration
-  const ok = await api.call('POST', '/auth/register', { body: { name: 'Nina New', email: 'nina@example.com', password: 'secret1' } });
+  const ok = await api.call('POST', '/auth/register', { body: { name: 'Nina New', email: 'nina@example.com', password: 'Secret-pass1' } });
   // Assert
   assert.equal(ok.status, 201);
   assert.equal(ok.body.user.role, 'customer');
@@ -64,7 +64,7 @@ test('US1.2 registration validates input and creates a logged-in customer', asyn
   assert.equal(me.body.customer.name, 'Nina New');
 
   // Act / Assert — a duplicate email (any case) is refused
-  const dup = await api.call('POST', '/auth/register', { body: { name: 'Nina', email: 'NINA@example.com', password: 'secret1' } });
+  const dup = await api.call('POST', '/auth/register', { body: { name: 'Nina', email: 'NINA@example.com', password: 'Secret-pass1' } });
   assert.equal(dup.status, 409);
 });
 
@@ -161,10 +161,10 @@ test('changing your own password keeps this session, signs out the others and cl
   const tokenB = await api.login(hired.email, hired.password);
 
   // Act
-  const wrong = await api.call('POST', '/auth/me/password', { token: tokenA, body: { currentPassword: 'nope', newPassword: 'secret-123' } });
+  const wrong = await api.call('POST', '/auth/me/password', { token: tokenA, body: { currentPassword: 'nope', newPassword: 'Secret-123x' } });
   const short = await api.call('POST', '/auth/me/password', { token: tokenA, body: { currentPassword: hired.password, newPassword: '123' } });
   const same = await api.call('POST', '/auth/me/password', { token: tokenA, body: { currentPassword: hired.password, newPassword: hired.password } });
-  const changed = await api.call('POST', '/auth/me/password', { token: tokenA, body: { currentPassword: hired.password, newPassword: 'secret-123' } });
+  const changed = await api.call('POST', '/auth/me/password', { token: tokenA, body: { currentPassword: hired.password, newPassword: 'Secret-123x' } });
 
   // Assert
   assert.deepEqual([wrong.status, short.status, same.status], [400, 400, 400]);
@@ -172,7 +172,7 @@ test('changing your own password keeps this session, signs out the others and cl
   assert.equal(changed.body.user.mustChangePassword, false);
   assert.equal((await api.call('GET', '/auth/me', { token: changed.body.token })).status, 200, 'the returned token works');
   assert.equal((await api.call('GET', '/auth/me', { token: tokenB })).status, 401, 'other sessions are signed out');
-  assert.equal((await api.call('POST', '/auth/login', { body: { email: hired.email, password: 'secret-123' } })).status, 200);
+  assert.equal((await api.call('POST', '/auth/login', { body: { email: hired.email, password: 'Secret-123x' } })).status, 200);
 });
 
 test('a manager edits and resets waiters and chefs, but not other managers, the admin or themselves', async () => {
@@ -226,25 +226,100 @@ test('an admin manages managers, but not another admin — not their details, ro
 });
 
 test('an admin changes their own password without the current one; other roles still need it', async () => {
-  // Arrange
-  const admin = await api.login('admin');
+  // Arrange — a second admin, so the seeded demo admin keeps its "password" for the other tests
+  const demoAdmin = await api.login('admin');
+  const promoted = await hire('waiter');
+  await api.call('PATCH', `/auth/users/${promoted.id}`, { token: demoAdmin, body: { role: 'admin' } });
+  const admin = await api.login(promoted.email, promoted.password);
   const waiter = await hire('waiter');
   const waiterToken = await api.login(waiter.email, waiter.password);
 
   // Act
-  const adminChange = await api.call('POST', '/auth/me/password', { token: admin, body: { newPassword: 'admin-new-1' } });
-  const waiterNoCurrent = await api.call('POST', '/auth/me/password', { token: waiterToken, body: { newPassword: 'waiter-new-1' } });
-  const adminSame = await api.call('POST', '/auth/me/password', { token: adminChange.body.token, body: { newPassword: 'admin-new-1' } });
+  const adminChange = await api.call('POST', '/auth/me/password', { token: admin, body: { newPassword: 'Admin-new-1!' } });
+  const waiterNoCurrent = await api.call('POST', '/auth/me/password', { token: waiterToken, body: { newPassword: 'Waiter-new-1!' } });
+  const adminSame = await api.call('POST', '/auth/me/password', { token: adminChange.body.token, body: { newPassword: 'Admin-new-1!' } });
 
   // Assert
   assert.equal(adminChange.status, 200);
-  assert.equal((await api.call('POST', '/auth/login', { body: { email: 'admin@rest.test', password: 'admin-new-1' } })).status, 200);
+  assert.equal((await api.call('POST', '/auth/login', { body: { email: promoted.email, password: 'Admin-new-1!' } })).status, 200);
   assert.equal(waiterNoCurrent.status, 400);
   assert.equal(adminSame.status, 400, 'the new password must still differ from the current one');
+});
 
-  // Restore the demo password for the other tests in this file
-  const restored = await api.call('POST', '/auth/me/password', { token: adminChange.body.token, body: { newPassword: 'password' } });
-  assert.equal(restored.status, 200);
+test('every way of setting a new password enforces the policy and names what is missing', async () => {
+  // Arrange
+  const admin = await api.login('admin');
+  const chef = await hire('chef');
+  const chefToken = await api.login(chef.email, chef.password);
+
+  // Act
+  const register = await api.call('POST', '/auth/register', { body: { name: 'Weak Pw', email: 'weak@example.com', password: 'alllowercase' } });
+  const common = await api.call('POST', '/auth/register', { body: { name: 'Common Pw', email: 'common@example.com', password: 'Password1!' } });
+  const asEmail = await api.call('POST', '/auth/register', { body: { name: 'Me', email: 'Same-As-1@x.io', password: 'Same-As-1@x.io' } });
+  const own = await api.call('POST', '/auth/me/password', { token: chefToken, body: { currentPassword: chef.password, newPassword: 'NoDigits!!' } });
+  const adminSet = await api.call('POST', `/auth/users/${chef.id}/password`, { token: admin, body: { newPassword: 'short1!' } });
+  const notText = await api.call('POST', '/auth/me/password', { token: chefToken, body: { currentPassword: chef.password, newPassword: ['A', 'b'] } });
+
+  // Assert
+  assert.equal(register.status, 400);
+  assert.match(register.body.error, /an uppercase letter/);
+  assert.match(register.body.error, /a number/);
+  assert.match(register.body.error, /a special character/);
+  assert.doesNotMatch(register.body.error, /lowercase/, 'only the failed rules are listed');
+  assert.equal(common.status, 400);
+  assert.match(common.body.error, /less common/);
+  assert.equal(asEmail.status, 400);
+  assert.match(asEmail.body.error, /different from your email/);
+  assert.equal(own.status, 400);
+  assert.match(own.body.error, /a number/);
+  assert.equal(adminSet.status, 400);
+  assert.match(adminSet.body.error, /at least 8 characters/);
+  assert.equal(notText.status, 400);
+});
+
+test('sign-in does not apply the password policy, so the demo accounts still use "password"', async () => {
+  // Act
+  const res = await api.call('POST', '/auth/login', { body: { email: 'waiter@rest.test', password: 'password' } });
+  const wrongType = await api.call('POST', '/auth/login', { body: { email: { $ne: '' }, password: 'password' } });
+
+  // Assert
+  assert.equal(res.status, 200);
+  assert.equal(wrongType.status, 400, 'an object instead of an email string is rejected, not matched');
+});
+
+test('registration ignores a role (or any other field) in the body', async () => {
+  // Act
+  const res = await api.call('POST', '/auth/register', {
+    body: { name: 'Sneaky', email: 'sneaky@example.com', password: 'Sneaky-pass1', role: 'admin', active: false, tokenVersion: 99, id: 'usr_admin' },
+  });
+
+  // Assert
+  assert.equal(res.status, 201);
+  assert.equal(res.body.user.role, 'customer');
+  assert.equal(res.body.user.active, true);
+  assert.notEqual(res.body.user.id, 'usr_admin');
+  assert.equal((await api.call('GET', '/auth/users', { token: await api.login('admin') })).body.users.filter((u) => u.id === 'usr_admin').length, 1);
+});
+
+test('profile and account fields are type-checked and length-limited', async () => {
+  // Arrange
+  const admin = await api.login('admin');
+  const hired = await hire('waiter');
+  const token = await api.login(hired.email, hired.password);
+
+  // Act
+  const longName = await api.call('PATCH', '/auth/me', { token, body: { name: 'x'.repeat(81) } });
+  const controlName = await api.call('PATCH', '/auth/me', { token, body: { name: 'Bad\u0000Name' } });
+  const arrayName = await api.call('PATCH', '/auth/me', { token, body: { name: ['Sam'] } });
+  const shortPhone = await api.call('PATCH', '/auth/me', { token, body: { phone: '12-34' } });
+  const longEmail = await api.call('POST', '/auth/register', { body: { name: 'Long', email: `${'a'.repeat(250)}@x.io`, password: 'Long-email-1' } });
+  const stringActive = await api.call('PATCH', `/auth/users/${hired.id}`, { token: admin, body: { active: 'false' } });
+  const after = (await api.call('GET', '/auth/me', { token })).body.user;
+
+  // Assert
+  for (const res of [longName, controlName, arrayName, shortPhone, longEmail, stringActive]) assert.equal(res.status, 400);
+  assert.equal(after.active, true, 'the string "false" did not flip the account');
+  assert.equal(after.name, hired.user.name);
 });
 
 test('an admin types a new password for a staff member below them; nobody else can, and not for another admin', async () => {
@@ -258,16 +333,16 @@ test('an admin types a new password for a staff member below them; nobody else c
 
   // Act
   const short = await api.call('POST', `/auth/users/${chef.id}/password`, { token: admin, body: { newPassword: '123' } });
-  const set = await api.call('POST', `/auth/users/${chef.id}/password`, { token: admin, body: { newPassword: 'chef-pass-9' } });
-  const byManager = await api.call('POST', `/auth/users/${chef.id}/password`, { token: manager, body: { newPassword: 'nope-nope' } });
-  const onAdmin = await api.call('POST', `/auth/users/${otherAdmin.id}/password`, { token: admin, body: { newPassword: 'nope-nope' } });
+  const set = await api.call('POST', `/auth/users/${chef.id}/password`, { token: admin, body: { newPassword: 'Chef-pass-9!' } });
+  const byManager = await api.call('POST', `/auth/users/${chef.id}/password`, { token: manager, body: { newPassword: 'Nope-nope-1!' } });
+  const onAdmin = await api.call('POST', `/auth/users/${otherAdmin.id}/password`, { token: admin, body: { newPassword: 'Nope-nope-1!' } });
 
   // Assert
   assert.equal(short.status, 400);
   assert.equal(set.status, 200);
   assert.equal(set.body.user.mustChangePassword, false, 'the admin chose it, so no forced change');
   assert.equal((await api.call('GET', '/auth/me', { token: chefToken })).status, 401, 'the chef is signed out');
-  assert.equal((await api.call('POST', '/auth/login', { body: { email: chef.email, password: 'chef-pass-9' } })).status, 200);
+  assert.equal((await api.call('POST', '/auth/login', { body: { email: chef.email, password: 'Chef-pass-9!' } })).status, 200);
   assert.equal(byManager.status, 403);
   assert.equal(onAdmin.status, 403);
 });

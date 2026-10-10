@@ -4,12 +4,23 @@ import { requireRole } from '../middleware/auth.js';
 import { isActive, userName } from '../lib/orders.js';
 import { syncTableHolds, isLate } from '../lib/reservations.js';
 import { localDate } from '../lib/time.js';
+import { text, number, bool } from '../lib/validate.js';
 
 const router = Router();
 const FLOOR_STAFF = ['waiter', 'manager', 'admin'];
 const floorRoles = requireRole(...FLOOR_STAFF);
 const managerRoles = requireRole('manager', 'admin');
 const LAYOUT_FIELDS = ['number', 'seats', 'zone'];
+const ZONE_MAX = 40;
+
+const readTableNumber = (value) =>
+  number(value, 'Table number', { min: 1, max: 9999, integer: true, message: 'Table number must be a positive whole number.' });
+const readSeats = (value) => number(value, 'Seats', { min: 1, max: 20, message: 'Seats must be between 1 and 20.' });
+const readZone = (value) => {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'string' || !value.trim()) return text('', 'Zone', { required: true });
+  return text(value, 'Zone', { max: ZONE_MAX });
+};
 
 /** Floor-plan view of a table: live orders and today's next booking. */
 function serialize(table) {
@@ -46,14 +57,13 @@ router.get('/', floorRoles, (req, res) => {
 
 /** POST /api/tables — add a table to the floor plan (US6.1). */
 router.post('/', managerRoles, (req, res) => {
-  const { number, seats = 4, zone = ZONES[0] } = req.body || {};
-  const n = Number(number);
-  if (!Number.isInteger(n) || n < 1) return res.status(400).json({ error: 'Table number must be a positive whole number.' });
-  if (!(Number(seats) >= 1 && Number(seats) <= 20)) return res.status(400).json({ error: 'Seats must be between 1 and 20.' });
-  if (!String(zone).trim()) return res.status(400).json({ error: 'Zone is required.' });
+  const body = req.body || {};
+  const n = readTableNumber(body.number ?? '');
+  const seats = readSeats(body.seats ?? 4);
+  const zone = readZone(body.zone ?? ZONES[0]);
   if (tables.some((t) => t.number === n)) return res.status(409).json({ error: 'A table with that number already exists.' });
 
-  const table = { id: nextId('tab'), number: n, seats: Number(seats), zone: String(zone).trim(), status: 'free', waiterId: null, held: false, reservedFor: null };
+  const table = { id: nextId('tab'), number: n, seats, zone, status: 'free', waiterId: null, held: false, reservedFor: null };
   tables.push(table);
   return res.status(201).json({ table: serialize(table) });
 });
@@ -71,23 +81,22 @@ router.patch('/:id', floorRoles, (req, res) => {
     return res.status(403).json({ error: 'Only managers can change the floor layout.' });
   }
 
-  const { status, waiterId, held, number, seats, zone } = body;
-  if (number !== undefined) {
-    const n = Number(number);
-    if (!Number.isInteger(n) || n < 1) return res.status(400).json({ error: 'Table number must be a positive whole number.' });
-    if (tables.some((t) => t.id !== table.id && t.number === n)) return res.status(409).json({ error: 'A table with that number already exists.' });
-    table.number = n;
+  const { status, waiterId } = body;
+  // Validate every field before changing anything.
+  const n = body.number === undefined ? undefined : readTableNumber(body.number);
+  const seats = body.seats === undefined ? undefined : readSeats(body.seats);
+  const zone = readZone(body.zone);
+  const held = bool(body.held, 'held');
+  if (status !== undefined && !tableStatuses.includes(status)) return res.status(400).json({ error: 'Invalid status.' });
+  if (waiterId !== undefined && waiterId !== null && typeof waiterId !== 'string') return res.status(400).json({ error: 'Unknown staff member.' });
+  if (n !== undefined && tables.some((t) => t.id !== table.id && t.number === n)) {
+    return res.status(409).json({ error: 'A table with that number already exists.' });
   }
-  if (seats !== undefined) {
-    if (!(Number(seats) >= 1 && Number(seats) <= 20)) return res.status(400).json({ error: 'Seats must be between 1 and 20.' });
-    table.seats = Number(seats);
-  }
-  if (zone !== undefined) {
-    if (!String(zone).trim()) return res.status(400).json({ error: 'Zone is required.' });
-    table.zone = String(zone).trim();
-  }
+
+  if (n !== undefined) table.number = n;
+  if (seats !== undefined) table.seats = seats;
+  if (zone !== undefined) table.zone = zone;
   if (status !== undefined) {
-    if (!tableStatuses.includes(status)) return res.status(400).json({ error: 'Invalid status.' });
     table.status = status;
     if (status !== 'reserved') table.reservedFor = null;
     if (status === 'free') table.waiterId = null;
@@ -101,7 +110,7 @@ router.patch('/:id', floorRoles, (req, res) => {
     }
     table.waiterId = waiterId || null;
   }
-  if (held !== undefined) table.held = Boolean(held);
+  if (held !== undefined) table.held = held;
 
   return res.json({ table: serialize(table) });
 });

@@ -148,3 +148,54 @@ test('the upcoming list keeps last night\'s late guests after midnight, but not 
   assert.equal(body.reservations.find((r) => r.id === 'res_lastnight_waiting').late, true);
   assert.ok(!ids.includes('res_lastnight_seated'), 'finished bookings from yesterday stay in Past');
 });
+
+test('booking fields are type-checked: real dates, valid email and phone, short name and requests', async () => {
+  // Arrange
+  const date = inDays(6);
+  const base = { customerName: 'Type Check', email: 'type@example.com', partySize: 2, date, time: '18:00' };
+  const book = (extra) => api.call('POST', '/reservations', { body: { ...base, ...extra } });
+
+  // Act
+  const arrayDate = await book({ date: [date] });
+  const impossibleDate = await book({ date: '2031-02-31' });
+  const badEmail = await book({ email: 'not-an-email' });
+  const badPhone = await book({ phone: 'call me' });
+  const longName = await book({ customerName: 'x'.repeat(81) });
+  const longRequests = await book({ specialRequests: 'x'.repeat(501) });
+  const boolParty = await book({ partySize: true });
+  const ok = await book({ phone: '+44 20 7946 0958' });
+
+  // Assert
+  for (const res of [arrayDate, impossibleDate, badEmail, badPhone, longName, longRequests, boolParty]) assert.equal(res.status, 400);
+  assert.equal(ok.status, 201);
+  assert.equal(ok.body.reservation.date, date);
+  assert.equal(ok.body.reservation.status, 'requested');
+});
+
+test('a guest cannot choose the status, table or id of a new booking', async () => {
+  // Act
+  const res = await api.call('POST', '/reservations', {
+    body: { customerName: 'Sneaky Guest', email: 'sneaky@example.com', partySize: 2, date: inDays(7), time: '18:30', status: 'confirmed', tableId: 'tab_1', id: 'res_hijack', customerId: 'cus_1' },
+  });
+
+  // Assert
+  assert.equal(res.status, 201);
+  assert.equal(res.body.reservation.status, 'requested');
+  assert.equal(res.body.reservation.tableId, null);
+  assert.notEqual(res.body.reservation.id, 'res_hijack');
+  assert.equal(res.body.reservation.customerId, null);
+});
+
+test('staff booking edits reject a non-string table and over-long requests', async () => {
+  // Arrange
+  const created = await api.call('POST', '/reservations', { body: { customerName: 'Edit Check', email: 'edit@example.com', partySize: 2, date: inDays(8), time: '19:00' } });
+  const id = created.body.reservation.id;
+
+  // Act
+  const objectTable = await api.call('PATCH', `/reservations/${id}`, { token: manager, body: { tableId: { $ne: null } } });
+  const longRequests = await api.call('PATCH', `/reservations/${id}`, { token: manager, body: { specialRequests: 'x'.repeat(501) } });
+
+  // Assert
+  assert.equal(objectTable.status, 400);
+  assert.equal(longRequests.status, 400);
+});

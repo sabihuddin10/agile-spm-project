@@ -5,38 +5,50 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/format';
+import { validateEmail, validateName, NAME_MAX, EMAIL_MAX } from '@/lib/validation/fields';
+import { confirmError, passwordError } from '@/lib/validation/password';
+import { useFormValidation, type Rules } from '@/lib/validation/use-form-validation';
+import { FieldError, describedBy } from '@/components/forms/field-error';
+import { PasswordInput } from '@/components/forms/password-input';
+import { PasswordMatch } from '@/components/forms/password-match';
+import { PasswordRequirements } from '@/components/forms/password-requirements';
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+interface Form {
+  name: string;
+  email: string;
+  password: string;
+  confirm: string;
+}
 
-/** Customer self-registration (US1.2): validates name, email and password, and shows server errors. */
+const RULES: Rules<Form> = {
+  name: (v) => validateName(v),
+  email: (v) => validateEmail(v),
+  password: (v, f) => passwordError(v, { email: f.email, name: f.name }),
+  confirm: (v, f) => confirmError(f.password, v),
+};
+
+/**
+ * Customer self-registration (US1.2). Fields are checked when you leave them
+ * and live after that; the password checklist updates as you type and mirrors
+ * the server's password policy. Server errors are shown above the button.
+ */
 export function RegisterForm() {
   const { register } = useAuth();
   const toast = useToast();
   const router = useRouter();
-  const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });
+  const [form, setForm] = useState<Form>({ name: '', email: '', password: '', confirm: '' });
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const v = useFormValidation(form, RULES);
 
-  function set<K extends keyof typeof form>(key: K, value: string) {
+  function set<K extends keyof Form>(key: K, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
     setError(null);
   }
 
-  function validate(): string | null {
-    if (!form.name.trim()) return 'Please enter your name.';
-    if (!EMAIL_RE.test(form.email.trim())) return 'Please enter a valid email address.';
-    if (form.password.length < 6) return 'Password must be at least 6 characters.';
-    if (form.password !== form.confirm) return 'Passwords do not match.';
-    return null;
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const problem = validate();
-    if (problem) {
-      setError(problem);
-      return;
-    }
+    if (!v.touchAll()) return;
     setError(null);
     setSubmitting(true);
     try {
@@ -48,8 +60,6 @@ export function RegisterForm() {
       setSubmitting(false);
     }
   }
-
-  const mismatch = form.confirm.length > 0 && form.password !== form.confirm;
 
   return (
     <div className="w-full max-w-md">
@@ -69,10 +79,15 @@ export function RegisterForm() {
               type="text"
               required
               autoComplete="name"
+              maxLength={NAME_MAX + 20}
               className="input"
               value={form.name}
               onChange={(e) => set('name', e.target.value)}
+              onBlur={() => v.blur('name')}
+              aria-invalid={Boolean(v.errors.name) || undefined}
+              aria-describedby={describedBy(v.errors.name && 'name-error')}
             />
+            <FieldError id="name-error" message={v.errors.name} tone="dark" />
           </div>
           <div>
             <label htmlFor="email" className="label">
@@ -83,45 +98,55 @@ export function RegisterForm() {
               type="email"
               required
               autoComplete="email"
+              inputMode="email"
+              maxLength={EMAIL_MAX}
               className="input"
               value={form.email}
               onChange={(e) => set('email', e.target.value)}
+              onBlur={() => v.blur('email')}
+              aria-invalid={Boolean(v.errors.email) || undefined}
+              aria-describedby={describedBy(v.errors.email && 'email-error')}
             />
+            <FieldError id="email-error" message={v.errors.email} tone="dark" />
           </div>
           <div>
             <label htmlFor="password" className="label">
               Password
             </label>
-            <input
+            <PasswordInput
               id="password"
-              type="password"
-              required
-              minLength={6}
-              autoComplete="new-password"
-              aria-describedby="password-hint"
-              className="input"
+              tone="dark"
               value={form.password}
-              onChange={(e) => set('password', e.target.value)}
+              onChange={(value) => set('password', value)}
+              onBlur={() => v.blur('password')}
+              invalid={Boolean(v.errors.password)}
+              describedBy={describedBy('password-rules', v.errors.password && 'password-error')}
             />
-            <p id="password-hint" className="mt-1 text-xs text-bone-faint">
-              At least 6 characters.
-            </p>
+            <FieldError id="password-error" message={v.errors.password} tone="dark" />
+            <PasswordRequirements
+              id="password-rules"
+              value={form.password}
+              email={form.email}
+              name={form.name}
+              tone="dark"
+              showUnmet={v.submitted}
+            />
           </div>
           <div>
             <label htmlFor="confirm" className="label">
               Confirm password
             </label>
-            <input
+            <PasswordInput
               id="confirm"
-              type="password"
-              required
-              autoComplete="new-password"
-              aria-invalid={mismatch}
-              className="input"
+              tone="dark"
               value={form.confirm}
-              onChange={(e) => set('confirm', e.target.value)}
+              onChange={(value) => set('confirm', value)}
+              onBlur={() => v.blur('confirm')}
+              invalid={Boolean(v.errors.confirm)}
+              describedBy={describedBy('confirm-match', v.errors.confirm && form.confirm === '' && 'confirm-error')}
             />
-            {mismatch ? <p className="mt-1 text-xs text-red-300">Passwords do not match yet.</p> : null}
+            {form.confirm === '' ? <FieldError id="confirm-error" message={v.errors.confirm} tone="dark" /> : null}
+            <PasswordMatch id="confirm-match" password={form.password} confirm={form.confirm} tone="dark" />
           </div>
 
           {error ? (
