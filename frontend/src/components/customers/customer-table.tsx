@@ -6,7 +6,10 @@ import { ExclamationTriangleIcon } from '@/components/ui/icons';
 import { money, titleCase } from '@/lib/format';
 import { ALLERGY_OPTIONS, DIETARY_OPTIONS } from '@/components/customers/preference-options';
 
-/** Customer ledger rows (US1.1, US1.3): contact, type, spend, orders, points and preference flags. */
+/**
+ * Customer ledger rows (US1.1, US1.3): contact, type, spend, orders, points and
+ * preference flags. A table from md up, stacked cards on phones and small tablets.
+ */
 export function CustomerTable({
   customers,
   onSelect,
@@ -17,64 +20,106 @@ export function CustomerTable({
   selectedId: string | null;
 }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="table-base">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Contact</th>
-            <th>Type</th>
-            <th className="text-right">Total spend</th>
-            <th className="text-right">Orders</th>
-            <th className="text-right">Points</th>
-            <th>Prefs</th>
-          </tr>
-        </thead>
-        <tbody>
-          {customers.map((c) => {
-            const selected = selectedId === c.id;
-            return (
-              <tr
-                key={c.id}
-                onClick={() => onSelect(c)}
-                aria-current={selected ? 'true' : undefined}
-                className={`cursor-pointer transition ${
-                  selected ? 'bg-brand-50 shadow-[inset_3px_0_0_theme(colors.brand.600)]' : 'hover:bg-stone-50'
-                }`}
-              >
-                <td>
+    <>
+      {/* Desktop */}
+      <div className="hidden overflow-x-auto md:block">
+        <table className="table-base">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Contact</th>
+              <th>Type</th>
+              <th className="text-right">Total spend</th>
+              <th className="text-right">Orders</th>
+              <th className="text-right">Points</th>
+              <th>Prefs</th>
+            </tr>
+          </thead>
+          <tbody>
+            {customers.map((c) => {
+              const selected = selectedId === c.id;
+              return (
+                <tr
+                  key={c.id}
+                  onClick={() => onSelect(c)}
+                  aria-current={selected ? 'true' : undefined}
+                  className={`cursor-pointer transition ${
+                    selected ? 'bg-brand-50 shadow-[inset_3px_0_0_theme(colors.brand.600)]' : 'hover:bg-stone-50'
+                  }`}
+                >
+                  <td>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelect(c);
+                      }}
+                      className={`-mx-1 rounded px-1 text-left font-medium hover:text-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                        selected ? 'text-brand-800' : 'text-stone-800'
+                      }`}
+                    >
+                      {c.name}
+                    </button>
+                  </td>
+                  <td className="text-stone-600">
+                    <div>{c.email || '—'}</div>
+                    <div className="text-xs text-stone-500">{c.phone || ''}</div>
+                  </td>
+                  <td>
+                    <Badge tone={c.type === 'online' ? 'blue' : 'stone'}>{titleCase(c.type)}</Badge>
+                  </td>
+                  <td className="text-right font-medium tabular-nums">{money(c.totalSpend)}</td>
+                  <td className="text-right tabular-nums text-stone-600">{c.orderCount ?? c.orderHistory?.length ?? 0}</td>
+                  <td className="text-right tabular-nums text-stone-600">{c.loyaltyPoints}</td>
+                  <td>
+                    <PreferencePills dietary={c.preferences?.dietary ?? []} allergies={c.preferences?.allergies ?? []} />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Phones and small tablets */}
+      <ul className="divide-y divide-stone-100 md:hidden" aria-label="Customers">
+        {customers.map((c) => {
+          const selected = selectedId === c.id;
+          return (
+            <li
+              key={c.id}
+              aria-current={selected ? 'true' : undefined}
+              className={`space-y-3 px-4 py-4 ${selected ? 'bg-brand-50 shadow-[inset_3px_0_0_theme(colors.brand.600)]' : ''}`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
                   <button
                     type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSelect(c);
-                    }}
-                    className={`-mx-1 rounded px-1 text-left font-medium hover:text-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
-                      selected ? 'text-brand-800' : 'text-stone-800'
+                    onClick={() => onSelect(c)}
+                    className={`-mx-1 rounded px-1 py-0.5 text-left font-medium hover:text-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                      selected ? 'text-brand-800' : 'text-stone-900'
                     }`}
                   >
                     {c.name}
                   </button>
-                </td>
-                <td className="text-stone-600">
-                  <div>{c.email || '—'}</div>
-                  <div className="text-xs text-stone-500">{c.phone || ''}</div>
-                </td>
-                <td>
-                  <Badge tone={c.type === 'online' ? 'blue' : 'stone'}>{titleCase(c.type)}</Badge>
-                </td>
-                <td className="text-right font-medium tabular-nums">{money(c.totalSpend)}</td>
-                <td className="text-right tabular-nums text-stone-600">{c.orderCount ?? c.orderHistory?.length ?? 0}</td>
-                <td className="text-right tabular-nums text-stone-600">{c.loyaltyPoints}</td>
-                <td>
-                  <PreferencePills dietary={c.preferences?.dietary ?? []} allergies={c.preferences?.allergies ?? []} />
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+                  <p className="truncate text-xs text-stone-500">{c.email || '—'}</p>
+                  {c.phone ? <p className="text-xs text-stone-500">{c.phone}</p> : null}
+                </div>
+                <Badge tone={c.type === 'online' ? 'blue' : 'stone'}>{titleCase(c.type)}</Badge>
+              </div>
+              <div className="flex items-end justify-between gap-3 text-sm">
+                <span className="font-semibold tabular-nums">{money(c.totalSpend)}</span>
+                <p className="text-right text-xs tabular-nums text-stone-500">
+                  {c.loyaltyPoints} points
+                  <span className="block">{c.orderCount ?? c.orderHistory?.length ?? 0} orders</span>
+                </p>
+              </div>
+              <PreferencePills dietary={c.preferences?.dietary ?? []} allergies={c.preferences?.allergies ?? []} />
+            </li>
+          );
+        })}
+      </ul>
+    </>
   );
 }
 

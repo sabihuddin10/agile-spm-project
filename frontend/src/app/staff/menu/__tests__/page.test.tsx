@@ -46,13 +46,20 @@ vi.mock('@/components/menu/menu-item-form', () => ({
     </div>
   ),
 }));
-vi.mock('@/components/menu/category-manager', () => ({
-  CategoryManager: ({ onCreate }: { onCreate: (name: string) => void }) => (
-    <div data-testid="category-manager">
-      <button onClick={() => onCreate('Desserts')}>Add category</button>
-    </div>
-  ),
-}));
+// Wraps the real CategoryManager (so its Delete buttons drive the page's ConfirmDialog)
+// and adds a one-click "Add category" shortcut for the create test.
+vi.mock('@/components/menu/category-manager', async () => {
+  const actual = await vi.importActual<typeof import('@/components/menu/category-manager')>('@/components/menu/category-manager');
+  return {
+    ...actual,
+    CategoryManager: (props: React.ComponentProps<typeof actual.CategoryManager>) => (
+      <div data-testid="category-manager">
+        <button onClick={() => props.onCreate('Desserts')}>Add category</button>
+        <actual.CategoryManager {...props} />
+      </div>
+    ),
+  };
+});
 vi.mock('@/components/inventory/recipe-editor', () => ({ RecipeEditor: () => <div data-testid="recipe-editor" /> }));
 
 function makeUser(overrides: Partial<User> = {}): User {
@@ -217,5 +224,39 @@ describe('MenuPage', () => {
     // Assert
     await waitFor(() => expect(menuApi.removeItem).toHaveBeenCalledWith('item_1'));
     expect(toastFn).toHaveBeenCalledWith('Margherita Pizza deleted.', 'success');
+  });
+
+  it('deletes an empty category only after confirming in the dialog', async () => {
+    // Arrange
+    vi.mocked(useAuth).mockReturnValue({ user: makeUser() } as unknown as ReturnType<typeof useAuth>);
+    vi.mocked(menuApi.get).mockResolvedValue({
+      menu: [makeCategory(), makeCategory({ id: 'cat_2', name: 'Desserts', sort: 1, items: [] })],
+      tags: [],
+      allergens: [],
+    });
+    vi.mocked(menuApi.removeCategory).mockResolvedValue({ deleted: true } as never);
+    const user = userEvent.setup({ delay: null });
+    render(<MenuPage />);
+    const manager = await screen.findByTestId('category-manager');
+    const dessertsRow = within(manager).getByText('Desserts').closest('li') as HTMLElement;
+
+    // Act — cancel first
+    await user.click(within(dessertsRow).getByRole('button', { name: 'Delete' }));
+    await user.click(
+      within(screen.getByRole('dialog', { name: 'Delete the "Desserts" category?' })).getByRole('button', { name: 'Cancel' }),
+    );
+
+    // Assert
+    expect(menuApi.removeCategory).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(within(manager).getByText('Desserts')).toBeInTheDocument();
+
+    // Act — then confirm
+    await user.click(within(dessertsRow).getByRole('button', { name: 'Delete' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete category' }));
+
+    // Assert
+    await waitFor(() => expect(menuApi.removeCategory).toHaveBeenCalledWith('cat_2'));
+    expect(toastFn).toHaveBeenCalledWith('Category "Desserts" deleted.', 'success');
   });
 });
