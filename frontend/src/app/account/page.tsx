@@ -63,7 +63,7 @@ export default function AccountPage() {
             Track your orders, and keep your allergies and contact details up to date so the kitchen cooks for you.
           </p>
           {customer ? (
-            <dl className="mt-5 grid grid-cols-3 gap-2 sm:gap-3 md:mt-6">
+            <dl className="stat-row mt-5 grid grid-cols-3 gap-2 sm:gap-3 md:mt-6">
               <Stat label="Flame Points" value={String(customer.loyaltyPoints)} accent />
               <Stat label="Orders" value={String(customer.orderCount ?? customer.orderHistory?.length ?? 0)} />
               <Stat label="Total spend" value={money(customer.totalSpend)} />
@@ -100,9 +100,9 @@ export default function AccountPage() {
 
 function Stat({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
   return (
-    <div className="flex min-w-0 flex-col-reverse rounded-xl border border-char-hairline bg-char-raised px-2 py-3 text-center sm:px-4">
-      <dt className="mt-0.5 text-xs font-medium uppercase tracking-wide text-bone-faint">{label}</dt>
-      <dd className={`font-display text-xl font-semibold tabular-nums sm:text-2xl ${accent ? 'text-ember-soft' : 'text-bone'}`}>{value}</dd>
+    <div className="stat flex min-w-0 flex-col-reverse rounded-xl border border-char-hairline bg-char-raised px-4 py-3 text-center">
+      <dt className="stat-label mt-0.5 text-xs font-medium uppercase tracking-wide text-bone-faint">{label}</dt>
+      <dd className={`stat-value font-display text-2xl font-semibold tabular-nums ${accent ? 'text-ember-soft' : 'text-bone'}`}>{value}</dd>
     </div>
   );
 }

@@ -32,11 +32,11 @@ function relativeDay(date: string, today: string): string {
 
 function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    // Phones: label and value share a row, note underneath; from sm a stacked tile.
-    <div className="card grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 p-3 sm:block sm:p-4">
-      <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">{label}</p>
-      <p className="text-xl font-bold tabular-nums text-stone-800 sm:mt-1 sm:text-2xl">{value}</p>
-      {sub ? <p className="col-span-2 text-xs text-stone-500">{sub}</p> : null}
+    // A pill like the order filter chips on phones (see .stat in globals.css), a tile from sm.
+    <div className="stat card p-4">
+      <p className="stat-label text-xs font-semibold uppercase tracking-wide text-stone-500">{label}</p>
+      <p className="stat-value mt-1 text-2xl font-bold tabular-nums text-stone-800">{value}</p>
+      {sub ? <p className="stat-extra text-xs text-stone-500">{sub}</p> : null}
     </div>
   );
 }
@@ -141,7 +141,7 @@ export function MySchedule() {
             </div>
           ) : null}
 
-          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4">
+          <div className="stat-row grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4">
             <Stat
               label="This week"
               value={formatHours(weekHours)}

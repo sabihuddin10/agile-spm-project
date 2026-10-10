@@ -26,15 +26,15 @@ interface Tile {
   hint: string;
 }
 
-/** KPI tiles: a compact row (label left, number right) on phones, stacked cards from `sm` up. */
+/** KPI tiles: filter-chip style pills on phones (see .stat in globals.css), stacked cards from `sm` up. */
 function KpiTiles({ tiles }: { tiles: Tile[] }) {
   return (
-    <dl className={`grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 ${tiles.length === 4 ? 'xl:grid-cols-4' : 'xl:grid-cols-3'}`}>
+    <dl className={`stat-row grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 ${tiles.length === 4 ? 'xl:grid-cols-4' : 'xl:grid-cols-3'}`}>
       {tiles.map((t) => (
-        <div key={t.label} className="card flex min-w-0 items-center justify-between gap-3 !p-3 sm:block sm:!p-4">
-          <dt className="min-w-0 text-xs font-medium text-stone-500">{t.label}</dt>
-          <dd className="shrink-0 text-xl font-semibold tabular-nums text-stone-900 sm:mt-1 sm:text-2xl">{t.value}</dd>
-          <dd className="mt-0.5 hidden text-xs text-stone-500 sm:block">{t.hint}</dd>
+        <div key={t.label} className="stat card min-w-0 p-4">
+          <dt className="stat-label min-w-0 text-xs font-medium text-stone-500">{t.label}</dt>
+          <dd className="stat-value mt-1 text-2xl font-semibold tabular-nums text-stone-900">{t.value}</dd>
+          <dd className="stat-extra mt-0.5 text-xs text-stone-500">{t.hint}</dd>
         </div>
       ))}
     </dl>
