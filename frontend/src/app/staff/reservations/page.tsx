@@ -226,7 +226,7 @@ function ReservationBook() {
             />
           </Card>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {groups.map(([date, list]) => (
               <section key={date} aria-labelledby={`day-${date}`}>
                 <h2 id={`day-${date}`} className="mb-2 flex items-baseline gap-2 text-sm font-semibold text-stone-800">

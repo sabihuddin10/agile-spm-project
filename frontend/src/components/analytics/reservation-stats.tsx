@@ -30,7 +30,7 @@ export function ReservationStats({
       ) : (
         <>
           <div>
-            <p className="text-5xl font-semibold tracking-tight text-stone-900">{pct(stats.noShowRate)}</p>
+            <p className="text-4xl font-semibold tracking-tight text-stone-900">{pct(stats.noShowRate)}</p>
             <p className="mt-1 text-sm text-stone-500">
               {due > 0
                 ? `no-show rate — ${count(stats.noShows)} of ${count(due)} bookings due to arrive didn’t show.`
