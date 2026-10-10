@@ -7,6 +7,7 @@ import { errorMessage } from '@/lib/format';
 import { useAuth } from '@/context/auth-context';
 import { usePolling } from '@/hooks/use-polling';
 import { Card } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import { Spinner } from '@/components/ui/spinner';
 import { useToast } from '@/components/ui/toast';
@@ -45,13 +46,17 @@ export function MyWork() {
   const [trend, setTrend] = useState<StaffAnalytics | null>(null);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [liveError, setLiveError] = useState(false);
+  const [analyticsError, setAnalyticsError] = useState(false);
 
   const loadLive = useCallback(async () => {
     try {
       const [s, p] = await Promise.all([workforceApi.me(), workforceApi.presence()]);
       setStatus(s);
       setPeople(p.people);
+      setLiveError(false);
     } catch (err) {
+      setLiveError(true);
       toast(errorMessage(err), 'error');
     }
   }, [toast]);
@@ -61,7 +66,9 @@ export function MyWork() {
       const [m, t] = await Promise.all([workforceApi.myAnalytics(monthBounds(month)), workforceApi.myAnalytics(trendBounds(month))]);
       setData(m);
       setTrend(t);
+      setAnalyticsError(false);
     } catch (err) {
+      setAnalyticsError(true);
       toast(errorMessage(err), 'error');
     } finally {
       setLoading(false);
@@ -106,13 +113,44 @@ export function MyWork() {
       <div className="space-y-6">
         {status ? (
           <TimeClock status={status} onAction={act} busy={busy} settings={settings} />
+        ) : liveError ? (
+          <Card>
+            <EmptyState
+              title="Couldn't load your time clock"
+              hint="Check your connection, then try again."
+              action={
+                <button type="button" className="btn-secondary" onClick={() => loadLive()}>
+                  Try again
+                </button>
+              }
+            />
+          </Card>
         ) : (
           <Card>
             <Spinner label="Loading your time clock…" />
           </Card>
         )}
 
-        {loading || !data ? (
+        {analyticsError ? (
+          <Card>
+            <EmptyState
+              title="Couldn't load your hours"
+              hint="Check your connection, then try again."
+              action={
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => {
+                    setLoading(true);
+                    loadAnalytics();
+                  }}
+                >
+                  Try again
+                </button>
+              }
+            />
+          </Card>
+        ) : loading || !data ? (
           <Card>
             <Spinner label="Loading your hours…" />
           </Card>

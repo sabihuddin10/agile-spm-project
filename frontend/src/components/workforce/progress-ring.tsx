@@ -1,12 +1,13 @@
 import type { StaffAnalytics, WorkSummary } from '@/types';
 import { money } from '@/lib/format';
 import { hoursText, projectedPay, ratePct } from '@/components/workforce/workforce-format';
+import { WORKFORCE_CHART_COLORS } from '@/components/workforce/chart-tokens';
 
 type RingTone = 'neutral' | 'warning';
 
 const ARC: Record<RingTone, string> = {
-  neutral: '#44403c', // stone-700
-  warning: '#d97706', // amber-600 — below target
+  neutral: WORKFORCE_CHART_COLORS.label,
+  warning: WORKFORCE_CHART_COLORS.warning, // below target
 };
 
 /**
@@ -36,7 +37,7 @@ export function ProgressRing({
   const fraction = max > 0 ? Math.min(1, Math.max(0, value / max)) : 0;
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={ariaLabel} className="shrink-0">
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#e7e5e4" strokeWidth={stroke} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={WORKFORCE_CHART_COLORS.track} strokeWidth={stroke} />
       <circle
         cx={size / 2}
         cy={size / 2}
@@ -155,7 +156,7 @@ export function WorkRings({
           <li key={s.key} className="card flex items-center gap-4 !p-4">
             <ProgressRing value={s.value} max={s.max} center={s.center} ariaLabel={s.ariaLabel} tone={s.tone} />
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-400">{s.title}</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">{s.title}</p>
               <p className="mt-0.5 text-sm text-stone-700">{s.detail}</p>
             </div>
           </li>

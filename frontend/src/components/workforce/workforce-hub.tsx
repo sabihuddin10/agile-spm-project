@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import type { PresenceEntry, WorkforceOverview } from '@/types';
 import { workforceApi } from '@/lib/workforce-api';
 import { can } from '@/lib/permissions';
@@ -8,6 +9,7 @@ import { errorMessage, money } from '@/lib/format';
 import { useAuth } from '@/context/auth-context';
 import { usePolling } from '@/hooks/use-polling';
 import { Card } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import { Spinner } from '@/components/ui/spinner';
 import { useToast } from '@/components/ui/toast';
@@ -15,8 +17,7 @@ import { MonthPicker } from '@/components/workforce/month-picker';
 import { PresenceList } from '@/components/workforce/presence-list';
 import { StaffDrilldown } from '@/components/workforce/staff-drilldown';
 import { StaffOverviewTable } from '@/components/workforce/staff-overview-table';
-import { HoursByRole, LatenessTrend } from '@/components/workforce/team-charts';
-import { WorkCharts } from '@/components/workforce/work-charts';
+import { LazyHoursByRole, LazyLatenessTrend, LazyWorkCharts } from '@/components/workforce/lazy-charts';
 import { currentMonth, hoursText, monthLabel, ratePct, recentMonths } from '@/components/workforce/workforce-format';
 
 interface Tile {
@@ -33,7 +34,7 @@ function KpiTiles({ tiles }: { tiles: Tile[] }) {
         <div key={t.label} className="card flex min-w-0 items-center justify-between gap-3 !p-4 sm:block">
           <dt className="min-w-0 text-xs font-medium text-stone-500">{t.label}</dt>
           <dd className="shrink-0 text-xl font-semibold tabular-nums text-stone-900 sm:mt-1 sm:text-2xl">{t.value}</dd>
-          <dd className="mt-0.5 hidden text-xs text-stone-400 sm:block">{t.hint}</dd>
+          <dd className="mt-0.5 hidden text-xs text-stone-500 sm:block">{t.hint}</dd>
         </div>
       ))}
     </dl>
@@ -44,20 +45,62 @@ function KpiTiles({ tiles }: { tiles: Tile[] }) {
  * Workforce hub (managers and admins): month KPIs, live presence, team charts
  * and the staff table with drill-down. Managers see waiters and chefs only and
  * never any money; admins see everyone, payroll, and can edit wages and bonuses.
+ *
+ * The open drill-down lives in the URL (`?staff=<id>`) so it can be shared and
+ * the browser's Back button closes it.
  */
 export function WorkforceHub() {
+  return (
+    <Suspense
+      fallback={
+        <Card>
+          <Spinner label="Loading workforce…" />
+        </Card>
+      }
+    >
+      <WorkforceHubContent />
+    </Suspense>
+  );
+}
+
+function WorkforceHubContent() {
   const { user } = useAuth();
   const toast = useToast();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const isAdmin = can.managePay(user?.role);
   const [month, setMonth] = useState(() => currentMonth());
   const [overview, setOverview] = useState<WorkforceOverview | null>(null);
+  const [overviewError, setOverviewError] = useState(false);
   const [people, setPeople] = useState<PresenceEntry[]>([]);
-  const [selected, setSelected] = useState<string | null>(null);
+  const selected = searchParams?.get('staff') || null;
+  // True when this page pushed the drill-down entry, so "Back to team" can pop it.
+  const pushedRef = useRef(false);
+
+  const select = useCallback(
+    (id: string) => {
+      pushedRef.current = true;
+      router.push(`${pathname}?staff=${encodeURIComponent(id)}`);
+    },
+    [router, pathname],
+  );
+
+  const closeDrilldown = useCallback(() => {
+    if (pushedRef.current) {
+      pushedRef.current = false;
+      router.back();
+    } else {
+      router.replace(pathname, { scroll: false });
+    }
+  }, [router, pathname]);
 
   const loadOverview = useCallback(async () => {
     try {
       setOverview(await workforceApi.overview(month));
+      setOverviewError(false);
     } catch (err) {
+      setOverviewError(true);
       toast(errorMessage(err), 'error');
     }
   }, [month, toast]);
@@ -116,9 +159,21 @@ export function WorkforceHub() {
           userId={selected}
           month={month}
           canManagePay={isAdmin}
-          onBack={() => setSelected(null)}
+          onBack={closeDrilldown}
           onChanged={loadOverview}
         />
+      ) : !overview && overviewError ? (
+        <Card>
+          <EmptyState
+            title="Couldn't load the workforce overview"
+            hint="Check your connection, then try again."
+            action={
+              <button type="button" className="btn-secondary" onClick={() => loadOverview()}>
+                Try again
+              </button>
+            }
+          />
+        </Card>
       ) : !overview ? (
         <Card>
           <Spinner label="Loading workforce…" />
@@ -133,7 +188,7 @@ export function WorkforceHub() {
 
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
             <div className="min-w-0 xl:col-span-2">
-              <WorkCharts
+              <LazyWorkCharts
                 series={overview.series}
                 modes={['week', 'day', 'hour']}
                 title="Team hours"
@@ -141,12 +196,12 @@ export function WorkforceHub() {
               />
             </div>
             <div className="min-w-0 space-y-4">
-              <HoursByRole rows={overview.rows} />
-              <LatenessTrend days={overview.series.day} />
+              <LazyHoursByRole rows={overview.rows} />
+              <LazyLatenessTrend days={overview.series.day} />
             </div>
           </div>
 
-          <StaffOverviewTable overview={overview} showPay={isAdmin} onSelect={setSelected} />
+          <StaffOverviewTable overview={overview} showPay={isAdmin} onSelect={select} />
         </div>
       )}
     </>

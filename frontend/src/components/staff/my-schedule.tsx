@@ -33,8 +33,8 @@ function relativeDay(date: string, today: string): string {
 function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="card p-4">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-400">{label}</p>
-      <p className="mt-1 text-2xl font-bold text-stone-800">{value}</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">{label}</p>
+      <p className="mt-1 text-2xl font-bold tabular-nums text-stone-800">{value}</p>
       {sub ? <p className="text-xs text-stone-500">{sub}</p> : null}
     </div>
   );
@@ -140,7 +140,7 @@ export function MySchedule() {
             </div>
           ) : null}
 
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Stat
               label="This week"
               value={formatHours(weekHours)}

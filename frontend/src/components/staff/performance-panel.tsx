@@ -46,7 +46,7 @@ const rangeLabel = (from: string, to: string) => {
 };
 
 /**
- * Staff performance (US9.5): orders taken/served, revenue and tips handled,
+ * Staff performance: orders taken/served, revenue and tips handled,
  * items prepared and average prep time, and shift attendance per staff member
  * over the last 7, 30 or 90 days. The best value in each column is highlighted.
  */
@@ -121,7 +121,7 @@ export function PerformancePanel() {
         {data ? <p className="text-sm text-stone-500">{rangeLabel(data.from, data.to)}</p> : null}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
           { label: 'Revenue handled', value: money(totals.revenue) },
           { label: 'Tips', value: money(totals.tips) },
@@ -129,8 +129,8 @@ export function PerformancePanel() {
           { label: 'Hours worked', value: formatHours(totals.hours), sub: totals.missed ? `${totals.missed} missed shift${totals.missed === 1 ? '' : 's'}` : 'No missed shifts' },
         ].map((k) => (
           <div key={k.label} className="card p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-400">{k.label}</p>
-            <p className="mt-1 text-xl font-bold text-stone-800">{loading && !data ? '–' : k.value}</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">{k.label}</p>
+            <p className="mt-1 text-xl font-bold tabular-nums text-stone-800">{loading && !data ? '–' : k.value}</p>
             {k.sub ? <p className="text-xs text-stone-500">{k.sub}</p> : null}
           </div>
         ))}
@@ -142,7 +142,39 @@ export function PerformancePanel() {
         ) : rows.length === 0 ? (
           <EmptyState title="No staff to report on" />
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {/* Phones: one card per person, showing only the columns that apply to their role. */}
+          <ul className="divide-y divide-stone-100 sm:hidden" aria-label="Staff performance">
+            {rows.map((r) => (
+              <li key={r.userId} className="px-4 py-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-medium text-stone-800">{r.name}</span>
+                  <Badge tone={ROLE_META[r.role].tone}>{ROLE_META[r.role].label}</Badge>
+                  {!r.active ? <Badge tone="red">Suspended</Badge> : null}
+                </div>
+                <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+                  {COLUMNS.map((c) => {
+                    const v = c.value(r);
+                    if (v === null) return null;
+                    const top = best[c.key] !== null && v === best[c.key];
+                    return (
+                      <div key={c.key} className="flex items-baseline justify-between gap-2">
+                        <dt className="text-xs text-stone-500">{c.label}</dt>
+                        <dd className={`tabular-nums ${top ? 'font-semibold text-brand-700' : 'text-stone-700'}`}>
+                          {c.format(v)}
+                          {c.key === 'shiftsCompleted' ? (
+                            <span className={r.shiftsMissed ? 'font-semibold text-red-600' : 'text-stone-500'}> / {r.shiftsMissed}</span>
+                          ) : null}
+                          {top ? <span className="sr-only"> (top)</span> : null}
+                        </dd>
+                      </div>
+                    );
+                  })}
+                </dl>
+              </li>
+            ))}
+          </ul>
+          <div className="hidden overflow-x-auto sm:block">
             <table className="table-base min-w-[960px]">
               <thead>
                 <tr>
@@ -180,7 +212,7 @@ export function PerformancePanel() {
                             <>
                               {c.format(v)}
                               {c.key === 'shiftsCompleted' ? (
-                                <span className={r.shiftsMissed ? 'font-semibold text-red-600' : 'font-normal text-stone-400'}>
+                                <span className={r.shiftsMissed ? 'font-semibold text-red-600' : 'font-normal text-stone-500'}>
                                   {' '}
                                   / {r.shiftsMissed}
                                 </span>
@@ -196,6 +228,7 @@ export function PerformancePanel() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </Card>
 

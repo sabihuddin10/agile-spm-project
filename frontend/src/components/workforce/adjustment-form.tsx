@@ -51,32 +51,55 @@ export function AdjustmentForm({
     }
   }
 
-  const fieldClass = (bad?: string) => `input ${bad ? 'border-red-400' : ''}`;
+  const fieldClass = (bad?: string) => `input ${bad ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : ''}`;
+
+  /** The note under a field: its error when there is one, otherwise its hint. */
+  function note(key: 'amount' | 'reason' | 'date', hint?: string) {
+    const error = errors[key];
+    const text = error ?? hint;
+    if (!text) return { id: undefined, node: null };
+    const id = `adj-${key}-${error ? 'error' : 'hint'}`;
+    return {
+      id,
+      node: (
+        <p id={id} role={error ? 'alert' : undefined} className={`mt-1 text-xs ${error ? 'font-medium text-red-600' : 'text-stone-500'}`}>
+          {text}
+        </p>
+      ),
+    };
+  }
+
+  const amountNote = note('amount', 'Use a minus sign for a correction.');
+  const reasonNote = note('reason');
+  const dateNote = note('date');
 
   return (
     <form onSubmit={submit} noValidate aria-labelledby="adjustment-heading">
       <h3 id="adjustment-heading" className="text-sm font-semibold text-stone-800">
         Add bonus or correction
       </h3>
-      <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-[8rem_1fr_10rem]">
+      <div className="mt-2 grid grid-cols-1 items-start gap-3 sm:grid-cols-[9rem_1fr_10rem]">
         <div>
           <label htmlFor="adj-amount" className="label">
             Amount
           </label>
           <div className="relative">
-            <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-stone-400">$</span>
+            <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-stone-500" aria-hidden="true">
+              $
+            </span>
             <input
               id="adj-amount"
-              className={`${fieldClass(errors.amount)} pl-7`}
+              className={`${fieldClass(errors.amount)} pl-7 tabular-nums`}
               type="number"
               inputMode="decimal"
               step={0.01}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              aria-invalid={Boolean(errors.amount)}
-              aria-describedby={errors.amount ? 'adj-amount-error' : undefined}
+              aria-invalid={errors.amount ? true : undefined}
+              aria-describedby={amountNote.id}
             />
           </div>
+          {amountNote.node}
         </div>
         <div>
           <label htmlFor="adj-reason" className="label">
@@ -89,9 +112,10 @@ export function AdjustmentForm({
             placeholder="Eid bonus"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            aria-invalid={Boolean(errors.reason)}
-            aria-describedby={errors.reason ? 'adj-reason-error' : undefined}
+            aria-invalid={errors.reason ? true : undefined}
+            aria-describedby={reasonNote.id}
           />
+          {reasonNote.node}
         </div>
         <div>
           <label htmlFor="adj-date" className="label">
@@ -103,17 +127,12 @@ export function AdjustmentForm({
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            aria-invalid={Boolean(errors.date)}
+            aria-invalid={errors.date ? true : undefined}
+            aria-describedby={dateNote.id}
           />
+          {dateNote.node}
         </div>
       </div>
-      {Object.entries(errors).map(([k, msg]) =>
-        msg ? (
-          <p key={k} id={`adj-${k}-error`} role="alert" className="mt-1 text-xs font-medium text-red-600">
-            {msg}
-          </p>
-        ) : null,
-      )}
       <button type="submit" className="btn-secondary mt-3">
         Add to pay
       </button>

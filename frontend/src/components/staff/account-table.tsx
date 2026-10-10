@@ -13,9 +13,20 @@ import { ConfirmDialog } from '@/components/staff/confirm-dialog';
 import { CredentialsModal } from '@/components/staff/credentials-modal';
 import { EditAccountModal } from '@/components/staff/edit-account-modal';
 import { SetPasswordModal } from '@/components/staff/set-password-modal';
+import { RowActionsMenu, type RowAction } from '@/components/staff/row-actions-menu';
 import { ROLE_META, ROLE_ORDER, initials, roleRank } from '@/components/staff/role-meta';
 
 const article = (word: string) => (/^[aeiou]/i.test(word) ? 'an' : 'a');
+
+/** One line on what a role can reach, shown before a role change is applied. */
+const ROLE_ACCESS: Record<Role, string> = {
+  admin: 'Admins can do everything, including changing roles, suspending and removing accounts.',
+  manager:
+    'Managers run the menu, inventory, refunds, shifts, analytics and settings, and manage waiter and chef accounts.',
+  chef: 'Chefs work the kitchen queue and see recipes and stock counts, but not billing, customers or tables.',
+  waiter: 'Waiters take orders, seat tables, handle reservations and take payment, but cannot refund.',
+  customer: 'Customers lose every staff screen and can only order and book for themselves.',
+};
 
 /**
  * List of user accounts. Admins change roles (US9.2), suspend / reactivate and
@@ -46,6 +57,8 @@ export function AccountTable({
   const [editing, setEditing] = useState<User | null>(null);
   const [resetting, setResetting] = useState<User | null>(null);
   const [settingPassword, setSettingPassword] = useState<User | null>(null);
+  const [roleChange, setRoleChange] = useState<{ user: User; role: Role } | null>(null);
+  const [suspending, setSuspending] = useState<User | null>(null);
   const [issued, setIssued] = useState<{ user: User; tempPassword: string } | null>(null);
   const [q, setQ] = useState('');
   const [roleFilter, setRoleFilter] = useState<Role | ''>('');
@@ -64,13 +77,15 @@ export function AccountTable({
     );
   }, [sorted, q, roleFilter]);
 
-  async function changeRole(u: User, role: Role) {
-    if (role === u.role) return;
+  async function confirmRoleChange() {
+    if (!roleChange) return;
+    const { user: u, role } = roleChange;
     setBusyId(u.id);
     try {
       await authApi.updateUser(u.id, { role });
       const label = ROLE_META[role].label.toLowerCase();
       toast(`${u.name} is now ${article(label)} ${label}. New permissions apply on their next request or page load.`, 'success');
+      setRoleChange(null);
       await onChanged();
     } catch (err) {
       toast(errorMessage(err), 'error');
@@ -87,6 +102,7 @@ export function AccountTable({
         u.active ? `${u.name} suspended — they'll be signed out on their next request.` : `${u.name} reactivated.`,
         'success',
       );
+      setSuspending(null);
       await onChanged();
     } catch (err) {
       toast(errorMessage(err), 'error');
@@ -186,7 +202,7 @@ export function AccountTable({
                   <div className="min-w-0">
                     <p className={`truncate font-medium ${u.active ? 'text-stone-800' : 'text-stone-500'}`}>
                       {u.name}
-                      {isSelf ? <span className="ml-1.5 text-xs font-normal text-stone-400">(you)</span> : null}
+                      {isSelf ? <span className="ml-1.5 text-xs font-normal text-stone-500">(you)</span> : null}
                     </p>
                     <p className="truncate text-xs text-stone-500">{u.email}</p>
                   </div>
@@ -195,12 +211,15 @@ export function AccountTable({
                 <div className="flex flex-wrap items-center gap-2 pl-12 sm:justify-end sm:pl-0">
                   {canAssign && showAdminControls ? (
                     <select
-                      className="input w-auto !py-1.5 text-xs"
+                      className="input w-auto py-1.5 sm:text-sm"
                       aria-label={`Role for ${u.name}`}
                       value={u.role}
                       disabled={isSelf || busy}
                       title={selfHint}
-                      onChange={(e) => changeRole(u, e.target.value as Role)}
+                      onChange={(e) => {
+                        const role = e.target.value as Role;
+                        if (role !== u.role) setRoleChange({ user: u, role });
+                      }}
                     >
                       {ROLE_ORDER.map((r) => (
                         <option key={r} value={r}>
@@ -215,67 +234,88 @@ export function AccountTable({
                   <Badge tone={u.active ? 'emerald' : 'red'}>{u.active ? 'Active' : 'Suspended'}</Badge>
 
                   {manageable ? (
-                    <>
-                      <button
-                        type="button"
-                        className="btn-secondary !px-3 !py-1.5 text-xs"
-                        onClick={() => setEditing(u)}
-                        disabled={busy}
-                        aria-label={`Edit details for ${u.name}`}
-                      >
-                        Edit details
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-secondary !px-3 !py-1.5 text-xs"
-                        onClick={() => setResetting(u)}
-                        disabled={busy}
-                        aria-label={`Reset password for ${u.name}`}
-                      >
-                        Reset password
-                      </button>
-                      {canSetPasswords ? (
-                        <button
-                          type="button"
-                          className="btn-secondary !px-3 !py-1.5 text-xs"
-                          onClick={() => setSettingPassword(u)}
-                          disabled={busy}
-                          aria-label={`Set password for ${u.name}`}
-                        >
-                          Set password
-                        </button>
-                      ) : null}
-                    </>
+                    <button
+                      type="button"
+                      className="btn-sm btn-secondary"
+                      onClick={() => setEditing(u)}
+                      disabled={busy}
+                      aria-label={`Edit details for ${u.name}`}
+                    >
+                      Edit
+                    </button>
                   ) : null}
 
-                  {canSuspend && showAdminControls ? (
-                    <>
-                      <button
-                        type="button"
-                        className="btn-secondary !px-3 !py-1.5 text-xs"
-                        onClick={() => toggleActive(u)}
-                        disabled={isSelf || busy}
-                        title={selfHint}
-                      >
-                        {u.active ? 'Suspend' : 'Reactivate'}
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-ghost !px-3 !py-1.5 text-xs text-red-600 hover:bg-red-50 hover:text-red-700"
-                        onClick={() => setRemoving(u)}
-                        disabled={isSelf || busy}
-                        title={selfHint}
-                      >
-                        Remove
-                      </button>
-                    </>
-                  ) : null}
+                  {(() => {
+                    const actions: RowAction[] = [];
+                    if (manageable) {
+                      actions.push({
+                        label: 'Reset password',
+                        ariaLabel: `Reset password for ${u.name}`,
+                        onSelect: () => setResetting(u),
+                      });
+                      if (canSetPasswords) {
+                        actions.push({
+                          label: 'Set password',
+                          ariaLabel: `Set password for ${u.name}`,
+                          onSelect: () => setSettingPassword(u),
+                        });
+                      }
+                    }
+                    if (canSuspend && showAdminControls && !isSelf) {
+                      actions.push({
+                        label: u.active ? 'Suspend' : 'Reactivate',
+                        onSelect: () => (u.active ? setSuspending(u) : void toggleActive(u)),
+                      });
+                      actions.push({ label: 'Remove', danger: true, onSelect: () => setRemoving(u) });
+                    }
+                    // Your own row keeps a disabled trigger so rows line up and the hint explains why.
+                    if (actions.length === 0 && !(isSelf && canSuspend)) return null;
+                    return (
+                      <RowActionsMenu
+                        label={`More actions for ${u.name}`}
+                        actions={actions}
+                        disabled={busy || actions.length === 0}
+                        title={actions.length === 0 ? selfHint : undefined}
+                      />
+                    );
+                  })()}
                 </div>
               </li>
             );
           })}
         </ul>
       )}
+
+      {roleChange ? (
+        <ConfirmDialog
+          title={`Make ${roleChange.user.name} ${article(ROLE_META[roleChange.role].label)} ${ROLE_META[
+            roleChange.role
+          ].label.toLowerCase()}?`}
+          confirmLabel={`Make ${ROLE_META[roleChange.role].label.toLowerCase()}`}
+          danger={roleRank(roleChange.role) > roleRank(roleChange.user.role)}
+          busy={busyId === roleChange.user.id}
+          onConfirm={confirmRoleChange}
+          onCancel={() => setRoleChange(null)}
+        >
+          <p>{ROLE_ACCESS[roleChange.role]}</p>
+          <p>The change applies on their next request or page load.</p>
+        </ConfirmDialog>
+      ) : null}
+
+      {suspending ? (
+        <ConfirmDialog
+          title={`Suspend ${suspending.name}?`}
+          confirmLabel="Suspend account"
+          busy={busyId === suspending.id}
+          onConfirm={() => toggleActive(suspending)}
+          onCancel={() => setSuspending(null)}
+        >
+          <p>
+            They are signed out on their next request and cannot sign in until reactivated. Their orders and shifts
+            stay in the records.
+          </p>
+        </ConfirmDialog>
+      ) : null}
 
       {removing ? (
         <ConfirmDialog

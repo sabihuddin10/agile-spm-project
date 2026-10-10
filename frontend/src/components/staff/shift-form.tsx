@@ -136,7 +136,7 @@ export function ShiftForm({
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-xs text-stone-400">Suspended staff can&apos;t be scheduled.</p>
+            <p className="mt-1 text-xs text-stone-500">Suspended staff can&apos;t be scheduled.</p>
           </div>
         )}
 
@@ -208,7 +208,7 @@ export function ShiftForm({
 
         <div>
           <label className="label" htmlFor="shift-notes">
-            Notes <span className="font-normal text-stone-400">(optional)</span>
+            Notes <span className="font-normal text-stone-500">(optional)</span>
           </label>
           <textarea
             id="shift-notes"
@@ -224,12 +224,12 @@ export function ShiftForm({
             confirmDelete ? (
               <div className="flex flex-wrap items-center gap-2 sm:mr-auto">
                 <span className="text-sm text-red-700">Delete this shift?</span>
-                <button type="button" className="btn-danger !px-3 !py-1.5 text-xs" onClick={remove} disabled={saving}>
+                <button type="button" className="btn-sm btn-danger" onClick={remove} disabled={saving}>
                   Yes, delete
                 </button>
                 <button
                   type="button"
-                  className="btn-ghost !px-3 !py-1.5 text-xs"
+                  className="btn-sm btn-ghost"
                   onClick={() => setConfirmDelete(false)}
                   disabled={saving}
                 >
