@@ -23,7 +23,7 @@ If a phase grows too big, it is split, never stretched. Update this file wheneve
 | 1 | Workforce: attendance, payroll, My work, Workforce hub | 13–14 | [x] |
 | 2 | Web `/api/health` page on the main site | 14 | [x] |
 | 3 | Shared UI base + late-booking fix | 15 | [x] |
-| 4 | Admin UI polish, batch 1 + input safety | 15 | [~] |
+| 4 | Admin UI polish, batch 1 + input safety | 15 | [x] |
 | 5 | Admin UI polish, batch 2: staff, workforce, settings | 15 | [~] |
 | 6a | Live validation, submit disabled until valid, customer rules | 16 | [~] |
 | 6b | Screen-side checks matching server limits | 16 | [~] |
@@ -56,26 +56,26 @@ If a phase grows too big, it is split, never stretched. Update this file wheneve
 - [x] Shared `ConfirmDialog`, icon set, `.btn-sm` / `.btn-success`, 44px tap targets on touch screens
 - [x] Reservations: late, still-confirmed bookings from last night stay on the "upcoming" list after midnight, so staff can still seat them or mark a no-show
 
-## Phase 4: Admin UI polish, batch 1 + input safety [~]
+## Phase 4: Admin UI polish, batch 1 + input safety [x]
 
 **Goal:** the admin screens follow the UI/UX review (accessible, phone-first, not AI-looking), and every API input is type-checked.
 
-- [~] Shell: accessible modal, toast, spinner, staff drawer, phone-first overview and analytics
-- [~] Inventory, menu, customers: phone card layouts, confirm dialogs instead of `window.confirm`, keyboard tabs, allergy pills
-- [~] Floor, kitchen, orders, reservations, billing: accessible dialogs, keyboard tabs, phone-first cards
-- [~] Password policy on the server and in the UI: 8+ characters, mixed case, a number, a special character, not common, not your name or email
-- [~] Server input guards:
+- [x] Shell: accessible modal, toast, spinner, staff drawer, phone-first overview and analytics
+- [x] Inventory, menu, customers: phone card layouts, confirm dialogs instead of `window.confirm`, keyboard tabs, allergy pills
+- [x] Floor, kitchen, orders, reservations, billing: accessible dialogs, keyboard tabs, phone-first cards
+- [x] Password policy on the server and in the UI: 8+ characters, mixed case, a number, a special character, not common, not your name or email
+- [x] Server input guards:
   - finite numbers within ranges
   - real booleans
   - length caps
   - 100 KB body limit
   - `__proto__` keys rejected
   - query arrays rejected
-- [~] SQL-injection audit and the `test/data/sql-safety.test.js` regression test (no issues found)
+- [x] SQL-injection audit and the `test/data/sql-safety.test.js` regression test (no issues found)
 
 **Done when:** all six checks pass on `development` and it is merged into `main`.
 
-**Verified so far:** each branch passed lint, tsc, the full Vitest suite (854–855 tests) and the production build on its own. Server: 352/352 tests. Combined `development` (75fc09d) is in the full gate now.
+**Verified so far:** each branch passed lint, tsc, the full Vitest suite (854–855 tests) and the production build on its own. Server: 352/352 tests. Combined `development` (75fc09d) passed the full gate (352 server tests, 910 frontend tests, build) and GitHub CI. Released to `main` as 5c3e48c on 2026-10-10.
 
 **Left out of this phase on purpose (moved, not dropped):**
 - Screen-side checks that match the new server limits → Phase 6. Today the server returns a clear error message, so nothing breaks.
@@ -90,7 +90,8 @@ If a phase grows too big, it is split, never stretched. Update this file wheneve
 
 - [x] Row-actions menu, confirm dialogs, lazy-loaded charts, phone-first tables (branch verified: 854/854 tests, build OK)
 - [x] Fix: warm the lazy chart modules before the workforce page tests (14b7ae5)
-- [ ] Merge into `development` after the Phase 4 release, run the gate, release to `main`
+- [x] Merged into `development` after the Phase 4 release
+- [ ] Gate passes and it is released to `main`
 
 **Done when:** the branch is merged and released. Nothing else is in scope.
 
