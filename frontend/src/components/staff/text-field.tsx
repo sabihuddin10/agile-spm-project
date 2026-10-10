@@ -22,6 +22,8 @@ export function TextField({
   optional = false,
   disabled = false,
   maxLength,
+  placeholder,
+  inputMode,
 }: {
   id: string;
   label: string;
@@ -36,6 +38,8 @@ export function TextField({
   optional?: boolean;
   disabled?: boolean;
   maxLength?: number;
+  placeholder?: string;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
 }) {
   const note = error ?? hint;
   const noteId = error ? `${id}-error` : `${id}-hint`;
@@ -55,6 +59,8 @@ export function TextField({
         autoComplete={autoComplete}
         disabled={disabled}
         maxLength={maxLength}
+        placeholder={placeholder}
+        inputMode={inputMode}
         aria-invalid={error ? true : undefined}
         aria-describedby={note ? noteId : undefined}
       />

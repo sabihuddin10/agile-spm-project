@@ -60,7 +60,7 @@ test('US1.4 order history is listed newest first with totals', async () => {
   assert.ok(body.customer.totalSpend > 0);
 
   // Act / Assert — a brand-new customer has an empty history
-  const fresh = await api.call('POST', '/customers', { token, body: { name: 'No Orders Yet' } });
+  const fresh = await api.call('POST', '/customers', { token, body: { name: 'No Orders Yet', phone: '+1 555 0150' } });
   assert.deepEqual(fresh.body.customer.orderHistory, []);
 });
 
@@ -77,7 +77,7 @@ test('US1.5 allergies travel with active orders for waiter and chef', async () =
 test('DELETE /customers/:id a manager removes a customer from the ledger; a waiter may not', async () => {
   // Arrange
   const [waiter, token] = await Promise.all([api.login('waiter'), api.login('manager')]);
-  const created = await api.call('POST', '/customers', { token: waiter, body: { name: 'Delete Me Walkin' } });
+  const created = await api.call('POST', '/customers', { token: waiter, body: { name: 'Delete Me Walkin', phone: '+1 555 0151' } });
   const id = created.body.customer.id;
 
   // Act
@@ -108,7 +108,7 @@ test('DELETE /customers/:id returns 404 for an unknown customer', async () => {
 test('DELETE /customers/:id is refused for a customer', async () => {
   // Arrange
   const manager = await api.login('manager');
-  const created = await api.call('POST', '/customers', { token: manager, body: { name: 'Keep Me Walkin' } });
+  const created = await api.call('POST', '/customers', { token: manager, body: { name: 'Keep Me Walkin', email: 'keep.me@example.com' } });
   const id = created.body.customer.id;
   const customer = await api.login('customer');
 
@@ -137,7 +137,7 @@ test('DELETE /customers/:id refuses a customer with order history, keeping their
 test('customer records are type-checked, and null preferences no longer crash the request', async () => {
   // Arrange
   const token = await api.login('waiter');
-  const create = (extra) => api.call('POST', '/customers', { token, body: { name: 'Type Check', ...extra } });
+  const create = (extra) => api.call('POST', '/customers', { token, body: { name: 'Type Check', phone: '+1 555 0152', ...extra } });
 
   // Act
   const nullPrefs = await create({ preferences: null });
@@ -160,7 +160,7 @@ test('loyalty points, id and account link cannot be set through the body', async
   const before = (await api.call('GET', '/customers/me', { token: customer })).body.customer;
 
   // Act
-  const created = await api.call('POST', '/customers', { token: waiter, body: { name: 'Mass Assign', loyaltyPoints: 99999, id: 'cus_hijack', userId: 'usr_admin' } });
+  const created = await api.call('POST', '/customers', { token: waiter, body: { name: 'Mass Assign', phone: '+1 555 0153', loyaltyPoints: 99999, id: 'cus_hijack', userId: 'usr_admin' } });
   const self = await api.call('PATCH', '/customers/me', { token: customer, body: { loyaltyPoints: 99999, userId: 'usr_admin', id: 'cus_hijack' } });
 
   // Assert
@@ -172,6 +172,38 @@ test('loyalty points, id and account link cannot be set through the body', async
   assert.equal(self.body.customer.loyaltyPoints, before.loyaltyPoints);
   assert.equal(self.body.customer.id, before.id);
   assert.equal(self.body.customer.userId, before.userId);
+});
+
+test('staff must give a new customer an email or phone, and an edit cannot remove the last one', async () => {
+  // Arrange
+  const token = await api.login('waiter');
+
+  // Act — the "SS with no details" record
+  const bare = await api.call('POST', '/customers', { token, body: { name: 'SS' } });
+  const blanks = await api.call('POST', '/customers', { token, body: { name: 'Sara Khan', email: '', phone: '  ' } });
+  const phoneOnly = await api.call('POST', '/customers', { token, body: { name: 'Sara Khan', phone: '+92 300 1234567' } });
+
+  // Assert
+  assert.equal(bare.status, 400);
+  assert.equal(bare.body.error, 'Add an email or phone so we can reach this customer.');
+  assert.equal(blanks.status, 400);
+  assert.equal(phoneOnly.status, 201);
+
+  // Arrange
+  const id = phoneOnly.body.customer.id;
+
+  // Act
+  const clearPhone = await api.call('PATCH', `/customers/${id}`, { token, body: { phone: '' } });
+  const swap = await api.call('PATCH', `/customers/${id}`, { token, body: { phone: '', email: 'sara.khan@example.com' } });
+  const notesOnly = await api.call('PATCH', `/customers/${id}`, { token, body: { notes: 'Window seat' } });
+
+  // Assert
+  assert.equal(clearPhone.status, 400);
+  assert.equal(clearPhone.body.error, 'Add an email or phone so we can reach this customer.');
+  assert.equal(swap.status, 200);
+  assert.equal(swap.body.customer.phone, '');
+  assert.equal(swap.body.customer.email, 'sara.khan@example.com');
+  assert.equal(notesOnly.status, 200);
 });
 
 test('a rejected self-service edit changes nothing', async () => {

@@ -109,18 +109,79 @@ describe('NewBookingForm', () => {
     expect(reservationApi.availability).toHaveBeenCalledWith('2026-10-08', 2);
   });
 
-  it('lists what is missing instead of submitting an incomplete booking', async () => {
+  it('keeps "Create booking" disabled and says what is missing while the form is incomplete', async () => {
+    // Arrange / Act
+    renderForm();
+    await screen.findByRole('button', { name: '19:00' });
+
+    // Assert — a pristine form shows no field errors, only the hint by the button
+    const submit = screen.getByRole('button', { name: 'Create booking' });
+    expect(submit).toBeDisabled();
+    expect(submit).toHaveAccessibleDescription('Complete these fields to continue: Guest name, Email, Time.');
+    expect(screen.queryByText("Please add the guest's name.")).not.toBeInTheDocument();
+  });
+
+  it('pressing Enter in an incomplete form does not submit it', async () => {
     // Arrange
     const user = userEvent.setup({ delay: null });
     renderForm();
     await screen.findByRole('button', { name: '19:00' });
 
     // Act
+    await user.type(screen.getByLabelText('Guest name'), 'Ana Silva{Enter}');
+
+    // Assert
+    expect(reservationApi.create).not.toHaveBeenCalled();
+  });
+
+  it('checks each field live as it is typed: name, email, phone and the special-requests cap', async () => {
+    // Arrange
+    const user = userEvent.setup({ delay: null });
+    renderForm();
+    await screen.findByRole('button', { name: '19:00' });
+    const name = screen.getByLabelText('Guest name');
+
+    // Act
+    await user.type(name, 'SS');
+
+    // Assert — shown while typing, before leaving the field
+    expect(name).toHaveAttribute('aria-invalid', 'true');
+    expect(name).toHaveAccessibleDescription(/full name/);
+
+    // Act
+    await user.type(name, 'ara Khan');
+    await user.type(screen.getByLabelText('Email'), 'ana@rest');
+    await user.type(screen.getByLabelText(/^phone/i), '12-34');
+
+    // Assert
+    expect(name).not.toHaveAttribute('aria-invalid');
+    expect(screen.getByLabelText('Email')).toHaveAccessibleDescription('Enter an email address like name@example.com.');
+    expect(screen.getByLabelText(/^phone/i)).toHaveAccessibleDescription('Phone numbers have 7 to 20 digits.');
+
+    // Act — the textarea's maxLength stops typing at 500, so paste past the cap via change
+    fireEvent.change(screen.getByLabelText(/special requests/i), { target: { value: 'x'.repeat(501) } });
+
+    // Assert
+    expect(screen.getByText('Special requests can be at most 500 characters (501 now).')).toBeInTheDocument();
+    expect(screen.getByText('501/500')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create booking' })).toBeDisabled();
+  });
+
+  it('sends the name with spaces collapsed once the form is valid', async () => {
+    // Arrange
+    const user = userEvent.setup({ delay: null });
+    vi.mocked(reservationApi.create).mockResolvedValue({ reservation: makeReservation() });
+    renderForm();
+    await user.type(screen.getByLabelText('Guest name'), 'Sara    Khan');
+    await user.type(screen.getByLabelText('Email'), 'sara@example.com');
+    await user.click(await screen.findByRole('button', { name: '19:00' }));
+    await user.click(screen.getByRole('checkbox', { name: /confirm now/i }));
+
+    // Act
     await user.click(screen.getByRole('button', { name: 'Create booking' }));
 
     // Assert
-    expect(screen.getByText("Please add the guest's name, email, time.")).toBeInTheDocument();
-    expect(reservationApi.create).not.toHaveBeenCalled();
+    await waitFor(() => expect(reservationApi.create).toHaveBeenCalledWith(expect.objectContaining({ customerName: 'Sara Khan' })));
   });
 
   it('reloads slots for a new party size and drops a time that is no longer open', async () => {
@@ -138,12 +199,11 @@ describe('NewBookingForm', () => {
     // Act
     await user.selectOptions(screen.getByLabelText('Party size'), '6');
     await screen.findByRole('button', { name: '19:00, full' });
-    await user.click(screen.getByRole('button', { name: 'Create booking' }));
 
     // Assert
     expect(reservationApi.availability).toHaveBeenLastCalledWith('2026-10-08', 6);
-    expect(screen.getByText("Please add the guest's time.")).toBeInTheDocument();
-    expect(reservationApi.create).not.toHaveBeenCalled();
+    expect(await screen.findByText('Please pick a time.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create booking' })).toBeDisabled();
   });
 
   it('loads availability for a newly picked date', async () => {
@@ -169,7 +229,7 @@ describe('NewBookingForm', () => {
     await fillGuest(user);
     await user.selectOptions(screen.getByLabelText('Party size'), '4');
     await user.click(await screen.findByRole('button', { name: '19:00' }));
-    await user.type(screen.getByLabelText('Special requests'), ' Window seat ');
+    await user.type(screen.getByLabelText(/special requests/i), ' Window seat ');
 
     // Act
     await user.click(screen.getByRole('button', { name: 'Create booking' }));

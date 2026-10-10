@@ -5,10 +5,48 @@ import type { Reservation } from '@/types';
 import { ApiError, reservationApi, type BookingConflict } from '@/lib/api';
 import { addDaysISO, errorMessage, formatDate, localDateISO } from '@/lib/format';
 import { useToast } from '@/components/ui/toast';
+import { FieldError, SubmitHint, describedBy } from '@/components/forms/field-error';
+import { TONES } from '@/components/forms/tone';
+import {
+  normalizeName, validateEmail, validateMaxLength, validateName, validatePhone,
+  EMAIL_MAX, NAME_MAX, PHONE_MAX,
+} from '@/lib/validation/fields';
+import { useFormValidation, type Rules } from '@/lib/validation/use-form-validation';
 import { SlotGrid } from './slot-grid';
 import { useAvailability } from './use-availability';
 
 const PARTY_SIZES = Array.from({ length: 12 }, (_, i) => i + 1);
+const REQUESTS_MAX = 500;
+const ERR = TONES.light.inputError;
+
+interface FormState {
+  customerName: string;
+  email: string;
+  phone: string;
+  partySize: number;
+  date: string;
+  time: string;
+  specialRequests: string;
+}
+
+/** Mirrors the server's checks for POST /api/reservations (server/src/routes/reservations.js). */
+const RULES: Rules<FormState> = {
+  customerName: (v) => validateName(v, { missing: "Please add the guest's name." }),
+  email: (v) => validateEmail(v, { missing: "Please add the guest's email." }),
+  phone: (v) => validatePhone(v),
+  date: (v) => (v ? undefined : 'Please choose a date.'),
+  time: (v, f) => (v ? undefined : f.date ? 'Please pick a time.' : 'Choose a date first, then pick a time.'),
+  specialRequests: (v) => validateMaxLength(v, REQUESTS_MAX, 'Special requests'),
+};
+
+const LABELS = {
+  customerName: 'Guest name',
+  email: 'Email',
+  phone: 'Phone',
+  date: 'Date',
+  time: 'Time',
+  specialRequests: 'Special requests',
+};
 
 function dayLabel(date: string): string {
   if (date === localDateISO()) return 'Today';
@@ -28,7 +66,7 @@ export function NewBookingForm({
   onCancel: () => void;
 }) {
   const toast = useToast();
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<FormState>({
     customerName: '',
     email: '',
     phone: '',
@@ -38,11 +76,12 @@ export function NewBookingForm({
     specialRequests: '',
   });
   const [confirmNow, setConfirmNow] = useState(true);
-  const [error, setError] = useState('');
   const [conflict, setConflict] = useState<BookingConflict | null>(null);
   const [saving, setSaving] = useState(false);
   const availability = useAvailability(form.date, form.partySize);
   const { slots, ready } = availability;
+  const v = useFormValidation(form, RULES, { labels: LABELS });
+  const errors = v.errors;
 
   useEffect(() => {
     if (ready && form.time && !slots.some((s) => s.time === form.time && s.available)) {
@@ -50,28 +89,20 @@ export function NewBookingForm({
     }
   }, [ready, slots, form.time]);
 
-  function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
+  function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
-    setError('');
+    // Picking a date or a slot is a complete choice, so check it straight away.
+    if (key === 'date' || key === 'time') v.blur(key);
   }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    const missing = [
-      !form.customerName.trim() && 'name',
-      !form.email.trim() && 'email',
-      !form.date && 'date',
-      !form.time && 'time',
-    ].filter(Boolean);
-    if (missing.length) {
-      setError(`Please add the guest's ${missing.join(', ')}.`);
-      return;
-    }
+    if (!v.touchAll()) return;
     setSaving(true);
     setConflict(null);
     try {
       let { reservation } = await reservationApi.create({
-        customerName: form.customerName.trim(),
+        customerName: normalizeName(form.customerName),
         email: form.email.trim(),
         phone: form.phone.trim() || undefined,
         partySize: form.partySize,
@@ -109,19 +140,57 @@ export function NewBookingForm({
           <label className="label" htmlFor="nb-name">
             Guest name
           </label>
-          <input id="nb-name" className="input" value={form.customerName} onChange={(e) => set('customerName', e.target.value)} />
+          <input
+            id="nb-name"
+            className={`input ${errors.customerName ? ERR : ''}`}
+            maxLength={NAME_MAX + 20}
+            autoComplete="off"
+            placeholder="e.g. Sara Khan"
+            value={form.customerName}
+            aria-invalid={Boolean(errors.customerName) || undefined}
+            aria-describedby={describedBy(errors.customerName && 'nb-name-err')}
+            onChange={(e) => set('customerName', e.target.value)}
+            onBlur={() => v.blur('customerName')}
+          />
+          <FieldError id="nb-name-err" message={errors.customerName} />
         </div>
         <div>
           <label className="label" htmlFor="nb-email">
             Email
           </label>
-          <input id="nb-email" className="input" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} />
+          <input
+            id="nb-email"
+            className={`input ${errors.email ? ERR : ''}`}
+            type="email"
+            inputMode="email"
+            maxLength={EMAIL_MAX}
+            placeholder="name@example.com"
+            value={form.email}
+            aria-invalid={Boolean(errors.email) || undefined}
+            aria-describedby={describedBy(errors.email && 'nb-email-err')}
+            onChange={(e) => set('email', e.target.value)}
+            onBlur={() => v.blur('email')}
+          />
+          <FieldError id="nb-email-err" message={errors.email} />
         </div>
         <div>
           <label className="label" htmlFor="nb-phone">
-            Phone
+            Phone <span className="font-normal text-stone-500">(optional)</span>
           </label>
-          <input id="nb-phone" className="input" type="tel" value={form.phone} onChange={(e) => set('phone', e.target.value)} />
+          <input
+            id="nb-phone"
+            className={`input ${errors.phone ? ERR : ''}`}
+            type="tel"
+            inputMode="tel"
+            maxLength={PHONE_MAX}
+            placeholder="+92 300 1234567"
+            value={form.phone}
+            aria-invalid={Boolean(errors.phone) || undefined}
+            aria-describedby={describedBy(errors.phone && 'nb-phone-err')}
+            onChange={(e) => set('phone', e.target.value)}
+            onBlur={() => v.blur('phone')}
+          />
+          <FieldError id="nb-phone-err" message={errors.phone} />
         </div>
         <div>
           <label className="label" htmlFor="nb-party">
@@ -146,12 +215,15 @@ export function NewBookingForm({
           </label>
           <input
             id="nb-date"
-            className="input"
+            className={`input ${errors.date ? ERR : ''}`}
             type="date"
             min={localDateISO()}
             value={form.date}
+            aria-invalid={Boolean(errors.date) || undefined}
+            aria-describedby={describedBy(errors.date && 'nb-date-err')}
             onChange={(e) => set('date', e.target.value)}
           />
+          <FieldError id="nb-date-err" message={errors.date} />
         </div>
       </div>
 
@@ -168,6 +240,7 @@ export function NewBookingForm({
             setConflict(null);
           }}
         />
+        <FieldError id="nb-time-err" message={errors.time} />
       </fieldset>
 
       {conflict ? (
@@ -198,15 +271,23 @@ export function NewBookingForm({
 
       <div>
         <label className="label" htmlFor="nb-requests">
-          Special requests
+          Special requests <span className="font-normal text-stone-500">(optional)</span>
         </label>
         <textarea
           id="nb-requests"
-          className="input min-h-[56px]"
-          maxLength={500}
+          className={`input min-h-[56px] ${errors.specialRequests ? ERR : ''}`}
+          maxLength={REQUESTS_MAX}
+          placeholder="e.g. birthday cake, high chair, window seat"
           value={form.specialRequests}
+          aria-invalid={Boolean(errors.specialRequests) || undefined}
+          aria-describedby={describedBy('nb-requests-count', errors.specialRequests && 'nb-requests-err')}
           onChange={(e) => set('specialRequests', e.target.value)}
+          onBlur={() => v.blur('specialRequests')}
         />
+        <p id="nb-requests-count" className="mt-1 text-right text-xs text-stone-500">
+          {form.specialRequests.length}/{REQUESTS_MAX}
+        </p>
+        <FieldError id="nb-requests-err" message={errors.specialRequests} />
       </div>
 
       <label className="flex items-start gap-2 text-sm text-stone-700">
@@ -221,15 +302,22 @@ export function NewBookingForm({
         </span>
       </label>
 
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
-
-      <div className="flex justify-end gap-2 pt-1">
-        <button type="button" className="btn-secondary" onClick={onCancel} disabled={saving}>
-          Cancel
-        </button>
-        <button type="submit" className="btn-primary" disabled={saving}>
-          {saving ? 'Saving…' : 'Create booking'}
-        </button>
+      <div className="space-y-2 pt-1">
+        <SubmitHint id="nb-submit-hint" fields={v.invalidLabels} className="text-right" />
+        <div className="flex justify-end gap-2">
+          <button type="button" className="btn-secondary" onClick={onCancel} disabled={saving}>
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={saving || !v.isValid}
+            aria-disabled={saving || !v.isValid}
+            aria-describedby={v.isValid ? undefined : 'nb-submit-hint'}
+          >
+            {saving ? 'Saving…' : 'Create booking'}
+          </button>
+        </div>
       </div>
     </form>
   );

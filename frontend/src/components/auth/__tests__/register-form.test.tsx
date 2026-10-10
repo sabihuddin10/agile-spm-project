@@ -31,7 +31,7 @@ async function fill(user: ReturnType<typeof userEvent.setup>, { name = 'Nina New
 const submit = (user: ReturnType<typeof userEvent.setup>) => user.click(screen.getByRole('button', { name: /create account/i }));
 
 describe('RegisterForm', () => {
-  it('rejects an empty name under the field', async () => {
+  it('keeps "Create account" disabled while the name is empty, and flags it once the field is left', async () => {
     // Arrange
     const register = mockRegister();
     const user = userEvent.setup({ delay: null });
@@ -41,29 +41,36 @@ describe('RegisterForm', () => {
     await fill(user, { name: '' });
     await submit(user);
 
+    // Assert — the button explains what is missing instead of submitting
+    const button = screen.getByRole('button', { name: /create account/i });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAccessibleDescription('Complete these fields to continue: Full name.');
+    expect(register).not.toHaveBeenCalled();
+
+    // Act
+    await user.click(screen.getByLabelText('Full name'));
+    await user.tab();
+
     // Assert
     expect(screen.getByLabelText('Full name')).toHaveAccessibleDescription('Please enter your name.');
     expect(screen.getByLabelText('Full name')).toHaveAttribute('aria-invalid', 'true');
-    expect(register).not.toHaveBeenCalled();
   });
 
-  it('checks the email when you leave the field and clears the error live once fixed', async () => {
+  it('checks the email on every keystroke and clears the error live once fixed', async () => {
     // Arrange
     mockRegister();
     const user = userEvent.setup({ delay: null });
     render(<RegisterForm />);
     const email = screen.getByLabelText('Email');
 
-    // Act
-    await user.type(email, 'nina@');
-
-    // Assert — no error while still typing the first time
+    // Assert — a pristine field shows nothing
     expect(email).not.toHaveAttribute('aria-invalid');
 
     // Act
-    await user.tab();
+    await user.type(email, 'nina@');
 
-    // Assert
+    // Assert — shown as soon as something has been typed
+    expect(email).toHaveAttribute('aria-invalid', 'true');
     expect(email).toHaveAccessibleDescription('Enter an email address like name@example.com.');
 
     // Act
@@ -95,7 +102,7 @@ describe('RegisterForm', () => {
     expect(screen.getByText('Strength: Strong')).toBeInTheDocument();
   });
 
-  it('refuses a weak password on submit and turns unmet rules red', async () => {
+  it('refuses a weak password (button stays disabled) and turns unmet rules red once the field is left', async () => {
     // Arrange
     const register = mockRegister();
     const user = userEvent.setup({ delay: null });
@@ -106,6 +113,7 @@ describe('RegisterForm', () => {
     await submit(user);
 
     // Assert
+    expect(screen.getByRole('button', { name: /create account/i })).toBeDisabled();
     expect(screen.getByLabelText('Password')).toHaveAccessibleDescription(/does not meet all the requirements yet/);
     expect(screen.getByText('An uppercase letter').closest('li')).toHaveClass('text-red-300');
     expect(register).not.toHaveBeenCalled();

@@ -71,12 +71,23 @@ describe('ChangePasswordForm', () => {
     );
   });
 
-  it('requires the current password', async () => {
+  it('requires the current password: the button stays disabled and says so, and the field errors once left', async () => {
     // Arrange
+    const user = userEvent.setup({ delay: null });
     render(<ChangePasswordForm />);
 
     // Act
     await fill('', 'Newpass-12', 'Newpass-12');
+
+    // Assert
+    const button = screen.getByRole('button', { name: 'Change password' });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAccessibleDescription('Complete these fields to continue: Current password.');
+    expect(authApi.changePassword).not.toHaveBeenCalled();
+
+    // Act
+    await user.click(screen.getByLabelText('Current password'));
+    await user.tab();
 
     // Assert
     expect(screen.getByLabelText('Current password')).toHaveAccessibleDescription('Enter your current password.');

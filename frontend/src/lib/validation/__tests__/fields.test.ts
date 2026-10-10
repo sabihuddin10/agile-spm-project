@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  isValidEmail, validateEmail, validateFutureDate, validateIntegerInRange, validateMaxLength, validateName, validatePhone, validateRequired,
+  CONTACT_MISSING, isValidEmail, normalizeName, validateContact, validateNumberInRange, validateEmail, validateFutureDate, validateIntegerInRange, validateMaxLength, validateName, validatePhone, validateRequired,
 } from '@/lib/validation/fields';
 
 describe('field validators', () => {
@@ -11,6 +11,30 @@ describe('field validators', () => {
     expect(validateName('', { required: false })).toBeUndefined();
     expect(validateName('x'.repeat(81))).toMatch(/80 characters/);
     expect(validateName('Bad\u0007Name')).toMatch(/unsupported/);
+  });
+
+  it('validateName: letters and spaces/\'-. only, and two words or at least three letters', () => {
+    // Act / Assert
+    expect(validateName('SS')).toMatch(/full name/);
+    expect(validateName('Jo')).toMatch(/full name/);
+    expect(validateName('Li Na')).toBeUndefined();
+    expect(validateName("Seán O'Brien-Murphy Jr.")).toBeUndefined();
+    expect(validateName('José')).toBeUndefined();
+    expect(validateName('R2D2')).toMatch(/letters, spaces/);
+    expect(validateName('ana@x')).toMatch(/letters, spaces/);
+    expect(normalizeName('  Ana    Silva ')).toBe('Ana Silva');
+  });
+
+  it('validateContact and validateNumberInRange', () => {
+    // Act / Assert
+    expect(validateContact('', '  ')).toBe(CONTACT_MISSING);
+    expect(validateContact('', '555 0100')).toBeUndefined();
+    expect(validateContact('a@b.co', '')).toBeUndefined();
+    expect(validateNumberInRange('12.5', 0, 10000, 'Price')).toBeUndefined();
+    expect(validateNumberInRange('10001', 0, 10000, 'Price')).toBe('Price must be between 0 and 10,000.');
+    expect(validateNumberInRange('', 0, 10, 'Price')).toBe('Price is required.');
+    expect(validateNumberInRange('', 0, 10, 'Price', { required: false })).toBeUndefined();
+    expect(validateNumberInRange('abc', 0, 10, 'Price')).toBe('Price must be a number.');
   });
 
   it('validateEmail and isValidEmail', () => {

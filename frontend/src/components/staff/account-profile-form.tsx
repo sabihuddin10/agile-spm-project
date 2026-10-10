@@ -8,7 +8,8 @@ import { useAuth } from '@/context/auth-context';
 import { Card, CardHeader } from '@/components/ui/card';
 import { useToast } from '@/components/ui/toast';
 import { TextField } from '@/components/staff/text-field';
-import { validateEmail, validateName, validatePhone, EMAIL_MAX, NAME_MAX, PHONE_MAX } from '@/lib/validation/fields';
+import { SubmitHint } from '@/components/forms/field-error';
+import { normalizeName, validateEmail, validateName, validatePhone, EMAIL_MAX, NAME_MAX, PHONE_MAX } from '@/lib/validation/fields';
 import { useFormValidation, type Rules } from '@/lib/validation/use-form-validation';
 
 interface Draft {
@@ -32,6 +33,8 @@ const RULES: Rules<Values> = {
   currentPassword: (v, all) => (all.emailChanged && !v ? 'Enter your current password to change your email.' : undefined),
 };
 
+const LABELS = { name: 'Name', email: 'Email', phone: 'Phone', currentPassword: 'Current password' };
+
 const toDraft = (u: User): Draft => ({ name: u.name, email: u.email, phone: u.phone ?? '' });
 
 /**
@@ -51,7 +54,7 @@ export function AccountProfileForm({ user }: { user: User }) {
 
   const emailChanged = draft.email.trim().toLowerCase() !== saved.email.toLowerCase();
   const dirty = draft.name !== saved.name || draft.email !== saved.email || draft.phone !== saved.phone;
-  const v = useFormValidation<Values>({ ...draft, currentPassword, emailChanged }, RULES);
+  const v = useFormValidation<Values>({ ...draft, currentPassword, emailChanged }, RULES, { labels: LABELS });
   const errors: Errors = {
     name: serverErrors.name ?? v.errors.name,
     email: serverErrors.email ?? v.errors.email,
@@ -73,7 +76,7 @@ export function AccountProfileForm({ user }: { user: User }) {
     setSaving(true);
     try {
       const { user: updated } = await authApi.updateMe({
-        name: draft.name.trim(),
+        name: normalizeName(draft.name),
         phone: draft.phone.trim(),
         ...(emailChanged ? { email: draft.email.trim(), currentPassword } : {}),
       });
@@ -107,6 +110,7 @@ export function AccountProfileForm({ user }: { user: User }) {
             onBlur={() => v.blur('name')}
             autoComplete="name"
             maxLength={NAME_MAX + 20}
+            placeholder="e.g. Sara Khan"
             error={errors.name}
           />
           <TextField
@@ -118,6 +122,8 @@ export function AccountProfileForm({ user }: { user: User }) {
             onBlur={() => v.blur('email')}
             autoComplete="email"
             maxLength={EMAIL_MAX}
+            placeholder="name@example.com"
+            inputMode="email"
             error={errors.email}
             hint="You sign in with this address."
           />
@@ -130,6 +136,8 @@ export function AccountProfileForm({ user }: { user: User }) {
             onBlur={() => v.blur('phone')}
             autoComplete="tel"
             maxLength={PHONE_MAX}
+            placeholder="+92 300 1234567"
+            inputMode="tel"
             error={errors.phone}
             hint="Digits, spaces and + ( ) - . (7 to 20 digits)."
             optional
@@ -159,7 +167,13 @@ export function AccountProfileForm({ user }: { user: User }) {
         ) : null}
 
         <div className="mt-5 flex flex-wrap items-center gap-3">
-          <button type="submit" className="btn-primary" disabled={saving || !dirty}>
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={saving || !dirty || !v.isValid}
+            aria-disabled={saving || !dirty || !v.isValid}
+            aria-describedby={v.isValid ? undefined : 'account-submit-hint'}
+          >
             {saving ? 'Saving…' : 'Save profile'}
           </button>
           {dirty && !saving ? (
@@ -178,6 +192,7 @@ export function AccountProfileForm({ user }: { user: User }) {
             </button>
           ) : null}
         </div>
+        <SubmitHint id="account-submit-hint" fields={v.invalidLabels} className="mt-2" />
       </form>
     </Card>
   );

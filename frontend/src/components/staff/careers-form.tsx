@@ -6,9 +6,11 @@ import { staffApi } from '@/lib/api';
 import { errorMessage } from '@/lib/format';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/components/ui/toast';
-import { validateEmail, validateMaxLength, validateName, validatePhone, EMAIL_MAX, NAME_MAX, PHONE_MAX } from '@/lib/validation/fields';
+import {
+  normalizeName, validateEmail, validateMaxLength, validateName, validatePhone, EMAIL_MAX, NAME_MAX, PHONE_MAX,
+} from '@/lib/validation/fields';
 import { useFormValidation, type Rules } from '@/lib/validation/use-form-validation';
-import { FieldError, describedBy } from '@/components/forms/field-error';
+import { FieldError, SubmitHint, describedBy } from '@/components/forms/field-error';
 
 type DesiredRole = 'waiter' | 'chef';
 
@@ -26,6 +28,7 @@ const RULES: Rules<typeof EMPTY> = {
   phone: (v) => validatePhone(v),
   experience: (v) => validateMaxLength(v, EXPERIENCE_MAX, 'Experience'),
 };
+const LABELS = { name: 'Full name', email: 'Email', phone: 'Phone', experience: 'Experience' };
 
 /**
  * Public "join our team" application form (US9.1). Submissions land in the
@@ -38,7 +41,7 @@ export function CareersForm() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState<{ name: string; role: DesiredRole } | null>(null);
-  const v = useFormValidation(form, RULES);
+  const v = useFormValidation(form, RULES, { labels: LABELS });
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -52,7 +55,7 @@ export function CareersForm() {
     setSubmitting(true);
     try {
       const { application } = await staffApi.apply({
-        name: form.name.trim(),
+        name: normalizeName(form.name),
         email: form.email.trim(),
         phone: form.phone.trim() || undefined,
         desiredRole: form.desiredRole,
@@ -151,6 +154,7 @@ export function CareersForm() {
             required
             autoComplete="name"
             maxLength={NAME_MAX + 20}
+            placeholder="e.g. Sara Khan"
             value={form.name}
             onChange={(e) => set('name', e.target.value)}
             onBlur={() => v.blur('name')}
@@ -172,6 +176,7 @@ export function CareersForm() {
               autoComplete="email"
               inputMode="email"
               maxLength={EMAIL_MAX}
+              placeholder="name@example.com"
               value={form.email}
               onChange={(e) => set('email', e.target.value)}
               onBlur={() => v.blur('email')}
@@ -191,6 +196,7 @@ export function CareersForm() {
               autoComplete="tel"
               inputMode="tel"
               maxLength={PHONE_MAX}
+              placeholder="+92 300 1234567"
               value={form.phone}
               onChange={(e) => set('phone', e.target.value)}
               onBlur={() => v.blur('phone')}
@@ -227,9 +233,16 @@ export function CareersForm() {
           </p>
         ) : null}
 
-        <button type="submit" className="btn-primary w-full" disabled={submitting}>
+        <button
+          type="submit"
+          className="btn-primary w-full"
+          disabled={submitting || !v.isValid}
+          aria-disabled={submitting || !v.isValid}
+          aria-describedby={v.isValid ? undefined : 'apply-submit-hint'}
+        >
           {submitting ? 'Sending…' : 'Send application'}
         </button>
+        <SubmitHint id="apply-submit-hint" fields={v.invalidLabels} tone="dark" className="text-center" />
         <p className="text-center text-xs text-bone-faint">
           We only use your details to review this application.
         </p>

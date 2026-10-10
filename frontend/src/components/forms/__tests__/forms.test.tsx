@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { PasswordRequirements } from '@/components/forms/password-requirements';
 import { PasswordInput } from '@/components/forms/password-input';
 import { PasswordMatch } from '@/components/forms/password-match';
-import { FieldError, describedBy } from '@/components/forms/field-error';
+import { FieldError, SubmitHint, describedBy } from '@/components/forms/field-error';
 
 describe('PasswordRequirements', () => {
   it('marks met rules with a check and pending rules as neutral', () => {
@@ -119,5 +119,21 @@ describe('FieldError and describedBy', () => {
     expect(screen.getByText('Wrong.')).toHaveAttribute('id', 'e');
     expect(describedBy('a', false, undefined, 'b')).toBe('a b');
     expect(describedBy(false)).toBeUndefined();
+  });
+});
+
+describe('SubmitHint', () => {
+  it('lists the fields still needed, and disappears once there are none', () => {
+    // Arrange / Act
+    const { container, rerender } = render(<SubmitHint id="h" fields={['Full name', 'Email']} />);
+
+    // Assert
+    expect(screen.getByText('Complete these fields to continue: Full name, Email.')).toHaveAttribute('id', 'h');
+
+    // Act
+    rerender(<SubmitHint id="h" fields={[]} />);
+
+    // Assert
+    expect(container).toBeEmptyDOMElement();
   });
 });
