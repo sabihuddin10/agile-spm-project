@@ -211,7 +211,7 @@ export function AccountTable({
                 <div className="flex flex-wrap items-center gap-2 pl-12 sm:justify-end sm:pl-0">
                   {canAssign && showAdminControls ? (
                     <select
-                      className="input w-auto py-1.5 sm:text-sm"
+                      className="input w-auto py-1.5"
                       aria-label={`Role for ${u.name}`}
                       value={u.role}
                       disabled={isSelf || busy}

@@ -46,7 +46,7 @@ export function StaffOverviewTable({
 
   return (
     <section className="card !p-0" aria-labelledby="staff-table-heading">
-      <div className="px-5 pb-3 pt-5">
+      <div className="px-4 pb-3 pt-4 sm:px-5 sm:pt-5">
         <h2 id="staff-table-heading" className="text-lg font-semibold">
           Team
         </h2>
