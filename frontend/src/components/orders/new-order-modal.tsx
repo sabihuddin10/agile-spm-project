@@ -5,6 +5,7 @@ import type { Customer, Order, Table } from '@/types';
 import { orderApi, tableApi } from '@/lib/api';
 import { TABLE_STATUS, errorMessage } from '@/lib/format';
 import { Modal } from '@/components/ui/modal';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Spinner } from '@/components/ui/spinner';
 import { useToast } from '@/components/ui/toast';
 import { CustomerLookup } from './customer-lookup';
@@ -20,9 +21,9 @@ const TABLE_HINT: Partial<Record<Table['status'], string>> = {
 };
 
 /**
- * Take an order at the table or on the phone (US3.1, US3.5, US6.3): dine-in
- * (optionally linked to a table) or takeaway pickup, an optional ledger guest
- * whose allergies are surfaced (US1.5), the menu line editor and notes. Staff
+ * Take an order at the table or on the phone: dine-in (optionally linked to a
+ * table) or takeaway pickup, an optional ledger guest whose allergies are
+ * surfaced, the menu line editor and notes. Staff
  * either send it straight to the kitchen or hold it as "placed".
  */
 export function NewOrderModal({ onClose, onCreated }: { onClose: () => void; onCreated: (order: Order) => void }) {
@@ -36,6 +37,7 @@ export function NewOrderModal({ onClose, onCreated }: { onClose: () => void; onC
   const [lines, setLines] = useState<DraftLine[]>([]);
   const [notes, setNotes] = useState('');
   const [pending, setPending] = useState<'send' | 'hold' | null>(null);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -53,10 +55,10 @@ export function NewOrderModal({ onClose, onCreated }: { onClose: () => void; onC
   }, [toast]);
 
   const requestClose = useCallback(() => {
-    if (pending) return;
-    if (lines.length > 0 && !window.confirm('Discard this order?')) return;
-    onClose();
-  }, [lines.length, onClose, pending]);
+    if (pending || confirmDiscard) return;
+    if (lines.length > 0) setConfirmDiscard(true);
+    else onClose();
+  }, [confirmDiscard, lines.length, onClose, pending]);
 
   const blocked = unavailableLines(lines, byId);
   const table = tables.find((t) => t.id === tableId);
@@ -122,7 +124,7 @@ export function NewOrderModal({ onClose, onCreated }: { onClose: () => void; onC
         {kind === 'dine-in' ? (
           <div>
             <label htmlFor="new-order-table" className="label">
-              Table <span className="font-normal text-stone-400">(optional — you can assign it later)</span>
+              Table <span className="font-normal text-stone-500">(optional — you can assign it later)</span>
             </label>
             <select id="new-order-table" className="input" value={tableId} onChange={(e) => setTableId(e.target.value)}>
               <option value="">No table yet</option>
@@ -160,7 +162,7 @@ export function NewOrderModal({ onClose, onCreated }: { onClose: () => void; onC
 
         <div>
           <label htmlFor="new-order-notes" className="label">
-            Notes <span className="font-normal text-stone-400">(optional)</span>
+            Notes <span className="font-normal text-stone-500">(optional)</span>
           </label>
           <textarea
             id="new-order-notes"
@@ -188,6 +190,18 @@ export function NewOrderModal({ onClose, onCreated }: { onClose: () => void; onC
           </button>
         </div>
       </div>
+      {confirmDiscard ? (
+        <ConfirmDialog
+          title="Discard this order?"
+          confirmLabel="Discard order"
+          onConfirm={onClose}
+          onCancel={() => setConfirmDiscard(false)}
+        >
+          <p>
+            {lines.length} {lines.length === 1 ? 'item' : 'items'} will be lost. Nothing has been sent to the kitchen.
+          </p>
+        </ConfirmDialog>
+      ) : null}
     </Modal>
   );
 }

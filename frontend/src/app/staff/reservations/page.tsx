@@ -11,6 +11,8 @@ import { Card } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Modal } from '@/components/ui/modal';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { handleTabListKeyDown } from '@/components/billing/tab-keys';
 import { useToast } from '@/components/ui/toast';
 import { ReservationCard } from '@/components/reservations/reservation-card';
 import { NewBookingForm } from '@/components/reservations/new-booking-form';
@@ -22,6 +24,8 @@ const SCOPES: { value: Scope; label: string }[] = [
   { value: 'past', label: 'Past' },
   { value: 'all', label: 'All' },
 ];
+
+const SCOPE_VALUES = SCOPES.map((s) => s.value);
 
 const STATUSES = Object.keys(RESERVATION_STATUS) as ReservationStatus[];
 
@@ -37,7 +41,7 @@ function dateHeading(date: string): string {
   return relative ? `${relative} · ${formatDate(date)}` : formatDate(date);
 }
 
-/** Reservation book (US7.2, US7.3, US7.4). */
+/** Reservation book: confirm requests, assign tables, seat, cancel and mark no-shows. */
 export default function ReservationsPage() {
   return (
     <StaffLayout section="reservations">
@@ -55,6 +59,7 @@ function ReservationBook() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [pending, setPending] = useState<{ kind: 'cancel' | 'no_show'; reservation: Reservation } | null>(null);
   const request = useRef(0);
 
   const load = useCallback(async () => {
@@ -134,18 +139,19 @@ function ReservationBook() {
       r.tableNumber ? `${r.customerName} seated at table ${r.tableNumber}.` : `${r.customerName} seated.`,
     );
 
-  function cancel(r: Reservation) {
-    if (!window.confirm(`Cancel ${r.customerName}'s booking for ${r.partySize} at ${r.time} on ${formatDate(r.date)}?`)) return;
-    run(r, () => reservationApi.cancel(r.id), `Booking cancelled${released(r)}.`);
-  }
-
-  function noShow(r: Reservation) {
-    if (!window.confirm(`Mark ${r.customerName} as a no-show?`)) return;
-    run(r, () => reservationApi.update(r.id, { status: 'no_show' }), `Marked as no-show${released(r)}.`);
+  async function confirmPending() {
+    if (!pending) return;
+    const r = pending.reservation;
+    if (pending.kind === 'cancel') {
+      await run(r, () => reservationApi.cancel(r.id), `Booking cancelled${released(r)}.`);
+    } else {
+      await run(r, () => reservationApi.update(r.id, { status: 'no_show' }), `Marked as no-show${released(r)}.`);
+    }
+    setPending(null);
   }
 
   const chip = (active: boolean) =>
-    `inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition ${
+    `inline-flex min-h-[36px] items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition ${
       active
         ? 'border-brand-600 bg-brand-600 text-white'
         : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300 hover:text-stone-900'
@@ -155,7 +161,7 @@ function ReservationBook() {
     <>
       <PageHeader
         title="Reservations"
-        subtitle="Confirm requests, assign tables and check guests in. Refreshes every 10 seconds."
+        subtitle="Confirm requests, assign tables and check guests in."
         action={
           <button type="button" className="btn-primary" onClick={() => setCreating(true)}>
             + New booking
@@ -164,16 +170,24 @@ function ReservationBook() {
       />
 
       <div className="mb-4 space-y-3">
-        <div className="inline-flex rounded-lg border border-stone-200 bg-white p-1 shadow-sm" role="tablist" aria-label="Booking period">
+        <div
+          className="inline-flex rounded-lg border border-stone-200 bg-white p-1 shadow-sm"
+          role="tablist"
+          aria-label="Booking period"
+          onKeyDown={(e) => handleTabListKeyDown(e, SCOPE_VALUES, scope, setScope)}
+        >
           {SCOPES.map((s) => (
             <button
               key={s.value}
+              id={`booking-tab-${s.value}`}
               type="button"
               role="tab"
               aria-selected={scope === s.value}
+              aria-controls="booking-panel"
+              tabIndex={scope === s.value ? 0 : -1}
               onClick={() => setScope(s.value)}
-              className={`rounded-md px-4 py-1.5 text-sm font-medium transition ${
-                scope === s.value ? 'bg-stone-900 text-white' : 'text-stone-600 hover:bg-stone-100'
+              className={`min-h-[36px] rounded-md px-4 py-1.5 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1 ${
+                scope === s.value ? 'bg-brand-600 text-white' : 'text-stone-600 hover:bg-stone-100'
               }`}
             >
               {s.label}
@@ -181,7 +195,7 @@ function ReservationBook() {
           ))}
         </div>
 
-        <div className="flex flex-wrap gap-1.5" aria-label="Filter by status">
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter by status">
           <button type="button" className={chip(statusFilter === '')} aria-pressed={statusFilter === ''} onClick={() => setStatusFilter('')}>
             All <span className="tabular-nums opacity-75">{reservations.length}</span>
           </button>
@@ -199,46 +213,65 @@ function ReservationBook() {
         </div>
       </div>
 
-      {loading ? (
-        <Card>
-          <Spinner label="Loading reservations…" />
-        </Card>
-      ) : groups.length === 0 ? (
-        <Card>
-          <EmptyState
-            title={statusFilter ? `No ${RESERVATION_STATUS[statusFilter].label.toLowerCase()} bookings` : 'No bookings'}
-            hint={statusFilter ? 'Try another status filter.' : EMPTY_HINT[scope]}
-          />
-        </Card>
-      ) : (
-        <div className="space-y-6">
-          {groups.map(([date, list]) => (
-            <section key={date} aria-labelledby={`day-${date}`}>
-              <h2 id={`day-${date}`} className="mb-2 flex items-baseline gap-2 text-sm font-semibold text-stone-800">
-                {dateHeading(date)}
-                <span className="text-xs font-normal text-stone-500">
-                  {list.length} {list.length === 1 ? 'booking' : 'bookings'} · {list.reduce((n, r) => n + r.partySize, 0)} guests
-                </span>
-              </h2>
-              <ul className="space-y-2">
-                {list.map((r) => (
-                  <ReservationCard
-                    key={r.id}
-                    reservation={r}
-                    tables={tables}
-                    busy={busyId === r.id}
-                    onConfirm={() => confirm(r)}
-                    onAssign={(tableId) => assign(r, tableId)}
-                    onSeat={() => seat(r)}
-                    onCancel={() => cancel(r)}
-                    onNoShow={() => noShow(r)}
-                  />
-                ))}
-              </ul>
-            </section>
-          ))}
-        </div>
-      )}
+      <div id="booking-panel" role="tabpanel" aria-labelledby={`booking-tab-${scope}`}>
+        {loading ? (
+          <Card>
+            <Spinner label="Loading reservations…" />
+          </Card>
+        ) : groups.length === 0 ? (
+          <Card>
+            <EmptyState
+              title={statusFilter ? `No ${RESERVATION_STATUS[statusFilter].label.toLowerCase()} bookings` : 'No bookings'}
+              hint={statusFilter ? 'Try another status filter.' : EMPTY_HINT[scope]}
+            />
+          </Card>
+        ) : (
+          <div className="space-y-6">
+            {groups.map(([date, list]) => (
+              <section key={date} aria-labelledby={`day-${date}`}>
+                <h2 id={`day-${date}`} className="mb-2 flex items-baseline gap-2 text-sm font-semibold text-stone-800">
+                  {dateHeading(date)}
+                  <span className="text-xs font-normal text-stone-500">
+                    {list.length} {list.length === 1 ? 'booking' : 'bookings'} · {list.reduce((n, r) => n + r.partySize, 0)} guests
+                  </span>
+                </h2>
+                <ul className="space-y-2">
+                  {list.map((r) => (
+                    <ReservationCard
+                      key={r.id}
+                      reservation={r}
+                      tables={tables}
+                      busy={busyId === r.id}
+                      onConfirm={() => confirm(r)}
+                      onAssign={(tableId) => assign(r, tableId)}
+                      onSeat={() => seat(r)}
+                      onCancel={() => setPending({ kind: 'cancel', reservation: r })}
+                      onNoShow={() => setPending({ kind: 'no_show', reservation: r })}
+                    />
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {pending ? (
+        <ConfirmDialog
+          title={pending.kind === 'cancel' ? 'Cancel this booking?' : 'Mark as no-show?'}
+          confirmLabel={pending.kind === 'cancel' ? 'Yes, cancel booking' : 'Mark no-show'}
+          busy={busyId === pending.reservation.id}
+          onConfirm={confirmPending}
+          onCancel={() => setPending(null)}
+        >
+          <p>
+            {pending.kind === 'cancel'
+              ? `${pending.reservation.customerName}'s booking for ${pending.reservation.partySize} at ${pending.reservation.time} on ${formatDate(pending.reservation.date)} will be cancelled.`
+              : `${pending.reservation.customerName} didn't arrive for ${pending.reservation.time} on ${formatDate(pending.reservation.date)}.`}
+            {pending.reservation.tableNumber ? ` Table ${pending.reservation.tableNumber} will be released.` : ''}
+          </p>
+        </ConfirmDialog>
+      ) : null}
 
       {creating ? (
         <Modal title="New booking" onClose={() => setCreating(false)} wide>

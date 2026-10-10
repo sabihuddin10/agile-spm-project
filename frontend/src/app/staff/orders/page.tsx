@@ -33,11 +33,15 @@ const FILTERS: { key: FilterKey; label: string; statuses: OrderStatus[]; empty: 
 /** Floor priority: food at the pass first, then orders to confirm, then the rest; oldest first. */
 const URGENCY: Partial<Record<OrderStatus, number>> = { ready: 0, placed: 1, confirmed: 2, preparing: 2, served: 3 };
 
+/** Tables change far less often than orders, so they refresh on a slower cycle (and after order actions). */
+const TABLES_REFRESH_MS = 30000;
+
 /**
- * Live floor view of today's orders (US3.1–US3.5, US6.3, US1.5): take new
- * orders, confirm / edit / cancel placed ones, follow each order through its
- * lifecycle, serve ready dishes, assign tables, and review today's closed and
- * cancelled orders. Refreshes every 5 seconds.
+ * Live floor view of today's orders: take new orders, confirm / edit / cancel
+ * placed ones, follow each order through its lifecycle, serve ready dishes,
+ * assign tables, and review today's closed and cancelled orders. Orders refresh
+ * every 5 seconds; each card has id="order-<number>" so the floor plan can link
+ * straight to it.
  */
 export default function OrdersPage() {
   const { user } = useAuth();
@@ -56,14 +60,33 @@ export default function OrdersPage() {
   const [editing, setEditing] = useState<Order | null>(null);
   const seq = useRef(0);
   const lastError = useRef<string | null>(null);
+  // Last payload applied, so a poll that returns the same data doesn't re-render every card.
+  const ordersSig = useRef('');
+  const tablesSig = useRef('');
+
+  const loadTables = useCallback(async () => {
+    try {
+      const t = await tableApi.list();
+      const sorted = [...t.tables].sort((a, b) => a.number - b.number);
+      const sig = JSON.stringify(sorted);
+      if (sig === tablesSig.current) return;
+      tablesSig.current = sig;
+      setTables(sorted);
+    } catch {
+      // The table picker just keeps its last list; the orders poll reports connection problems.
+    }
+  }, []);
 
   const load = useCallback(async () => {
     const mine = ++seq.current;
     try {
-      const [o, t] = await Promise.all([orderApi.list({ scope: 'today' }), tableApi.list()]);
+      const o = await orderApi.list({ scope: 'today' });
       if (mine !== seq.current) return;
-      setOrders(o.orders);
-      setTables([...t.tables].sort((a, b) => a.number - b.number));
+      const sig = JSON.stringify(o.orders);
+      if (sig !== ordersSig.current) {
+        ordersSig.current = sig;
+        setOrders(o.orders);
+      }
       setError(null);
       lastError.current = null;
     } catch (err) {
@@ -78,9 +101,13 @@ export default function OrdersPage() {
   }, [toast]);
 
   useEffect(() => {
-    if (allowed) load();
-  }, [allowed, load]);
+    if (allowed) {
+      load();
+      loadTables();
+    }
+  }, [allowed, load, loadTables]);
   usePolling(load, 5000, allowed);
+  usePolling(loadTables, TABLES_REFRESH_MS, allowed);
 
   const active = useMemo(
     () =>
@@ -100,16 +127,34 @@ export default function OrdersPage() {
   const current = FILTERS.find((f) => f.key === filter) ?? FILTERS[0];
   const shown = active.filter((o) => current.statuses.includes(o.status));
 
-  function replaceOrder(updated: Order) {
-    setOrders((prev) => (prev.some((o) => o.id === updated.id) ? prev.map((o) => (o.id === updated.id ? updated : o)) : [updated, ...prev]));
-    load();
-  }
+  const replaceOrder = useCallback(
+    (updated: Order) => {
+      setOrders((prev) =>
+        prev.some((o) => o.id === updated.id) ? prev.map((o) => (o.id === updated.id ? updated : o)) : [updated, ...prev],
+      );
+      // The local merge no longer matches the last payload, so the next load must apply.
+      ordersSig.current = '';
+      load();
+      // Assigning, serving or cancelling can change a table's status.
+      loadTables();
+    },
+    [load, loadTables],
+  );
+
+  // Cards render after the first fetch, so a /staff/orders#order-<n> link has to scroll once they exist.
+  const scrolledToHash = useRef(false);
+  useEffect(() => {
+    if (loading || scrolledToHash.current) return;
+    scrolledToHash.current = true;
+    const hash = window.location.hash.slice(1);
+    if (hash.startsWith('order-')) document.getElementById(hash)?.scrollIntoView?.({ block: 'start' });
+  }, [loading]);
 
   return (
     <StaffLayout section="orders">
       <PageHeader
         title="Orders"
-        subtitle="Today's orders, live — refreshes every 5 seconds. Confirm new orders, serve what's ready, and assign tables."
+        subtitle="Today's orders, live. Confirm new orders, serve what's ready, and assign tables."
         action={
           can.placeStaffOrders(role) ? (
             <button type="button" className="btn-primary" onClick={() => setNewOpen(true)}>
@@ -122,7 +167,7 @@ export default function OrdersPage() {
       {error && !loading ? (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
           <span>Couldn&apos;t refresh orders: {error} Retrying automatically…</span>
-          <button type="button" className="btn-ghost !px-2 !py-1 text-xs text-red-700" onClick={() => load()}>
+          <button type="button" className="btn-sm btn-ghost text-red-700 hover:bg-red-100" onClick={() => load()}>
             Retry now
           </button>
         </div>
@@ -138,7 +183,7 @@ export default function OrdersPage() {
               type="button"
               aria-pressed={selected}
               onClick={() => setFilter(f.key)}
-              className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-medium transition ${
+              className={`inline-flex min-h-[36px] items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-medium transition ${
                 selected
                   ? 'border-brand-600 bg-brand-600 text-white'
                   : 'border-stone-200 bg-white text-stone-600 hover:bg-stone-50'

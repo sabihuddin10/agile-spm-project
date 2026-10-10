@@ -5,7 +5,9 @@ import type { Invoice } from '@/types';
 import { billingApi } from '@/lib/api';
 import { modifierText, money } from '@/lib/format';
 import { Modal } from '@/components/ui/modal';
+import { CheckIcon, XMarkIcon } from '@/components/ui/icons';
 import { previewEvenSplit, previewItemSplit, toCents } from './bill-utils';
+import { handleTabListKeyDown } from './tab-keys';
 import { useBillAction } from './use-bill-action';
 
 const EVEN_MIN = 2;
@@ -57,14 +59,19 @@ function CheckLine({ amounts, total }: { amounts: number[]; total: number }) {
   const sumC = amounts.reduce((s, a) => s + toCents(a), 0);
   const ok = sumC === toCents(total);
   return (
-    <p className={`text-xs font-medium ${ok ? 'text-emerald-700' : 'text-red-600'}`}>
-      Shares total {money(sumC / 100)} {ok ? '=' : '≠'} bill total {money(total)} {ok ? '✓' : '✗'}
+    <p className={`flex items-center gap-1 text-xs font-medium tabular-nums ${ok ? 'text-emerald-700' : 'text-red-600'}`}>
+      {ok ? <CheckIcon className="h-3.5 w-3.5 shrink-0" /> : <XMarkIcon className="h-3.5 w-3.5 shrink-0" />}
+      <span>
+        Shares total {money(sumC / 100)} {ok ? '=' : '≠'} bill total {money(total)} · {ok ? 'Adds up' : 'Does not add up'}
+      </span>
     </p>
   );
 }
 
+const SPLIT_MODES = ['even', 'items'] as const;
+
 /**
- * Split an unpaid bill (US5.3) evenly between 2–20 payers, or by assigning each
+ * Split an unpaid bill evenly between 2–20 payers, or by assigning each
  * line to a guest. Previews mirror the server's cent-exact maths so the shares
  * always add up to the bill total.
  */
@@ -126,19 +133,27 @@ export function SplitDialog({
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-3 rounded-lg bg-stone-50 px-3 py-2 text-sm">
           <span className="text-stone-600">Bill total (incl. tax, service &amp; tip)</span>
-          <span className="font-semibold">{money(invoice.total)}</span>
+          <span className="font-semibold tabular-nums">{money(invoice.total)}</span>
         </div>
 
-        <div className="grid grid-cols-2 gap-1 rounded-lg bg-stone-100 p-1" role="tablist" aria-label="Split mode">
-          {(['even', 'items'] as const).map((m) => (
+        <div
+          className="grid grid-cols-2 gap-1 rounded-lg bg-stone-100 p-1"
+          role="tablist"
+          aria-label="Split mode"
+          onKeyDown={(e) => handleTabListKeyDown(e, SPLIT_MODES, mode, setMode)}
+        >
+          {SPLIT_MODES.map((m) => (
             <button
               key={m}
+              id={`split-tab-${m}`}
               type="button"
               role="tab"
               aria-selected={mode === m}
+              aria-controls="split-mode-panel"
+              tabIndex={mode === m ? 0 : -1}
               disabled={m === 'items' && !canSplitItems}
               onClick={() => setMode(m)}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${
+              className={`min-h-[36px] rounded-md px-3 py-1.5 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:cursor-not-allowed disabled:opacity-50 ${
                 mode === m ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-600 hover:text-stone-900'
               }`}
             >
@@ -150,92 +165,94 @@ export function SplitDialog({
           <p className="text-xs text-stone-500">Splitting by items needs at least two lines on the bill.</p>
         ) : null}
 
-        {mode === 'even' ? (
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="label !mb-0">Number of payers</p>
-                <p className="text-xs text-stone-500">Between {EVEN_MIN} and {EVEN_MAX}.</p>
-              </div>
-              <Stepper value={ways} min={EVEN_MIN} max={EVEN_MAX} onChange={setWays} noun="payers" />
-            </div>
-            <ul className="max-h-56 divide-y divide-stone-100 overflow-y-auto rounded-lg border border-stone-200 text-sm">
-              {evenParts.map((amount, i) => (
-                <li key={i} className="flex justify-between px-3 py-1.5">
-                  <span>Guest {i + 1}</span>
-                  <span className="font-medium">{money(amount)}</span>
-                </li>
-              ))}
-            </ul>
-            <p className="text-xs text-stone-500">Shares differ by at most one cent so they always add up exactly.</p>
-            <CheckLine amounts={evenParts} total={invoice.total} />
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="label !mb-0">Number of guests</p>
-                <p className="text-xs text-stone-500">Each line goes to one guest; tax, service and tip are shared in proportion.</p>
-              </div>
-              <Stepper value={guests} min={GUESTS_MIN} max={GUESTS_MAX} onChange={changeGuests} noun="guests" />
-            </div>
-
-            <ul className="divide-y divide-stone-100 rounded-lg border border-stone-200">
-              {invoice.lines.map((l) => (
-                <li key={l.id} className="flex flex-col gap-2 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0 text-sm">
-                    <p className="font-medium">
-                      {l.qty} × {l.name} <span className="font-normal text-stone-500">· {money(l.lineTotal)}</span>
-                    </p>
-                    {l.modifiers.length ? <p className="text-xs text-stone-500">{modifierText(l.modifiers)}</p> : null}
-                  </div>
-                  <select
-                    className={`input sm:w-40 ${assign[l.id] ? '' : 'border-amber-400'}`}
-                    value={assign[l.id] ?? 0}
-                    onChange={(e) => setAssign((prev) => ({ ...prev, [l.id]: Number(e.target.value) }))}
-                    aria-label={`Guest paying for ${l.name}`}
-                  >
-                    <option value={0}>Choose guest…</option>
-                    {Array.from({ length: guests }, (_, g) => (
-                      <option key={g + 1} value={g + 1}>
-                        Guest {g + 1}
-                      </option>
-                    ))}
-                  </select>
-                </li>
-              ))}
-            </ul>
-
-            <div className="rounded-lg bg-stone-50 p-3 text-sm">
-              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-stone-500">Preview</p>
-              <ul className="space-y-1">
-                {guestGroups.map((lines, g) => {
-                  const idx = filled.findIndex((f) => f.guest === g + 1);
-                  return (
-                    <li key={g} className="flex justify-between gap-3">
-                      <span className={lines.length ? '' : 'text-stone-400'}>
-                        Guest {g + 1}
-                        <span className="text-xs text-stone-500">
-                          {lines.length ? ` · ${lines.map((l) => l.name).join(', ')}` : ' · no items (skipped)'}
-                        </span>
-                      </span>
-                      <span className="shrink-0 font-medium">{idx >= 0 && !unassigned ? money(itemShares[idx]) : '—'}</span>
-                    </li>
-                  );
-                })}
-              </ul>
-              {!itemsProblem ? (
-                <div className="mt-2 border-t border-stone-200 pt-2">
-                  <CheckLine amounts={itemShares} total={invoice.total} />
+        <div id="split-mode-panel" role="tabpanel" aria-labelledby={`split-tab-${mode}`}>
+          {mode === 'even' ? (
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="label !mb-0">Number of payers</p>
+                  <p className="text-xs text-stone-500">Between {EVEN_MIN} and {EVEN_MAX}.</p>
                 </div>
-              ) : null}
+                <Stepper value={ways} min={EVEN_MIN} max={EVEN_MAX} onChange={setWays} noun="payers" />
+              </div>
+              <ul className="max-h-56 divide-y divide-stone-100 overflow-y-auto rounded-lg border border-stone-200 text-sm">
+                {evenParts.map((amount, i) => (
+                  <li key={i} className="flex justify-between px-3 py-1.5">
+                    <span>Guest {i + 1}</span>
+                    <span className="font-medium tabular-nums">{money(amount)}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-stone-500">Shares differ by at most one cent so they always add up exactly.</p>
+              <CheckLine amounts={evenParts} total={invoice.total} />
             </div>
-            {skipsGuests && !itemsProblem ? (
-              <p className="text-xs text-stone-500">Guests without items are left out and the shares are numbered in order.</p>
-            ) : null}
-            {itemsProblem ? <p className="text-xs font-medium text-amber-700">{itemsProblem}</p> : null}
-          </div>
-        )}
+          ) : (
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="label !mb-0">Number of guests</p>
+                  <p className="text-xs text-stone-500">Each line goes to one guest; tax, service and tip are shared in proportion.</p>
+                </div>
+                <Stepper value={guests} min={GUESTS_MIN} max={GUESTS_MAX} onChange={changeGuests} noun="guests" />
+              </div>
+  
+              <ul className="divide-y divide-stone-100 rounded-lg border border-stone-200">
+                {invoice.lines.map((l) => (
+                  <li key={l.id} className="flex flex-col gap-2 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0 text-sm">
+                      <p className="font-medium">
+                        {l.qty} × {l.name} <span className="font-normal text-stone-500">· {money(l.lineTotal)}</span>
+                      </p>
+                      {l.modifiers.length ? <p className="text-xs text-stone-500">{modifierText(l.modifiers)}</p> : null}
+                    </div>
+                    <select
+                      className={`input sm:w-40 ${assign[l.id] ? '' : 'border-amber-400'}`}
+                      value={assign[l.id] ?? 0}
+                      onChange={(e) => setAssign((prev) => ({ ...prev, [l.id]: Number(e.target.value) }))}
+                      aria-label={`Guest paying for ${l.name}`}
+                    >
+                      <option value={0}>Choose guest…</option>
+                      {Array.from({ length: guests }, (_, g) => (
+                        <option key={g + 1} value={g + 1}>
+                          Guest {g + 1}
+                        </option>
+                      ))}
+                    </select>
+                  </li>
+                ))}
+              </ul>
+  
+              <div className="rounded-lg bg-stone-50 p-3 text-sm">
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-stone-500">Preview</p>
+                <ul className="space-y-1">
+                  {guestGroups.map((lines, g) => {
+                    const idx = filled.findIndex((f) => f.guest === g + 1);
+                    return (
+                      <li key={g} className="flex justify-between gap-3">
+                        <span className={lines.length ? '' : 'text-stone-500'}>
+                          Guest {g + 1}
+                          <span className="text-xs text-stone-500">
+                            {lines.length ? ` · ${lines.map((l) => l.name).join(', ')}` : ' · no items (skipped)'}
+                          </span>
+                        </span>
+                        <span className="shrink-0 font-medium tabular-nums">{idx >= 0 && !unassigned ? money(itemShares[idx]) : '—'}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+                {!itemsProblem ? (
+                  <div className="mt-2 border-t border-stone-200 pt-2">
+                    <CheckLine amounts={itemShares} total={invoice.total} />
+                  </div>
+                ) : null}
+              </div>
+              {skipsGuests && !itemsProblem ? (
+                <p className="text-xs text-stone-500">Guests without items are left out and the shares are numbered in order.</p>
+              ) : null}
+              {itemsProblem ? <p className="text-xs font-medium text-amber-700">{itemsProblem}</p> : null}
+            </div>
+          )}
+        </div>
 
         {invoice.tip === 0 ? (
           <p className="text-xs text-stone-500">Add any tip before splitting — changing the tip later clears the split.</p>

@@ -6,6 +6,10 @@ import { billingApi } from '@/lib/api';
 import type { Bill, BillingSummary } from '@/types';
 
 const toastFn = vi.fn();
+const replace = vi.fn();
+let search = new URLSearchParams();
+const router = { replace };
+vi.mock('next/navigation', () => ({ useRouter: () => router, useSearchParams: () => search }));
 vi.mock('@/components/ui/toast', () => ({ useToast: () => toastFn }));
 vi.mock('@/components/layout/staff-layout', () => ({ StaffLayout: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
 vi.mock('@/lib/api', async () => {
@@ -46,6 +50,8 @@ function makeSummary(overrides: Partial<BillingSummary> = {}): BillingSummary {
 describe('BillingPage', () => {
   beforeEach(() => {
     toastFn.mockClear();
+    replace.mockClear();
+    search = new URLSearchParams();
     vi.stubGlobal(
       'matchMedia',
       vi.fn().mockReturnValue({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }),
@@ -90,7 +96,29 @@ describe('BillingPage', () => {
     await waitFor(() => expect(billingApi.list).toHaveBeenLastCalledWith('today'));
   });
 
-  it('opens a bill panel when a bill is selected', async () => {
+  it('moves between scope tabs with the arrow keys', async () => {
+    // Arrange
+    vi.mocked(billingApi.list).mockResolvedValue({ bills: [], summary: makeSummary() });
+    const user = userEvent.setup({ delay: null });
+    render(<BillingPage />);
+    await screen.findByText('No open bills');
+    const open = screen.getByRole('tab', { name: /^Open/ });
+    open.focus();
+
+    // Act
+    await user.keyboard('{ArrowRight}');
+
+    // Assert
+    const today = screen.getByRole('tab', { name: /^Today/ });
+    expect(today).toHaveAttribute('aria-selected', 'true');
+    expect(today).toHaveFocus();
+    expect(today).toHaveAttribute('tabindex', '0');
+    expect(open).toHaveAttribute('tabindex', '-1');
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', today.id);
+    await waitFor(() => expect(billingApi.list).toHaveBeenLastCalledWith('today'));
+  });
+
+  it('opens a bill panel when a bill is selected and puts it in the URL', async () => {
     // Arrange
     vi.mocked(billingApi.list).mockResolvedValue({ bills: [makeBill()], summary: makeSummary() });
     const user = userEvent.setup({ delay: null });
@@ -102,6 +130,19 @@ describe('BillingPage', () => {
 
     // Assert
     expect(await screen.findByTestId('bill-panel')).toHaveTextContent('bill_1');
+    expect(replace).toHaveBeenCalledWith('/staff/billing?bill=bill_1', { scroll: false });
+  });
+
+  it('opens the bill named in the ?bill= deep link straight away', async () => {
+    // Arrange
+    search = new URLSearchParams('bill=order_42');
+    vi.mocked(billingApi.list).mockResolvedValue({ bills: [], summary: makeSummary() });
+
+    // Act
+    render(<BillingPage />);
+
+    // Assert
+    expect(await screen.findByTestId('bill-panel')).toHaveTextContent('order_42');
   });
 
   it('shows an error state with a retry button when loading fails', async () => {

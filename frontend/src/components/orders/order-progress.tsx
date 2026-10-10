@@ -11,7 +11,7 @@ export function OrderProgress({ status, className = '' }: { status: OrderStatus;
     return (
       <div className={className}>
         <span className="block h-1.5 rounded-full bg-red-200" aria-hidden="true" />
-        <p className="mt-1 text-[11px] font-medium text-red-600">Cancelled</p>
+        <p className="mt-1 text-xs font-medium text-red-600">Cancelled</p>
       </div>
     );
   }
@@ -31,8 +31,8 @@ export function OrderProgress({ status, className = '' }: { status: OrderStatus;
             />
             <span
               aria-hidden="true"
-              className={`mt-1 hidden truncate text-[10px] uppercase tracking-wide sm:block ${
-                state === 'current' ? 'font-semibold text-brand-700' : 'text-stone-400'
+              className={`mt-1 hidden truncate text-xs sm:block ${
+                state === 'current' ? 'font-semibold text-brand-700' : 'text-stone-500'
               }`}
             >
               {ORDER_STATUS[step].label}

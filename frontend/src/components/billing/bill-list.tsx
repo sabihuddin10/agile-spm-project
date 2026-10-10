@@ -75,7 +75,7 @@ export function BillList({
                     >
                       #{b.number}
                     </button>
-                    <p className="text-xs text-stone-400">
+                    <p className="text-xs text-stone-500">
                       <Created iso={b.createdAt} />
                     </p>
                   </td>
@@ -87,7 +87,7 @@ export function BillList({
                     <StatusBadges bill={b} />
                   </td>
                   <td className="whitespace-nowrap text-right">
-                    <p className="font-semibold">{money(b.total)}</p>
+                    <p className="font-semibold tabular-nums">{money(b.total)}</p>
                     {b.refundedAmount > 0 ? (
                       <p className="text-xs text-red-600">−{money(b.refundedAmount)} refunded</p>
                     ) : null}
@@ -113,7 +113,7 @@ export function BillList({
               <div className="min-w-0 space-y-1">
                 <p className="text-sm">
                   <span className="font-mono font-semibold">#{b.number}</span>
-                  <span className="text-stone-400"> · </span>
+                  <span className="text-stone-500"> · </span>
                   <span className="font-medium">{billWhere(b)}</span>
                 </p>
                 <p className="truncate text-xs text-stone-500">
@@ -122,7 +122,7 @@ export function BillList({
                 <StatusBadges bill={b} />
               </div>
               <div className="shrink-0 text-right">
-                <p className="font-semibold">{money(b.total)}</p>
+                <p className="font-semibold tabular-nums">{money(b.total)}</p>
                 {b.refundedAmount > 0 ? <p className="text-xs text-red-600">−{money(b.refundedAmount)}</p> : null}
               </div>
             </button>

@@ -5,6 +5,7 @@ import type { Order } from '@/types';
 import { orderApi } from '@/lib/api';
 import { errorMessage, money } from '@/lib/format';
 import { Modal } from '@/components/ui/modal';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Spinner } from '@/components/ui/spinner';
 import { useToast } from '@/components/ui/toast';
 import { AllergyBanner } from './allergy-banner';
@@ -13,7 +14,7 @@ import { placementLabel } from './labels';
 import { useOrderMenu } from './use-order-menu';
 
 /**
- * Amend a placed, unpaid order before it is confirmed (US3.2): the line editor
+ * Amend a placed, unpaid order before it is confirmed: the line editor
  * is prefilled from the order and saving replaces its items server-side.
  */
 export function EditItemsModal({
@@ -31,12 +32,13 @@ export function EditItemsModal({
   const [lines, setLines] = useState<DraftLine[]>(() => linesFromOrder(order));
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
 
   const requestClose = useCallback(() => {
-    if (saving) return;
-    if (dirty && !window.confirm('Discard your changes to this order?')) return;
-    onClose();
-  }, [dirty, onClose, saving]);
+    if (saving || confirmDiscard) return;
+    if (dirty) setConfirmDiscard(true);
+    else onClose();
+  }, [confirmDiscard, dirty, onClose, saving]);
 
   const blocked = unavailableLines(lines, byId);
 
@@ -103,6 +105,16 @@ export function EditItemsModal({
           </button>
         </div>
       </div>
+      {confirmDiscard ? (
+        <ConfirmDialog
+          title="Discard changes?"
+          confirmLabel="Discard changes"
+          onConfirm={onClose}
+          onCancel={() => setConfirmDiscard(false)}
+        >
+          <p>Your changes to order #{order.number} haven&apos;t been saved.</p>
+        </ConfirmDialog>
+      ) : null}
     </Modal>
   );
 }

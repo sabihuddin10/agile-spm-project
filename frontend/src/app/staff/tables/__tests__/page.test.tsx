@@ -61,7 +61,6 @@ describe('FloorPlanPage', () => {
     vi.mocked(tableApi.update).mockResolvedValue({ table: makeTable() });
     vi.mocked(tableApi.create).mockResolvedValue({ table: makeTable({ id: 't_new' }) });
     vi.mocked(tableApi.remove).mockResolvedValue({ deleted: true });
-    vi.stubGlobal('confirm', vi.fn(() => true));
   });
 
   it('shows a loading spinner, then groups tables by zone', async () => {
@@ -124,7 +123,7 @@ describe('FloorPlanPage', () => {
     expect(screen.queryByTestId('table-form')).not.toBeInTheDocument();
   });
 
-  it('removes a table after the user confirms', async () => {
+  it('asks in a dialog before removing a table, then removes it', async () => {
     // Arrange
     vi.mocked(useAuth).mockReturnValue({ user: makeUser() } as unknown as ReturnType<typeof useAuth>);
     vi.mocked(tableApi.list).mockResolvedValue({ tables: [makeTable()], zones: ['Main'], statuses: ['free'] });
@@ -136,6 +135,32 @@ describe('FloorPlanPage', () => {
     await user.click(screen.getByRole('button', { name: 'Remove' }));
 
     // Assert
+    expect(screen.getByRole('dialog', { name: 'Remove table 1?' })).toBeInTheDocument();
+    expect(tableApi.remove).not.toHaveBeenCalled();
+
+    // Act
+    await user.click(screen.getByRole('button', { name: 'Remove table' }));
+
+    // Assert
     await waitFor(() => expect(tableApi.remove).toHaveBeenCalledWith('t1'));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Remove table 1?' })).not.toBeInTheDocument());
+  });
+
+  it('keeps the table when the removal is cancelled', async () => {
+    // Arrange
+    vi.mocked(tableApi.remove).mockClear();
+    vi.mocked(useAuth).mockReturnValue({ user: makeUser() } as unknown as ReturnType<typeof useAuth>);
+    vi.mocked(tableApi.list).mockResolvedValue({ tables: [makeTable()], zones: ['Main'], statuses: ['free'] });
+    const user = userEvent.setup({ delay: null });
+    render(<FloorPlanPage />);
+    await screen.findByTestId('table-tile-t1');
+    await user.click(screen.getByRole('button', { name: 'Remove' }));
+
+    // Act
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    // Assert
+    expect(screen.queryByRole('dialog', { name: 'Remove table 1?' })).not.toBeInTheDocument();
+    expect(tableApi.remove).not.toHaveBeenCalled();
   });
 });

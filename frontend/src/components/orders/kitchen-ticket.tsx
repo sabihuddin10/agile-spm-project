@@ -6,6 +6,7 @@ import { orderApi } from '@/lib/api';
 import { can } from '@/lib/permissions';
 import { ITEM_STATUS, ORDER_STATUS, errorMessage, formatMinutes, formatTime, minutesSince } from '@/lib/format';
 import { Badge } from '@/components/ui/badge';
+import { ArrowDownIcon, ArrowUpIcon } from '@/components/ui/icons';
 import { useToast } from '@/components/ui/toast';
 import { AllergyBanner, orderAllergyFlags } from './allergy-banner';
 
@@ -16,10 +17,10 @@ export function isDelayed(order: Order, delayMinutes: number, now: number): bool
 }
 
 /**
- * A KDS ticket (US4.1–US4.5): queue position, order number, table or takeaway,
- * waiter and time since confirmation; "Delayed" / RUSH flags; per-dish Start →
- * Ready with prominent modifiers, notes and allergy alert (US1.5); order-level
- * "Start all" / "All ready"; and ↑ / ↓ / Rush queue controls.
+ * A KDS ticket: queue position, order number, table or takeaway, waiter and
+ * time since confirmation; "Delayed" / RUSH flags; per-dish Start → Ready with
+ * prominent modifiers, notes and allergy alert; order-level "Start all" /
+ * "All ready"; and move up / move down / Rush queue controls.
  */
 export function KitchenTicket({
   order,
@@ -105,7 +106,7 @@ export function KitchenTicket({
           <p className={`text-lg font-bold tabular-nums leading-none ${delayed ? 'text-red-600' : 'text-stone-800'}`}>
             {formatMinutes(elapsed)}
           </p>
-          <p className="mt-1 text-[11px] text-stone-400">since {formatTime(order.confirmedAt ?? order.createdAt)}</p>
+          <p className="mt-1 text-xs text-stone-500">since {formatTime(order.confirmedAt ?? order.createdAt)}</p>
         </div>
       </header>
 
@@ -161,31 +162,31 @@ export function KitchenTicket({
                   <div className="mt-1.5 flex flex-wrap items-center gap-2">
                     <Badge tone={s.tone}>{s.label}</Badge>
                     {item.preparedByName && item.status !== 'queued' ? (
-                      <span className="text-xs text-stone-400">{item.preparedByName}</span>
+                      <span className="text-xs text-stone-500">{item.preparedByName}</span>
                     ) : null}
                   </div>
                 </div>
                 {cook && item.status === 'queued' ? (
                   <button
                     type="button"
-                    className="btn-secondary !px-3 !py-1.5 text-xs"
+                    className="btn-sm btn-secondary shrink-0"
                     disabled={Boolean(busy)}
                     onClick={() =>
                       run(`item:${item.id}`, () => orderApi.setItemStatus(order.id, item.id, 'preparing'), `${item.name} started.`)
                     }
                   >
-                    {busy === `item:${item.id}` ? '…' : 'Start'}
+                    {busy === `item:${item.id}` ? 'Starting…' : 'Start'}
                   </button>
                 ) : cook && item.status === 'preparing' ? (
                   <button
                     type="button"
-                    className="btn-primary !bg-emerald-600 !px-3 !py-1.5 text-xs hover:!bg-emerald-700 focus:!ring-emerald-500"
+                    className="btn-sm btn-success shrink-0"
                     disabled={Boolean(busy)}
                     onClick={() =>
                       run(`item:${item.id}`, () => orderApi.setItemStatus(order.id, item.id, 'ready'), `${item.name} is ready.`)
                     }
                   >
-                    {busy === `item:${item.id}` ? '…' : 'Ready'}
+                    {busy === `item:${item.id}` ? 'Saving…' : 'Ready'}
                   </button>
                 ) : null}
               </div>
@@ -200,7 +201,7 @@ export function KitchenTicket({
           {cook && order.status === 'confirmed' && hasQueued ? (
             <button
               type="button"
-              className="btn-secondary !px-3 !py-1.5 text-xs"
+              className="btn-sm btn-secondary"
               disabled={Boolean(busy)}
               onClick={() => run('start', () => orderApi.setStatus(order.id, 'preparing'), `Order #${order.number} started.`)}
             >
@@ -210,7 +211,7 @@ export function KitchenTicket({
           {cook && hasOpen ? (
             <button
               type="button"
-              className="btn-primary !bg-emerald-600 !px-3 !py-1.5 text-xs hover:!bg-emerald-700 focus:!ring-emerald-500"
+              className="btn-sm btn-success"
               disabled={Boolean(busy)}
               onClick={() =>
                 run('ready', () => orderApi.setStatus(order.id, 'ready'), `Order #${order.number} is ready — floor staff notified.`)
@@ -220,35 +221,31 @@ export function KitchenTicket({
             </button>
           ) : null}
           {reprioritize ? (
-            <div className="ml-auto flex items-center gap-1" role="group" aria-label={`Queue controls for order #${order.number}`}>
+            <div className="ml-auto flex items-center gap-1.5" role="group" aria-label={`Queue controls for order #${order.number}`}>
               <button
                 type="button"
-                className="btn-ghost !px-2.5 !py-1.5 text-sm"
+                className="btn-sm btn-secondary !px-2.5"
                 disabled={Boolean(busy) || !canMoveUp}
                 onClick={() => run('up', () => orderApi.kitchenAction(order.id, 'up'), `Order #${order.number} moved up.`)}
                 aria-label={`Move order #${order.number} up the queue`}
                 title="Move up"
               >
-                ↑
+                <ArrowUpIcon className="h-4 w-4" />
               </button>
               <button
                 type="button"
-                className="btn-ghost !px-2.5 !py-1.5 text-sm"
+                className="btn-sm btn-secondary !px-2.5"
                 disabled={Boolean(busy) || !canMoveDown}
                 onClick={() => run('down', () => orderApi.kitchenAction(order.id, 'down'), `Order #${order.number} moved down.`)}
                 aria-label={`Move order #${order.number} down the queue`}
                 title="Move down"
               >
-                ↓
+                <ArrowDownIcon className="h-4 w-4" />
               </button>
               <button
                 type="button"
                 aria-pressed={rush}
-                className={`btn !px-3 !py-1.5 text-xs ${
-                  rush
-                    ? 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500'
-                    : 'border border-red-200 bg-white text-red-600 hover:bg-red-50 focus:ring-red-400'
-                }`}
+                className={rush ? 'btn-sm btn-danger' : 'btn-sm btn-secondary'}
                 disabled={Boolean(busy)}
                 onClick={() =>
                   run(
@@ -258,7 +255,7 @@ export function KitchenTicket({
                   )
                 }
               >
-                {rush ? 'Rush on' : 'Rush'}
+                {busy === 'rush' ? 'Saving…' : rush ? 'Rush on' : 'Rush'}
               </button>
             </div>
           ) : null}
