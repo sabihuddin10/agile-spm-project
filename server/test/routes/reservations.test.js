@@ -163,7 +163,7 @@ test('booking fields are type-checked: real dates, valid email and phone, short 
   const longName = await book({ customerName: 'x'.repeat(81) });
   const longRequests = await book({ specialRequests: 'x'.repeat(501) });
   const boolParty = await book({ partySize: true });
-  const ok = await book({ phone: '+44 20 7946 0958' });
+  const ok = await book({ phone: '+92 345 7946095' });
 
   // Assert
   for (const res of [arrayDate, impossibleDate, badEmail, badPhone, longName, longRequests, boolParty]) assert.equal(res.status, 400);

@@ -11,7 +11,7 @@ import { SlotGrid } from '@/components/reservations/slot-grid';
 import { useAvailability } from '@/components/reservations/use-availability';
 import { addDaysISO, errorMessage, formatDate, localDateISO } from '@/lib/format';
 import {
-  normalizeName, validateEmail, validateFutureDate, validateIntegerInRange, validateMaxLength, validateName, validatePhone,
+  normalizeName, validateEmail, validateFutureDate, validateIntegerInRange, validateMaxLength, validateName, formatPhoneInput, validatePhone,
   EMAIL_MAX, NAME_MAX, PHONE_MAX,
 } from '@/lib/validation/fields';
 import { useFormValidation, type Rules } from '@/lib/validation/use-form-validation';
@@ -285,13 +285,13 @@ export function BookingForm() {
               className="input"
               type="tel"
               autoComplete="tel"
-              inputMode="tel"
+              inputMode="numeric"
               maxLength={PHONE_MAX}
               placeholder="+92 300 1234567"
               value={form.phone}
               aria-invalid={Boolean(errors.phone)}
               aria-describedby={errors.phone ? 'bk-phone-err' : undefined}
-              onChange={(e) => set('phone', e.target.value)}
+              onChange={(e) => set('phone', formatPhoneInput(e.target.value))}
               onBlur={() => v.blur('phone')}
             />
             <FieldError id="bk-phone-err" message={errors.phone} />

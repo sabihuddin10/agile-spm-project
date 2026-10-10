@@ -126,7 +126,7 @@ test('staff edit their own name and phone; changing the email needs the current 
   const token = await api.login(hired.email, hired.password);
 
   // Act
-  const profile = await api.call('PATCH', '/auth/me', { token, body: { name: '  Chef Renamed ', phone: '+1 (555) 010-2000' } });
+  const profile = await api.call('PATCH', '/auth/me', { token, body: { name: '  Chef Renamed ', phone: '0300-1234567' } });
   const noPassword = await api.call('PATCH', '/auth/me', { token, body: { email: `new-${hired.email}` } });
   const taken = await api.call('PATCH', '/auth/me', { token, body: { email: 'manager@rest.test', currentPassword: hired.password } });
   const badPhone = await api.call('PATCH', '/auth/me', { token, body: { phone: 'call me maybe' } });
@@ -135,7 +135,7 @@ test('staff edit their own name and phone; changing the email needs the current 
   // Assert
   assert.equal(profile.status, 200);
   assert.equal(profile.body.user.name, 'Chef Renamed');
-  assert.equal(profile.body.user.phone, '+1 (555) 010-2000');
+  assert.equal(profile.body.user.phone, '+92 300 1234567', 'saved in the one stored format');
   assert.equal(noPassword.status, 400);
   assert.equal(taken.status, 409);
   assert.equal(badPhone.status, 400);
@@ -183,7 +183,7 @@ test('a manager edits and resets waiters and chefs, but not other managers, the 
   const chefToken = await api.login(chef.email, chef.password);
 
   // Act
-  const edit = await api.call('PATCH', `/auth/users/${chef.id}/profile`, { token: manager, body: { phone: '555-0199' } });
+  const edit = await api.call('PATCH', `/auth/users/${chef.id}/profile`, { token: manager, body: { phone: '923211110199' } });
   const reset = await api.call('POST', `/auth/users/${chef.id}/reset-password`, { token: manager });
   const onPeer = await api.call('PATCH', `/auth/users/${peer.id}/profile`, { token: manager, body: { name: 'X' } });
   const resetPeer = await api.call('POST', `/auth/users/${peer.id}/reset-password`, { token: manager });
@@ -192,7 +192,7 @@ test('a manager edits and resets waiters and chefs, but not other managers, the 
 
   // Assert
   assert.equal(edit.status, 200);
-  assert.equal(edit.body.user.phone, '555-0199');
+  assert.equal(edit.body.user.phone, '+92 321 1110199');
   assert.equal(reset.status, 200);
   assert.equal(reset.body.user.mustChangePassword, true);
   assert.ok(reset.body.tempPassword.length >= 8);

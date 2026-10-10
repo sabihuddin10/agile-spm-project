@@ -9,7 +9,7 @@ import { Card, CardHeader } from '@/components/ui/card';
 import { useToast } from '@/components/ui/toast';
 import { TextField } from '@/components/staff/text-field';
 import { SubmitHint } from '@/components/forms/field-error';
-import { normalizeName, validateEmail, validateName, validatePhone, EMAIL_MAX, NAME_MAX, PHONE_MAX } from '@/lib/validation/fields';
+import { normalizeName, validateEmail, validateName, formatPhoneInput, validatePhone, EMAIL_MAX, NAME_MAX, PHONE_MAX } from '@/lib/validation/fields';
 import { useFormValidation, type Rules } from '@/lib/validation/use-form-validation';
 
 interface Draft {
@@ -132,14 +132,14 @@ export function AccountProfileForm({ user }: { user: User }) {
             label="Phone"
             type="tel"
             value={draft.phone}
-            onChange={(value) => set('phone', value)}
+            onChange={(value) => set('phone', formatPhoneInput(value))}
             onBlur={() => v.blur('phone')}
             autoComplete="tel"
             maxLength={PHONE_MAX}
             placeholder="+92 300 1234567"
-            inputMode="tel"
+            inputMode="numeric"
             error={errors.phone}
-            hint="Digits, spaces and + ( ) - . (7 to 20 digits)."
+            hint="Pakistani mobile, digits only, e.g. 0300 1234567."
             optional
           />
           {emailChanged ? (

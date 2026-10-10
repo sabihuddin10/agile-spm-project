@@ -6,7 +6,7 @@ import { ALLERGY_OPTIONS, DIETARY_OPTIONS, optionsWith, toggleValue } from '@/co
 import { FieldError, SubmitHint, describedBy } from '@/components/forms/field-error';
 import { TONES } from '@/components/forms/tone';
 import {
-  normalizeName, validateContact, validateEmail, validateMaxLength, validateName, validatePhone,
+  normalizeName, validateContact, validateEmail, validateMaxLength, validateName, formatPhoneInput, validatePhone,
   EMAIL_MAX, NAME_MAX, PHONE_MAX,
 } from '@/lib/validation/fields';
 import { useFormValidation, type Rules } from '@/lib/validation/use-form-validation';
@@ -127,14 +127,14 @@ export function CustomerForm({
           <input
             id="customer-phone"
             type="tel"
-            inputMode="tel"
+            inputMode="numeric"
             className={`input ${errors.phone || errors.contact ? ERR : ''}`}
             maxLength={PHONE_MAX}
             placeholder="+92 300 1234567"
             value={draft.phone}
             aria-invalid={Boolean(errors.phone || errors.contact) || undefined}
             aria-describedby={describedBy(errors.phone && 'customer-phone-err', errors.contact && 'customer-contact-err')}
-            onChange={(e) => setDraft({ ...draft, phone: e.target.value })}
+            onChange={(e) => setDraft({ ...draft, phone: formatPhoneInput(e.target.value) })}
             onBlur={() => {
               v.blur('phone');
               v.blur('contact');

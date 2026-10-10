@@ -125,12 +125,12 @@ function customer(fields) {
 }
 
 export const customers = [
-  customer({ name: 'Emma Thompson', email: 'emma@example.com', phone: '+1 555-0101', loyaltyPoints: 320, preferences: { dietary: ['vegetarian'], allergies: ['peanuts'] } }),
-  customer({ name: 'Liam Nguyen', email: 'liam@example.com', phone: '+1 555-0102', type: 'online', loyaltyPoints: 85, preferences: { dietary: ['gluten-free'], allergies: [] }, notes: 'Prefers window table' }),
-  customer({ name: 'Sofia Ramirez', email: 'sofia@example.com', phone: '+1 555-0103', loyaltyPoints: 540, preferences: { dietary: ['vegan'], allergies: ['shellfish', 'dairy'] }, notes: 'Regular weekend dinner guest' }),
-  customer({ name: 'Casey Customer', email: 'customer@rest.test', phone: '+1 555-0199', type: 'online', userId: 'usr_customer', loyaltyPoints: 210, preferences: { dietary: ['vegetarian', 'gluten-free'], allergies: ['peanuts'] }, notes: 'Online customer · prefers contactless' }),
-  customer({ name: 'Olivia Chen', email: 'olivia@example.com', phone: '+1 555-0104', type: 'online', loyaltyPoints: 120, preferences: { dietary: ['nut-free'], allergies: ['tree nuts'] } }),
-  customer({ name: 'Noah Patel', email: 'noah@example.com', phone: '+1 555-0105', loyaltyPoints: 60, preferences: { dietary: ['halal'], allergies: [] } }),
+  customer({ name: 'Emma Thompson', email: 'emma@example.com', phone: '+92 300 5550101', loyaltyPoints: 320, preferences: { dietary: ['vegetarian'], allergies: ['peanuts'] } }),
+  customer({ name: 'Liam Nguyen', email: 'liam@example.com', phone: '+92 300 5550102', type: 'online', loyaltyPoints: 85, preferences: { dietary: ['gluten-free'], allergies: [] }, notes: 'Prefers window table' }),
+  customer({ name: 'Sofia Ramirez', email: 'sofia@example.com', phone: '+92 300 5550103', loyaltyPoints: 540, preferences: { dietary: ['vegan'], allergies: ['shellfish', 'dairy'] }, notes: 'Regular weekend dinner guest' }),
+  customer({ name: 'Casey Customer', email: 'customer@rest.test', phone: '+92 300 5550199', type: 'online', userId: 'usr_customer', loyaltyPoints: 210, preferences: { dietary: ['vegetarian', 'gluten-free'], allergies: ['peanuts'] }, notes: 'Online customer · prefers contactless' }),
+  customer({ name: 'Olivia Chen', email: 'olivia@example.com', phone: '+92 300 5550104', type: 'online', loyaltyPoints: 120, preferences: { dietary: ['nut-free'], allergies: ['tree nuts'] } }),
+  customer({ name: 'Noah Patel', email: 'noah@example.com', phone: '+92 300 5550105', loyaltyPoints: 60, preferences: { dietary: ['halal'], allergies: [] } }),
 ];
 
 export function findCustomerByUserId(userId) {
@@ -542,8 +542,8 @@ function seedLiveState() {
   );
 
   applications.push(
-    { id: nextId('app'), name: 'Priya Singh', email: 'priya@example.com', phone: '+1 555-0140', desiredRole: 'chef', experience: 'Five years as a line cook at Ember & Oak; wood-fire experience.', status: 'pending', createdAt: at(26 * 60), decidedAt: null, decidedBy: null, userId: null },
-    { id: nextId('app'), name: 'Tom Baker', email: 'tom@example.com', phone: '+1 555-0141', desiredRole: 'waiter', experience: 'Weekend server for two years, good wine knowledge.', status: 'pending', createdAt: at(180), decidedAt: null, decidedBy: null, userId: null },
+    { id: nextId('app'), name: 'Priya Singh', email: 'priya@example.com', phone: '+92 300 5550140', desiredRole: 'chef', experience: 'Five years as a line cook at Ember & Oak; wood-fire experience.', status: 'pending', createdAt: at(26 * 60), decidedAt: null, decidedBy: null, userId: null },
+    { id: nextId('app'), name: 'Tom Baker', email: 'tom@example.com', phone: '+92 300 5550141', desiredRole: 'waiter', experience: 'Weekend server for two years, good wine knowledge.', status: 'pending', createdAt: at(180), decidedAt: null, decidedBy: null, userId: null },
     { id: nextId('app'), name: 'Jake Miller', email: 'jake@example.com', phone: '', desiredRole: 'waiter', experience: 'No hospitality experience yet.', status: 'rejected', createdAt: at(6 * 24 * 60), decidedAt: at(5 * 24 * 60), decidedBy: 'usr_manager', userId: null },
   );
 

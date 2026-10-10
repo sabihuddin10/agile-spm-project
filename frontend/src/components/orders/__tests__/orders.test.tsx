@@ -114,7 +114,7 @@ function makeCustomer(overrides: Partial<Customer> = {}): Customer {
     id: 'cust_1',
     name: 'Ann Lee',
     email: 'ann@example.com',
-    phone: '555-0101',
+    phone: '+92 300 5550101',
     type: 'walk-in',
     loyaltyPoints: 0,
     totalSpend: 0,
@@ -208,7 +208,7 @@ const peanutAllergic = {
   id: 'cust_1',
   name: 'Ann Lee',
   email: 'ann@example.com',
-  phone: '555-0101',
+  phone: '+92 300 5550101',
   preferences: { allergies: ['peanuts'], dietary: ['vegetarian'] },
 };
 
@@ -246,7 +246,7 @@ describe('CustomerLookup', () => {
     const user = userEvent.setup({ delay: null });
     const onChange = vi.fn();
     const ann = makeCustomer({ preferences: { allergies: ['peanuts'], dietary: [] } });
-    const bob = makeCustomer({ id: 'cust_2', name: 'Annabel Bo', email: '', phone: '555-0202' });
+    const bob = makeCustomer({ id: 'cust_2', name: 'Annabel Bo', email: '', phone: '+92 300 5550202' });
     vi.mocked(customerApi.list).mockResolvedValue({ customers: [ann, bob] } as Awaited<ReturnType<typeof customerApi.list>>);
     render(<CustomerLookup value={null} onChange={onChange} />);
 
@@ -259,7 +259,7 @@ describe('CustomerLookup', () => {
     expect(customerApi.list).toHaveBeenCalledTimes(1);
     expect(customerApi.list).toHaveBeenCalledWith({ q: 'ann' });
     expect(within(annButton).getByText('Allergies')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /annabel bo/i })).toHaveTextContent('555-0202');
+    expect(screen.getByRole('button', { name: /annabel bo/i })).toHaveTextContent('+92 300 5550202');
     expect(onChange).toHaveBeenCalledWith(ann);
   });
 
@@ -301,7 +301,7 @@ describe('CustomerLookup', () => {
 
     // Assert
     expect(screen.getByText('Ann Lee')).toBeInTheDocument();
-    expect(screen.getByText('ann@example.com · 555-0101')).toBeInTheDocument();
+    expect(screen.getByText('ann@example.com · +92 300 5550101')).toBeInTheDocument();
     expect(screen.getByText(/allergy alert: peanuts/i)).toBeInTheDocument();
     expect(screen.getByText(/vegan/i)).toBeInTheDocument();
     expect(onChange).toHaveBeenCalledWith(null);
