@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import type { AnalyticsDashboard as DashboardData } from '@/types';
 import { analyticsApi } from '@/lib/api';
 import { errorMessage } from '@/lib/format';
@@ -11,13 +12,38 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { useToast } from '@/components/ui/toast';
 import { RangeControls, presetRange, type RangeState } from '@/components/analytics/range-controls';
 import { KpiTiles } from '@/components/analytics/kpi-tiles';
-import { RevenueTrendChart } from '@/components/analytics/revenue-trend-chart';
-import { TopDishes } from '@/components/analytics/top-dishes';
 import { TableUtilization } from '@/components/analytics/table-utilization';
-import { PeakHoursChart } from '@/components/analytics/peak-hours-chart';
 import { InventoryHealth } from '@/components/analytics/inventory-health';
 import { ReservationStats } from '@/components/analytics/reservation-stats';
 import { longDate } from '@/components/analytics/analytics-format';
+
+/** Card-sized skeleton shown while a Chart.js panel's code loads. */
+function chartPlaceholder(className: string) {
+  function ChartPlaceholder() {
+    return (
+      <div className={`card animate-pulse motion-reduce:animate-none ${className}`} aria-hidden="true">
+        <div className="h-4 w-40 rounded bg-stone-100" />
+        <div className="mt-2 h-3 w-64 max-w-full rounded bg-stone-100" />
+        <div className="mt-5 h-56 rounded-lg bg-stone-50 sm:h-64" />
+      </div>
+    );
+  }
+  return ChartPlaceholder;
+}
+
+// Chart.js is the heaviest dependency on this screen — load the chart panels on demand.
+const RevenueTrendChart = dynamic(() => import('@/components/analytics/revenue-trend-chart').then((m) => m.RevenueTrendChart), {
+  ssr: false,
+  loading: chartPlaceholder(''),
+});
+const TopDishes = dynamic(() => import('@/components/analytics/top-dishes').then((m) => m.TopDishes), {
+  ssr: false,
+  loading: chartPlaceholder('lg:col-span-2'),
+});
+const PeakHoursChart = dynamic(() => import('@/components/analytics/peak-hours-chart').then((m) => m.PeakHoursChart), {
+  ssr: false,
+  loading: chartPlaceholder('lg:col-span-2'),
+});
 
 const GRANULARITY_LABEL = { day: 'day', week: 'week', month: 'month' } as const;
 
@@ -104,7 +130,7 @@ export function AnalyticsDashboard() {
           ) : (
             <span>Loading period…</span>
           )}
-          {refreshing ? <span className="text-xs text-stone-400">Updating…</span> : null}
+          {refreshing ? <span className="text-xs text-stone-500">Updating…</span> : null}
         </p>
       </Card>
 

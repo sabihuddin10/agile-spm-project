@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DevShell } from '@/components/layout/dev-shell';
 import { MenuDrawer } from '@/components/layout/menu-drawer';
@@ -468,6 +468,71 @@ describe('StaffShell', () => {
     // Assert
     expect(logout).toHaveBeenCalledTimes(1);
     expect(push).toHaveBeenCalledWith('/login');
+  });
+
+  it('marks only the active nav link with aria-current="page"', () => {
+    // Arrange
+    pathname.value = '/staff/orders/o-12';
+    vi.mocked(useAuth).mockReturnValue({ user: makeUser({ role: 'manager' }), logout: vi.fn() } as unknown as ReturnType<typeof useAuth>);
+
+    // Act
+    render(<StaffShell>content</StaffShell>);
+
+    // Assert
+    expect(screen.getByRole('link', { name: 'Orders' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Overview' })).not.toHaveAttribute('aria-current');
+  });
+
+  it('files Settings under Back of house, not under "Me", and hides the Scrum board outside development', () => {
+    // Arrange
+    vi.mocked(useAuth).mockReturnValue({ user: makeUser({ role: 'admin' }), logout: vi.fn() } as unknown as ReturnType<typeof useAuth>);
+
+    // Act
+    render(<StaffShell>content</StaffShell>);
+
+    // Assert
+    const backOfHouse = screen.getByText('Back of house').parentElement as HTMLElement;
+    const me = screen.getByText('Me').parentElement as HTMLElement;
+    expect(within(backOfHouse).getByRole('link', { name: 'Settings' })).toHaveAttribute('href', '/staff/settings');
+    expect(within(me).queryByRole('link', { name: 'Settings' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Scrum board' })).not.toBeInTheDocument();
+  });
+
+  it('opens the mobile drawer as a labelled dialog, focuses its first link and closes on Escape', async () => {
+    // Arrange
+    vi.mocked(useAuth).mockReturnValue({ user: makeUser({ role: 'manager' }), logout: vi.fn() } as unknown as ReturnType<typeof useAuth>);
+    const user = userEvent.setup({ delay: null });
+    render(<StaffShell>content</StaffShell>);
+    const opener = screen.getByRole('button', { name: 'Open navigation' });
+
+    // Act
+    await user.click(opener);
+
+    // Assert
+    const drawer = screen.getByRole('dialog', { name: 'Navigation' });
+    expect(drawer).toHaveAttribute('aria-modal', 'true');
+    expect(within(drawer).getAllByRole('link')[0]).toHaveFocus();
+
+    // Act
+    await user.keyboard('{Escape}');
+
+    // Assert
+    expect(screen.queryByRole('dialog', { name: 'Navigation' })).not.toBeInTheDocument();
+    expect(opener).toHaveFocus();
+  });
+
+  it('closes the mobile drawer from its close button', async () => {
+    // Arrange
+    vi.mocked(useAuth).mockReturnValue({ user: makeUser(), logout: vi.fn() } as unknown as ReturnType<typeof useAuth>);
+    const user = userEvent.setup({ delay: null });
+    render(<StaffShell>content</StaffShell>);
+    await user.click(screen.getByRole('button', { name: 'Open navigation' }));
+
+    // Act
+    await user.click(screen.getByRole('button', { name: 'Close navigation' }));
+
+    // Assert
+    expect(screen.queryByRole('dialog', { name: 'Navigation' })).not.toBeInTheDocument();
   });
 });
 

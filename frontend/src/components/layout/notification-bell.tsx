@@ -95,7 +95,7 @@ export function NotificationBell({ variant = 'light', align = 'right' }: { varia
           </div>
           <ul className="max-h-96 overflow-y-auto">
             {items.length === 0 ? (
-              <li className={`px-4 py-8 text-center text-sm ${dark ? 'text-bone-faint' : 'text-stone-400'}`}>You&apos;re all caught up.</li>
+              <li className={`px-4 py-8 text-center text-sm ${dark ? 'text-bone-faint' : 'text-stone-500'}`}>You&apos;re all caught up.</li>
             ) : (
               items.map((n) => (
                 <li key={n.id}>
@@ -109,7 +109,7 @@ export function NotificationBell({ variant = 'light', align = 'right' }: { varia
                     <span className="min-w-0 flex-1">
                       <span className={`block text-sm font-medium ${dark ? 'text-bone' : 'text-stone-800'}`}>{n.title}</span>
                       <span className={`block text-xs ${dark ? 'text-bone-dim' : 'text-stone-500'}`}>{n.message}</span>
-                      <span className={`mt-0.5 block text-[11px] ${dark ? 'text-bone-faint' : 'text-stone-400'}`}>{timeAgo(n.createdAt)}</span>
+                      <span className={`mt-0.5 block text-xs ${dark ? 'text-bone-faint' : 'text-stone-500'}`}>{timeAgo(n.createdAt)}</span>
                     </span>
                   </button>
                 </li>

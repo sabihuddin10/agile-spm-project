@@ -38,4 +38,18 @@ describe('KpiTiles', () => {
     expect(screen.getByText('No paid orders')).toBeInTheDocument();
     expect(screen.getByText('No orders')).toBeInTheDocument();
   });
+
+  it('lays tiles out one per row on phones', () => {
+    // Arrange
+    const kpis: AnalyticsDashboard['kpis'] = { revenue: 0, orders: 0, avgOrder: 0, tips: 0, refunds: 0, cancelled: 0, customers: 0 };
+
+    // Act
+    const { container } = render(<KpiTiles kpis={kpis} />);
+
+    // Assert
+    const grid = container.querySelector('dl') as HTMLElement;
+    expect(grid).toHaveClass('grid-cols-1', 'sm:grid-cols-2');
+    expect(screen.getByText('Revenue').parentElement).toHaveClass('sm:col-span-2');
+    expect(screen.getByText('Revenue').parentElement).not.toHaveClass('col-span-2');
+  });
 });

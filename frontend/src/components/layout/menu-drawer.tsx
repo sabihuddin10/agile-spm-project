@@ -28,7 +28,7 @@ export function MenuDrawer({ open, onClose }: { open: boolean; onClose: () => vo
       pathname === href ? 'bg-ember/10 text-ember' : 'text-bone hover:bg-char-deep hover:text-bone'
     }`;
 
-  const groupTitle = 'px-4 pb-1 pt-5 text-[11px] font-extrabold uppercase tracking-[0.18em] text-bone-faint';
+  const groupTitle = 'px-4 pb-1 pt-5 text-xs font-extrabold uppercase tracking-[0.18em] text-bone-faint';
 
   return (
     <div className="fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-label="Site menu">

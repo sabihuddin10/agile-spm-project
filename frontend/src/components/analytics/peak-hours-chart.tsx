@@ -72,7 +72,7 @@ export function PeakHoursChart({ hours, className = '' }: { hours: AnalyticsDash
         grid: { color: CHART_COLORS.grid },
         border: { display: false },
         ticks: { precision: 0, maxTicksLimit: 6 },
-        title: { display: true, text: 'Orders', color: '#78716c' },
+        title: { display: true, text: 'Orders', color: CHART_COLORS.axisTitle },
       },
     },
   };

@@ -74,7 +74,7 @@ export function ReservationStats({
 
           <p className="mt-4 border-t border-stone-100 pt-3 text-sm text-stone-600">
             Cancellation rate <span className="font-semibold text-stone-900">{pct(stats.cancellationRate)}</span>
-            <span className="text-stone-400"> of all bookings</span>
+            <span className="text-stone-500"> of all bookings</span>
           </p>
         </>
       )}

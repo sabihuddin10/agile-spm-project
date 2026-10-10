@@ -79,7 +79,7 @@ export function MobileBottomNav() {
               aria-current={active ? 'page' : undefined}
             >
               <span className={active ? 'text-ember' : 'text-bone-faint'}>{item.icon}</span>
-              <span className={`text-[11px] font-medium ${active ? 'text-ember' : 'text-bone-faint'}`}>{item.label}</span>
+              <span className={`text-xs font-medium ${active ? 'text-ember' : 'text-bone-faint'}`}>{item.label}</span>
             </Link>
           );
         })}

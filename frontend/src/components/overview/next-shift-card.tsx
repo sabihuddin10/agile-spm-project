@@ -53,8 +53,8 @@ export function NextShiftCard({ shifts, loading, now }: { shifts: Shift[] | null
 
       {loading && !shifts ? (
         <div className="mt-4 space-y-2" aria-label="Loading shifts">
-          <div className="h-6 w-32 animate-pulse rounded bg-stone-100" />
-          <div className="h-4 w-48 animate-pulse rounded bg-stone-100" />
+          <div className="h-6 w-32 animate-pulse rounded bg-stone-100 motion-reduce:animate-none" />
+          <div className="h-4 w-48 animate-pulse rounded bg-stone-100 motion-reduce:animate-none" />
         </div>
       ) : !shifts ? (
         <p className="mt-4 text-sm text-stone-500">Your schedule couldn&apos;t be loaded.</p>

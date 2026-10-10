@@ -30,12 +30,12 @@ export function KpiTiles({ kpis }: { kpis: AnalyticsDashboard['kpis'] }) {
   ];
 
   return (
-    <dl className="grid grid-cols-2 gap-3 md:grid-cols-4 2xl:grid-cols-8">
+    <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4 2xl:grid-cols-8">
       {tiles.map((t) => (
-        <div key={t.label} className={`card min-w-0 !p-4 ${t.wide ? 'col-span-2' : ''}`}>
+        <div key={t.label} className={`card min-w-0 !p-4 ${t.wide ? 'sm:col-span-2' : ''}`}>
           <dt className="text-xs font-medium text-stone-500">{t.label}</dt>
           <dd className={`mt-1 break-words font-semibold text-stone-900 ${t.wide ? 'text-3xl' : 'text-xl'}`}>{t.value}</dd>
-          <dd className="mt-0.5 text-xs text-stone-400">{t.hint}</dd>
+          <dd className="mt-0.5 text-xs text-stone-500">{t.hint}</dd>
         </div>
       ))}
     </dl>
