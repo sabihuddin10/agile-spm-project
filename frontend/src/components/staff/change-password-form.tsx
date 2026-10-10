@@ -8,7 +8,7 @@ import { Card, CardHeader } from '@/components/ui/card';
 import { useToast } from '@/components/ui/toast';
 import { PASSWORD_MIN, confirmError, passwordError } from '@/lib/validation/password';
 import { useFormValidation, type Rules } from '@/lib/validation/use-form-validation';
-import { FieldError, describedBy } from '@/components/forms/field-error';
+import { FieldError, SubmitHint, describedBy } from '@/components/forms/field-error';
 import { PasswordInput } from '@/components/forms/password-input';
 import { PasswordMatch } from '@/components/forms/password-match';
 import { PasswordRequirements } from '@/components/forms/password-requirements';
@@ -47,7 +47,9 @@ export function ChangePasswordForm({ id }: { id?: string }) {
     },
     confirm: (v, f) => confirmError(f.next, v),
   };
-  const v = useFormValidation(fields, rules);
+  const v = useFormValidation(fields, rules, {
+    labels: { current: 'Current password', next: 'New password', confirm: 'Confirm new password' },
+  });
   const errors: Partial<Fields> = {
     current: serverErrors.current ?? v.errors.current,
     next: serverErrors.next ?? v.errors.next,
@@ -127,7 +129,7 @@ export function ChangePasswordForm({ id }: { id?: string }) {
                 describedBy={describedBy('password-new-rules', errors.next && 'password-new-error')}
               />
               <FieldError id="password-new-error" message={errors.next} />
-              <PasswordRequirements id="password-new-rules" value={fields.next} {...account} showUnmet={v.submitted} />
+              <PasswordRequirements id="password-new-rules" value={fields.next} {...account} showUnmet={v.isTouched('next')} />
             </div>
             <div>
               <label htmlFor="password-confirm" className="label">
@@ -153,10 +155,17 @@ export function ChangePasswordForm({ id }: { id?: string }) {
           </p>
         ) : null}
 
-        <div className="mt-5">
-          <button type="submit" className="btn-primary" disabled={saving}>
+        <div className="mt-5 space-y-2">
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={saving || !v.isValid}
+            aria-disabled={saving || !v.isValid}
+            aria-describedby={v.isValid ? undefined : 'password-submit-hint'}
+          >
             {saving ? 'Changing…' : 'Change password'}
           </button>
+          <SubmitHint id="password-submit-hint" fields={v.invalidLabels} />
         </div>
       </form>
     </Card>

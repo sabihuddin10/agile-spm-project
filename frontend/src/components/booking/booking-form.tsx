@@ -11,11 +11,11 @@ import { SlotGrid } from '@/components/reservations/slot-grid';
 import { useAvailability } from '@/components/reservations/use-availability';
 import { addDaysISO, errorMessage, formatDate, localDateISO } from '@/lib/format';
 import {
-  validateEmail, validateFutureDate, validateIntegerInRange, validateMaxLength, validateName, validatePhone,
+  normalizeName, validateEmail, validateFutureDate, validateIntegerInRange, validateMaxLength, validateName, validatePhone,
   EMAIL_MAX, NAME_MAX, PHONE_MAX,
 } from '@/lib/validation/fields';
 import { useFormValidation, type Rules } from '@/lib/validation/use-form-validation';
-import { describedBy } from '@/components/forms/field-error';
+import { SubmitHint, describedBy } from '@/components/forms/field-error';
 
 const MAX_PARTY = 12;
 const REQUESTS_MAX = 500;
@@ -68,6 +68,16 @@ function bookingRules(today: string): Rules<FormState> {
   };
 }
 
+const LABELS = {
+  customerName: 'Full name',
+  email: 'Email',
+  phone: 'Phone',
+  partySize: 'Party size',
+  date: 'Date',
+  time: 'Time',
+  specialRequests: 'Special requests',
+};
+
 function FieldError({ id, message }: { id: string; message?: string }) {
   if (!message) return null;
   return (
@@ -97,7 +107,7 @@ export function BookingForm() {
   // Computed after mount so the server-rendered markup never disagrees about "today".
   useEffect(() => setToday(localDateISO()), []);
 
-  const v = useFormValidation(form, bookingRules(today));
+  const v = useFormValidation(form, bookingRules(today), { labels: LABELS });
   const errors = v.errors;
 
   // Signed-in guests get their details filled in; they can still edit them.
@@ -138,7 +148,7 @@ export function BookingForm() {
     setConflict(null);
     try {
       const { reservation } = await reservationApi.create({
-        customerName: form.customerName.trim(),
+        customerName: normalizeName(form.customerName),
         email: form.email.trim(),
         phone: form.phone.trim() || undefined,
         partySize: form.partySize,
@@ -237,6 +247,7 @@ export function BookingForm() {
               className="input"
               autoComplete="name"
               maxLength={NAME_MAX + 20}
+              placeholder="e.g. Sara Khan"
               value={form.customerName}
               aria-invalid={Boolean(errors.customerName)}
               aria-describedby={errors.customerName ? 'bk-name-err' : undefined}
@@ -256,6 +267,7 @@ export function BookingForm() {
               autoComplete="email"
               inputMode="email"
               maxLength={EMAIL_MAX}
+              placeholder="name@example.com"
               value={form.email}
               aria-invalid={Boolean(errors.email)}
               aria-describedby={errors.email ? 'bk-email-err' : undefined}
@@ -275,6 +287,7 @@ export function BookingForm() {
               autoComplete="tel"
               inputMode="tel"
               maxLength={PHONE_MAX}
+              placeholder="+92 300 1234567"
               value={form.phone}
               aria-invalid={Boolean(errors.phone)}
               aria-describedby={errors.phone ? 'bk-phone-err' : undefined}
@@ -389,9 +402,16 @@ export function BookingForm() {
 
         <div className="space-y-2">
           {summary ? <p className="text-center text-sm text-bone-dim">{summary}</p> : null}
-          <button type="submit" className="btn-primary w-full" disabled={submitting}>
+          <button
+            type="submit"
+            className="btn-primary w-full"
+            disabled={submitting || !v.isValid}
+            aria-disabled={submitting || !v.isValid}
+            aria-describedby={v.isValid ? undefined : 'bk-submit-hint'}
+          >
             {submitting ? 'Requesting…' : 'Request booking'}
           </button>
+          <SubmitHint id="bk-submit-hint" fields={v.invalidLabels} tone="dark" className="text-center" />
         </div>
       </form>
     </Card>

@@ -12,6 +12,12 @@ export const PHONE_MAX = 30;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_RE = /^[0-9+()\-.\s]*$/;
+/** Letters (any script, with combining marks), spaces, apostrophes (straight or curly), hyphens, full stops. */
+// Built with RegExp() because the TS target predates the `u` flag in literals; every supported browser has it.
+const NAME_CHARS_RE = new RegExp("^[\\p{L}\\p{M}' ’.-]+$", 'u');
+const LETTER_RE = new RegExp('\\p{L}', 'u');
+const LETTERS_RE = new RegExp('\\p{L}', 'gu');
+const NAME_MIN_LETTERS = 3;
 // eslint-disable-next-line no-control-regex
 const CONTROL_RE = /[\u0000-\u001F\u007F]/;
 
@@ -21,11 +27,25 @@ export function validateRequired(value: string, message = 'This field is require
   return value.trim() ? undefined : message;
 }
 
+/** Trim and collapse runs of whitespace — how a person's name is sent to the server. */
+export function normalizeName(value: string): string {
+  return value.trim().replace(/\s+/g, ' ');
+}
+
+/**
+ * A person's name: at most 80 characters of letters, spaces and ' - . only, and
+ * either two or more words or at least three letters ("Li Na" and "Ana" pass,
+ * "SS" does not).
+ */
 export function validateName(value: string, { required = true, missing = 'Please enter your name.' } = {}): string | undefined {
-  const clean = value.trim();
+  const clean = normalizeName(value);
   if (!clean) return required ? missing : undefined;
   if (clean.length > NAME_MAX) return `Keep it to ${NAME_MAX} characters or fewer.`;
   if (CONTROL_RE.test(clean)) return 'Remove the unsupported characters.';
+  if (!NAME_CHARS_RE.test(clean)) return 'Use letters, spaces, apostrophes, hyphens and full stops only.';
+  const words = clean.split(' ').filter((w) => LETTER_RE.test(w)).length;
+  const letters = (clean.match(LETTERS_RE) ?? []).length;
+  if (words < 2 && letters < NAME_MIN_LETTERS) return 'Enter a full name: at least 3 letters, or a first and last name.';
   return undefined;
 }
 
@@ -56,6 +76,29 @@ export function validatePhone(value: string, { required = false } = {}): string 
 
 export function validateMaxLength(value: string, max: number, label = 'This'): string | undefined {
   return value.length > max ? `${label} can be at most ${max} characters (${value.length} now).` : undefined;
+}
+
+export const CONTACT_MISSING = 'Add an email or phone so we can reach them.';
+
+/** At least one way to reach someone: returns CONTACT_MISSING when both are blank. */
+export function validateContact(email: string, phone: string): string | undefined {
+  return email.trim() || phone.trim() ? undefined : CONTACT_MISSING;
+}
+
+/** A number within [min, max] (decimals allowed). Blank counts as missing unless `required` is false. */
+export function validateNumberInRange(
+  value: number | string,
+  min: number,
+  max: number,
+  label = 'This',
+  { required = true } = {},
+): string | undefined {
+  const blank = typeof value === 'string' && value.trim() === '';
+  if (blank) return required ? `${label} is required.` : undefined;
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(n)) return `${label} must be a number.`;
+  if (n < min || n > max) return `${label} must be between ${min.toLocaleString('en-US')} and ${max.toLocaleString('en-US')}.`;
+  return undefined;
 }
 
 /** A whole number within [min, max]. Accepts numbers or numeric strings. */

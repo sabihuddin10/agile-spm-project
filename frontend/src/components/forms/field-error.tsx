@@ -15,3 +15,17 @@ export function describedBy(...ids: (string | false | null | undefined)[]): stri
   const list = ids.filter(Boolean);
   return list.length ? list.join(' ') : undefined;
 }
+
+/**
+ * Says why the submit button is disabled: "Complete these fields to continue:
+ * Name, Email." Point the button's aria-describedby at `id`. Renders nothing
+ * once every field is valid.
+ */
+export function SubmitHint({ id, fields, tone = 'light', className = '' }: { id: string; fields: string[]; tone?: Tone; className?: string }) {
+  if (!fields.length) return null;
+  return (
+    <p id={id} className={`text-xs ${TONES[tone].hint} ${className}`}>
+      Complete these fields to continue: {fields.join(', ')}.
+    </p>
+  );
+}

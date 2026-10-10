@@ -45,6 +45,7 @@ function serialize(customer) {
 }
 
 const NOTES_MAX = 500;
+const CONTACT_REQUIRED = 'Add an email or phone so we can reach this customer.';
 
 /** Validated { dietary, allergies } from a request; missing lists keep `current`. */
 function readPreferences(raw, current) {
@@ -172,6 +173,8 @@ router.post('/', staffOnly, (req, res) => {
   if (typeof body.name !== 'string' || !body.name.trim()) return res.status(400).json({ error: 'Customer name is required.' });
   const { fields } = readCustomerFields(body, null, { nameRequired: 'Customer name is required.' });
   const type = oneOf(body.type, 'Type', ['walk-in', 'online']) ?? 'walk-in';
+  // Staff-created records need at least one way to reach the customer.
+  if (!fields.email && !fields.phone) return res.status(400).json({ error: CONTACT_REQUIRED });
 
   // id, userId, loyaltyPoints and createdAt are always set here, never taken from the body.
   const customer = {
@@ -200,6 +203,11 @@ router.patch('/:id', staffOnly, (req, res) => {
   const { fields, error } = readCustomerFields(body, customer, { nameRequired: 'Customer name is required.' });
   if (error) return res.status(400).json({ error });
   const type = oneOf(body.type, 'Type', ['walk-in', 'online']);
+  // An edit may not clear the last contact detail (records that never had one can still be edited).
+  const touchesContact = fields.email !== undefined || fields.phone !== undefined;
+  if (touchesContact && !(fields.email ?? customer.email) && !(fields.phone ?? customer.phone)) {
+    return res.status(400).json({ error: CONTACT_REQUIRED });
+  }
 
   applyFields(customer, fields);
   if (type !== undefined) customer.type = type;

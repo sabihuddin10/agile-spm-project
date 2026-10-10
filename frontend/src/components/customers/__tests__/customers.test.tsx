@@ -6,7 +6,7 @@
  * Every test follows Arrange-Act-Assert, with each phase commented.
  */
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CustomerDetail } from '@/components/customers/customer-detail';
 import { CustomerForm } from '@/components/customers/customer-form';
@@ -210,49 +210,89 @@ describe('CustomerForm', () => {
     });
   });
 
-  it('requires a name before submitting', async () => {
+  it('keeps "Add customer" disabled on a pristine form, with a hint saying what is needed', () => {
+    // Arrange / Act
+    render(<CustomerForm onSubmit={vi.fn()} onCancel={vi.fn()} />);
+
+    // Assert
+    const submit = screen.getByRole('button', { name: 'Add customer' });
+    expect(submit).toBeDisabled();
+    expect(submit).toHaveAccessibleDescription('Complete these fields to continue: Full name, Email or phone.');
+    expect(screen.getByLabelText('Full name *')).not.toHaveAttribute('aria-invalid');
+  });
+
+  it('refuses a name like "SS" and a customer with no way to reach them', async () => {
     // Arrange
     const user = userEvent.setup({ delay: null });
     const onSubmit = vi.fn();
     render(<CustomerForm onSubmit={onSubmit} onCancel={vi.fn()} />);
+    const name = screen.getByLabelText('Full name *');
 
     // Act
-    await user.click(screen.getByRole('button', { name: 'Add customer' }));
+    await user.type(name, 'SS');
+    await user.click(screen.getByLabelText('Email'));
+    await user.tab();
 
     // Assert
-    expect(screen.getByLabelText('Full name *')).toBeRequired();
-    expect(screen.getByLabelText('Full name *')).toBeInvalid();
+    expect(name).toHaveAccessibleDescription('Enter a full name: at least 3 letters, or a first and last name.');
+    expect(screen.getByLabelText('Email')).toHaveAccessibleDescription('Add an email or phone so we can reach them.');
+    expect(screen.getByRole('button', { name: 'Add customer' })).toBeDisabled();
+
+    // Act — pressing Enter does not get round the disabled button
+    await user.type(name, '{Enter}');
+
+    // Assert
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
-  it('rejects a malformed email', async () => {
+  it('flags a malformed email and phone as they are typed', async () => {
     // Arrange
     const user = userEvent.setup({ delay: null });
-    const onSubmit = vi.fn();
-    render(<CustomerForm onSubmit={onSubmit} onCancel={vi.fn()} />);
+    render(<CustomerForm onSubmit={vi.fn()} onCancel={vi.fn()} />);
     await user.type(screen.getByLabelText('Full name *'), 'Lena Park');
 
     // Act
-    await user.type(screen.getByLabelText('Email'), 'not-an-email');
-    await user.click(screen.getByRole('button', { name: 'Add customer' }));
+    await user.type(screen.getByLabelText('Email'), 'lena@rest');
+    await user.type(screen.getByLabelText('Phone'), '12-34');
 
     // Assert
-    expect(screen.getByLabelText('Email')).toBeInvalid();
-    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Email')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText('Email')).toHaveAccessibleDescription('Enter an email address like name@example.com.');
+    expect(screen.getByLabelText('Phone')).toHaveAccessibleDescription('Phone numbers have 7 to 20 digits.');
+    expect(screen.getByRole('button', { name: 'Add customer' })).toBeDisabled();
   });
 
-  it('allows a walk-in customer without an email', async () => {
+  it('caps notes at 500 characters with a live counter', () => {
+    // Arrange
+    render(<CustomerForm onSubmit={vi.fn()} onCancel={vi.fn()} />);
+
+    // Act
+    fireEvent.change(screen.getByLabelText('Notes'), { target: { value: 'n'.repeat(501) } });
+
+    // Assert
+    expect(screen.getByText('501/500')).toBeInTheDocument();
+    expect(screen.getByText('Notes can be at most 500 characters (501 now).')).toBeInTheDocument();
+    expect(screen.getByLabelText('Notes')).toHaveAttribute('maxLength', '500');
+    expect(screen.getByLabelText('Full name *')).toHaveAttribute('maxLength', '80');
+    expect(screen.getByLabelText('Email')).toHaveAttribute('maxLength', '254');
+    expect(screen.getByLabelText('Phone')).toHaveAttribute('maxLength', '30');
+  });
+
+  it('allows a walk-in customer with only a phone, and collapses spaces in the name', async () => {
     // Arrange
     const user = userEvent.setup({ delay: null });
     const onSubmit = vi.fn();
     render(<CustomerForm onSubmit={onSubmit} onCancel={vi.fn()} />);
 
     // Act
-    await user.type(screen.getByLabelText('Full name *'), 'Walk In');
+    await user.type(screen.getByLabelText('Full name *'), 'Walk   In');
+    await user.type(screen.getByLabelText('Phone'), '+92 300 1234567');
     await user.click(screen.getByRole('button', { name: 'Add customer' }));
 
     // Assert
-    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ name: 'Walk In', email: '', type: 'walk-in' }));
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Walk In', email: '', phone: '+92 300 1234567', type: 'walk-in' }),
+    );
   });
 
   it('prefills an existing customer, keeps unknown preferences, and saves changes', async () => {

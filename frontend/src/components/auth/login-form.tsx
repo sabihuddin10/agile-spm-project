@@ -8,7 +8,7 @@ import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/format';
 import { validateEmail, validateRequired, EMAIL_MAX } from '@/lib/validation/fields';
 import { useFormValidation, type Rules } from '@/lib/validation/use-form-validation';
-import { FieldError, describedBy } from '@/components/forms/field-error';
+import { FieldError, SubmitHint, describedBy } from '@/components/forms/field-error';
 import { PasswordInput } from '@/components/forms/password-input';
 
 // Sign-in only checks that something sensible was typed; the password policy
@@ -17,6 +17,7 @@ const RULES: Rules<{ email: string; password: string }> = {
   email: (v) => validateEmail(v),
   password: (v) => validateRequired(v, 'Please enter your password.'),
 };
+const LABELS = { email: 'Email', password: 'Password' };
 
 const DEMO_ACCOUNTS = [
   { label: 'Admin', email: 'admin@rest.test' },
@@ -39,7 +40,7 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [expired, setExpired] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const v = useFormValidation({ email, password }, RULES);
+  const v = useFormValidation({ email, password }, RULES, { labels: LABELS });
 
   // Read the query string directly (useSearchParams would need a Suspense boundary).
   useEffect(() => {
@@ -97,7 +98,7 @@ export function LoginForm() {
               onBlur={() => v.blur('email')}
               aria-invalid={Boolean(v.errors.email) || undefined}
               aria-describedby={describedBy(v.errors.email && 'login-email-error')}
-              placeholder="you@example.com"
+              placeholder="name@example.com"
             />
             <FieldError id="login-email-error" message={v.errors.email} tone="dark" />
           </div>
@@ -124,9 +125,16 @@ export function LoginForm() {
             </p>
           ) : null}
 
-          <button type="submit" className="btn-primary w-full" disabled={submitting}>
+          <button
+            type="submit"
+            className="btn-primary w-full"
+            disabled={submitting || !v.isValid}
+            aria-disabled={submitting || !v.isValid}
+            aria-describedby={v.isValid ? undefined : 'login-submit-hint'}
+          >
             {submitting ? 'Signing in…' : 'Sign in'}
           </button>
+          <SubmitHint id="login-submit-hint" fields={v.invalidLabels} tone="dark" className="text-center" />
         </form>
 
         <div className="mt-6 border-t border-char-hairline pt-4">
