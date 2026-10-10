@@ -72,13 +72,26 @@ If a phase grows too big, it is split, never stretched. Update this file wheneve
 
 **Done when:** all six checks pass on `development` and it is merged into `main`.
 
+**Verified so far:** each branch passed lint, tsc, the full Vitest suite (854–855 tests) and the production build on its own. Server: 352/352 tests. Combined `development` (75fc09d) is in the full gate now.
+
+**Left out of this phase on purpose (moved, not dropped):**
+- Screen-side checks that match the new server limits → Phase 6. Today the server returns a clear error message, so nothing breaks.
+- Browser check of the phone layouts and print view → Phase 7. jsdom cannot test CSS breakpoints.
+- Phone card list for the customer table → Phase 7.
+- Category delete through the dialog has no page test, because CategoryManager is mocked → Phase 7.
+- Inventory text fields sent as `null` are stored as the string "null" (old behaviour) → Phase 7.
+
 ## Phase 5: Admin UI polish, batch 2 [~]
 
 **Goal:** the same polish for the staff, workforce and settings screens.
 
 - [x] Row-actions menu, confirm dialogs, lazy-loaded charts, phone-first tables (branch verified: 854/854 tests, build OK)
-- [ ] Merge into `development` after the Phase 4 release
-- [ ] Shift form: placeholder and the 500-character notes limit
+- [x] Fix: warm the lazy chart modules before the workforce page tests (14b7ae5)
+- [ ] Merge into `development` after the Phase 4 release, run the gate, release to `main`
+
+**Done when:** the branch is merged and released. Nothing else is in scope.
+
+**Left out of this phase on purpose:** shift form placeholder and 500-character notes limit → Phase 6.
 
 ## Phase 6: Formik/Yup-style validation + placeholders [~]
 
@@ -97,6 +110,8 @@ If a phase grows too big, it is split, never stretched. Update this file wheneve
   - billing
   - tables
 - [ ] A correct, realistic placeholder on every text input (labels stay)
+- [ ] Shift form: placeholder and the 500-character notes limit (moved from Phase 5)
+- [ ] Optional: block a 51st order line (server limit is 50)
 
 **Done when:** the forms and their tests are updated, all six checks pass, and it is merged into `main`.
 
@@ -106,12 +121,18 @@ If a phase grows too big, it is split, never stretched. Update this file wheneve
 - [ ] Redeploy the API Vercel project, which is not git-connected and is stale
 - [ ] Browser check of the phone layouts and print view, which jsdom cannot test
 - [ ] Phone card list for the customer table, which has no fixed width today
+- [ ] Page test for menu category delete through the confirm dialog
+- [ ] Inventory text fields: treat `null` as empty instead of the string "null"
 
 ## Phase 8: Open product questions [ ]
 
 - [ ] Should a single super-admin manage the other admins?
 
 ---
+
+## Order of work
+
+Phases are finished and released one at a time: 4 → 5 → 6 → 7. Later phases can be built in parallel on their own branches, but they merge into `development` only after the phase before them reaches `main`. This keeps each gate small and quick.
 
 ## Rules of the road
 
