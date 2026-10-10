@@ -208,3 +208,84 @@
     }
   }
 }
+
+/* Stat tiles on phones: below sm every stat tile becomes a pill like the order filter chips
+   (label + count bubble) and the tile grid becomes a wrapping row. From sm up these classes
+   do nothing, so each tile keeps its own desktop design. Usage:
+   <dl class="stat-row grid ..."> <div class="stat stat-red ..."> <dt class="stat-label">..</dt>
+   <dd class="stat-value">..</dd> <p class="stat-extra">hint, icon or delta (hidden on phones)</p>
+   Unlayered and after the utilities, so these win over the tile's own phone padding and sizes. */
+@media (max-width: 639.98px) {
+  .stat-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .stat {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 32px;
+    padding: 0.25rem 0.75rem;
+    border: 1px solid theme('colors.stone.200');
+    border-radius: 9999px;
+    background: theme('colors.white');
+    box-shadow: none;
+  }
+  .stat-label {
+    margin: 0;
+    font-size: theme('fontSize.xs');
+    font-weight: 500;
+    letter-spacing: normal;
+    text-transform: none;
+    color: theme('colors.stone.600');
+    white-space: nowrap;
+  }
+  .stat-value {
+    margin: 0;
+    padding: 0 0.375rem;
+    border-radius: 9999px;
+    font-size: theme('fontSize.xs');
+    font-weight: 600;
+    line-height: 1.25rem;
+    font-variant-numeric: tabular-nums;
+    background: theme('colors.stone.100');
+    color: theme('colors.stone.700');
+    white-space: nowrap;
+  }
+  .stat-red .stat-value {
+    background: theme('colors.red.100');
+    color: theme('colors.red.700');
+  }
+  .stat-amber .stat-value {
+    background: theme('colors.amber.100');
+    color: theme('colors.amber.800');
+  }
+  .stat-emerald .stat-value {
+    background: theme('colors.emerald.100');
+    color: theme('colors.emerald.700');
+  }
+  .stat-brand .stat-value {
+    background: theme('colors.brand.100');
+    color: theme('colors.brand.700');
+  }
+  .stat-blue .stat-value {
+    background: theme('colors.blue.100');
+    color: theme('colors.blue.700');
+  }
+  .stat-extra {
+    display: none !important;
+  }
+  .storefront .stat {
+    border-color: theme('colors.char.hairline');
+    background: theme('colors.char.raised');
+  }
+  .storefront .stat-label {
+    color: theme('colors.bone.dim');
+  }
+  .storefront .stat-value {
+    background: theme('colors.char.deep');
+    color: theme('colors.bone.DEFAULT');
+  }
+}
