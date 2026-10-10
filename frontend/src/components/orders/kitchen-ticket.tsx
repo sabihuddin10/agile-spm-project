@@ -77,15 +77,15 @@ export function KitchenTicket({
 
   return (
     <article
-      className={`card flex flex-col gap-3 !p-4 ${
+      className={`card flex flex-col gap-3 !p-3.5 sm:!p-4 ${
         delayed ? '!border-2 !border-red-500 bg-red-50/40' : rush ? '!border-2 !border-amber-400' : ''
       }`}
       aria-label={`Order #${order.number}, queue position ${position}${delayed ? ', delayed' : ''}${rush ? ', rush' : ''}`}
     >
       {/* Header */}
-      <header className="flex items-start gap-3">
+      <header className="flex items-start gap-2.5 sm:gap-3">
         <span
-          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${
+          className={`flex h-8 w-8 shrink-0 sm:h-9 sm:w-9 items-center justify-center rounded-full text-sm font-bold text-white ${
             delayed ? 'bg-red-600' : 'bg-stone-900'
           }`}
         >
@@ -94,7 +94,7 @@ export function KitchenTicket({
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="font-mono text-lg font-bold leading-none text-stone-900">#{order.number}</span>
+            <span className="font-mono text-base font-bold leading-none text-stone-900 sm:text-lg">#{order.number}</span>
             {rush ? <span className="badge bg-red-600 uppercase tracking-wide text-white">Rush</span> : null}
             {delayed ? <Badge tone="red">Delayed</Badge> : null}
             <Badge tone={ORDER_STATUS[order.status].tone}>{ORDER_STATUS[order.status].label}</Badge>
@@ -103,7 +103,7 @@ export function KitchenTicket({
           <p className="text-xs text-stone-500">Waiter: {order.waiterName ?? '—'}</p>
         </div>
         <div className="shrink-0 text-right">
-          <p className={`text-lg font-bold tabular-nums leading-none ${delayed ? 'text-red-600' : 'text-stone-800'}`}>
+          <p className={`text-base font-bold tabular-nums leading-none sm:text-lg ${delayed ? 'text-red-600' : 'text-stone-800'}`}>
             {formatMinutes(elapsed)}
           </p>
           <p className="mt-1 text-xs text-stone-500">since {formatTime(order.confirmedAt ?? order.createdAt)}</p>
@@ -125,13 +125,13 @@ export function KitchenTicket({
       ) : null}
 
       {/* Dishes */}
-      <ul className="space-y-2">
+      <ul className="space-y-1.5 sm:space-y-2">
         {order.items.map((item) => {
           const s = ITEM_STATUS[item.status];
           return (
             <li
               key={item.id}
-              className={`rounded-lg border px-3 py-2.5 ${
+              className={`rounded-lg border px-2.5 py-2 sm:px-3 sm:py-2.5 ${
                 item.status === 'ready'
                   ? 'border-emerald-200 bg-emerald-50'
                   : item.status === 'preparing'
@@ -141,8 +141,8 @@ export function KitchenTicket({
                       : 'border-stone-200 bg-white'
               }`}
             >
-              <div className="flex items-start gap-3">
-                <span className="text-lg font-bold tabular-nums leading-tight text-stone-900">{item.qty}×</span>
+              <div className="flex items-start gap-2.5 sm:gap-3">
+                <span className="text-base font-bold tabular-nums leading-tight text-stone-900 sm:text-lg">{item.qty}×</span>
                 <div className="min-w-0 flex-1">
                   <p className={`font-semibold leading-tight text-stone-900 ${item.status === 'served' ? 'line-through' : ''}`}>
                     {item.name}
@@ -159,7 +159,7 @@ export function KitchenTicket({
                   {flags[item.id] ? (
                     <p className="mt-1 text-xs font-bold uppercase text-red-600">Contains {flags[item.id].join(', ')}</p>
                   ) : null}
-                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5 sm:mt-1.5 sm:gap-2">
                     <Badge tone={s.tone}>{s.label}</Badge>
                     {item.preparedByName && item.status !== 'queued' ? (
                       <span className="text-xs text-stone-500">{item.preparedByName}</span>

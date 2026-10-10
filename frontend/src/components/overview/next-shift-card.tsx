@@ -61,7 +61,7 @@ export function NextShiftCard({ shifts, loading, now }: { shifts: Shift[] | null
       ) : next ? (
         <div className="mt-4">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-2xl font-semibold text-stone-900">{when}</p>
+            <p className="text-xl font-semibold text-stone-900 sm:text-2xl">{when}</p>
             {status ? <Badge tone={status.tone}>{status.label}</Badge> : null}
           </div>
           <p className="mt-1 text-sm text-stone-700">

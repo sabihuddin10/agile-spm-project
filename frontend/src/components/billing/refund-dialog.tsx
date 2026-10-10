@@ -77,7 +77,7 @@ export function RefundDialog({
 
   return (
     <Modal title={`Refund bill #${invoice.number}`} onClose={onClose}>
-      <form onSubmit={submit} className="space-y-4" noValidate>
+      <form onSubmit={submit} className="space-y-3 sm:space-y-4" noValidate>
         <dl className="grid grid-cols-3 gap-2 rounded-lg bg-stone-50 p-3 text-sm">
           <div>
             <dt className="text-xs text-stone-500">Bill total</dt>
@@ -148,7 +148,7 @@ export function RefundDialog({
         </p>
 
         <SubmitHint id="refund-submit-hint" fields={v.invalidLabels} className="sm:text-right" />
-        <div className="flex flex-col-reverse gap-2 border-t border-stone-200 pt-4 sm:flex-row sm:justify-end">
+        <div className="flex flex-col-reverse gap-2 border-t border-stone-200 pt-3 sm:flex-row sm:pt-4 sm:justify-end">
           <button type="button" className="btn-secondary" onClick={onClose} disabled={pending !== null}>
             Cancel
           </button>
