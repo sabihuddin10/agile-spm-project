@@ -101,7 +101,7 @@ export function RefundDialog({
 
         <div>
           <label htmlFor="refund-amount" className="label">
-            Amount <span className="font-normal text-stone-400">(optional)</span>
+            Amount <span className="font-normal text-stone-500">(optional)</span>
           </label>
           <div className="relative">
             <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-stone-400">$</span>

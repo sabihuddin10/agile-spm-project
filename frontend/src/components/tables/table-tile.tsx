@@ -22,9 +22,9 @@ function LockIcon() {
 }
 
 /**
- * One table on the live floor plan: status, seats, waiter, active orders and
- * today's next booking (US6.2), with status / hold / take-over controls
- * (US6.4) and layout edits for managers (US6.1).
+ * One table on the live floor plan: status, seats, waiter, active orders
+ * (each linking to its card on the orders page) and today's next booking, with
+ * status / hold / take-over controls and layout edits for managers.
  */
 export function TableTile({
   table,
@@ -91,8 +91,8 @@ export function TableTile({
           orders.map((o) => (
             <Link
               key={o.id}
-              href="/staff/orders"
-              className="flex items-center justify-between gap-2 rounded-md bg-white/80 px-2 py-1 text-xs ring-1 ring-black/5 transition hover:bg-white hover:ring-brand-300"
+              href={`/staff/orders#order-${o.number}`}
+              className="flex min-h-[36px] items-center justify-between gap-2 rounded-md bg-white/80 px-2 py-1.5 text-xs ring-1 ring-black/5 transition hover:bg-white hover:ring-brand-300"
             >
               <span className="truncate">
                 <span className="font-semibold text-stone-800">#{o.number}</span>
@@ -102,7 +102,7 @@ export function TableTile({
             </Link>
           ))
         ) : (
-          <p className="text-xs text-stone-400">No active orders</p>
+          <p className="text-xs text-stone-500">No active orders</p>
         )}
       </div>
 
@@ -120,7 +120,7 @@ export function TableTile({
       ) : null}
 
       <div className="mt-auto space-y-2 pt-3">
-        <div className="grid grid-cols-4 gap-1" role="group" aria-label={`Set status of table ${table.number}`}>
+        <div className="grid grid-cols-4 gap-1.5" role="group" aria-label={`Set status of table ${table.number}`}>
           {STATUS_BUTTONS.map((s) => {
             const active = table.status === s;
             return (
@@ -130,7 +130,7 @@ export function TableTile({
                 disabled={busy || active}
                 aria-pressed={active}
                 onClick={() => onStatus(s)}
-                className={`rounded-md px-1 py-1 text-[11px] font-medium transition disabled:cursor-not-allowed ${
+                className={`min-h-[40px] rounded-md px-1 py-1 text-xs font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:cursor-not-allowed ${
                   active
                     ? 'bg-stone-800 text-white'
                     : 'bg-white/80 text-stone-600 ring-1 ring-stone-200 hover:bg-white hover:text-stone-900 disabled:opacity-60'
@@ -145,11 +145,7 @@ export function TableTile({
         <div className="flex flex-wrap items-center gap-1.5">
           <button
             type="button"
-            className={`btn !px-2.5 !py-1 text-xs ${
-              table.held
-                ? 'bg-brand-600 text-white hover:bg-brand-700 focus:ring-brand-500'
-                : 'border border-stone-300 bg-white text-stone-700 hover:bg-stone-50 focus:ring-stone-400'
-            }`}
+            className={table.held ? 'btn-sm btn-primary' : 'btn-sm btn-secondary'}
             disabled={busy}
             aria-pressed={table.held}
             onClick={onToggleHold}
@@ -158,7 +154,7 @@ export function TableTile({
             {table.held ? 'Release hold' : 'Hold'}
           </button>
           {!mine ? (
-            <button type="button" className="btn-secondary !px-2.5 !py-1 text-xs" disabled={busy} onClick={onTake}>
+            <button type="button" className="btn-sm btn-secondary" disabled={busy} onClick={onTake}>
               Take this table
             </button>
           ) : null}
@@ -166,7 +162,7 @@ export function TableTile({
             <span className="ml-auto flex gap-1">
               <button
                 type="button"
-                className="btn-ghost !px-2 !py-1 text-xs"
+                className="btn-sm btn-ghost"
                 disabled={busy}
                 onClick={onEdit}
                 aria-label={`Edit table ${table.number}`}
@@ -175,7 +171,7 @@ export function TableTile({
               </button>
               <button
                 type="button"
-                className="btn-ghost !px-2 !py-1 text-xs text-red-600 hover:bg-red-50"
+                className="btn-sm btn-ghost text-red-700 hover:bg-red-50"
                 disabled={busy}
                 onClick={onRemove}
                 aria-label={`Remove table ${table.number}`}

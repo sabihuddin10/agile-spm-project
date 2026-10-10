@@ -6,7 +6,7 @@ import { placementLabel } from './labels';
 /** Today's finished (closed or cancelled) orders, newest first (US3.3). */
 export function OrderHistoryTable({ orders }: { orders: Order[] }) {
   if (orders.length === 0) {
-    return <p className="px-5 py-8 text-center text-sm text-stone-400">No closed or cancelled orders yet today.</p>;
+    return <p className="px-5 py-8 text-center text-sm text-stone-500">No closed or cancelled orders yet today.</p>;
   }
   return (
     <div className="overflow-x-auto">
@@ -29,7 +29,7 @@ export function OrderHistoryTable({ orders }: { orders: Order[] }) {
               <td className="font-mono font-semibold">#{o.number}</td>
               <td>
                 <span className="text-stone-700">{o.type === 'dine-in' ? 'Dine-in' : 'Online'}</span>
-                <span className="text-stone-400">
+                <span className="text-stone-500">
                   {' · '}
                   {o.type === 'dine-in' ? (o.tableNumber ? `Table ${o.tableNumber}` : 'no table') : placementLabel(o)}
                 </span>

@@ -168,11 +168,11 @@ export function OrderLineEditor({
 
         <div className="max-h-72 overflow-y-auto rounded-lg border border-stone-200">
           {visible.length === 0 ? (
-            <p className="px-4 py-6 text-center text-sm text-stone-400">No dishes match.</p>
+            <p className="px-4 py-6 text-center text-sm text-stone-500">No dishes match.</p>
           ) : (
             visible.map((c) => (
               <section key={c.id} aria-label={c.name}>
-                <h3 className="sticky top-0 z-10 border-b border-stone-200 bg-stone-50 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-stone-500">
+                <h3 className="sticky top-0 z-10 border-b border-stone-200 bg-stone-50 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-stone-500">
                   {c.name}
                 </h3>
                 <ul className="divide-y divide-stone-100">
@@ -193,13 +193,13 @@ export function OrderLineEditor({
                             <span className={`block text-sm font-medium ${item.available ? 'text-stone-800' : 'text-stone-400'}`}>
                               {item.name}
                               {inOrder > 0 ? (
-                                <span className="ml-2 rounded-full bg-brand-100 px-1.5 py-0.5 text-[10px] font-semibold text-brand-700">
+                                <span className="ml-2 rounded-full bg-brand-100 px-1.5 py-0.5 text-xs font-semibold text-brand-700">
                                   {inOrder} in order
                                 </span>
                               ) : null}
                             </span>
                             {item.available ? (
-                              <span className="mt-0.5 block text-xs text-stone-400">
+                              <span className="mt-0.5 block text-xs text-stone-500">
                                 {item.allergens.length ? `Contains ${item.allergens.join(', ')}` : 'No listed allergens'}
                                 {item.modifiers.length ? ' · options' : ''}
                               </span>
@@ -240,12 +240,12 @@ export function OrderLineEditor({
                                 onChange={(qty) => setConfiguring({ ...configuring, qty })}
                               />
                               <div className="flex gap-2">
-                                <button type="button" className="btn-ghost !px-3 !py-1.5 text-xs" onClick={() => setConfiguring(null)}>
+                                <button type="button" className="btn-sm btn-ghost" onClick={() => setConfiguring(null)}>
                                   Cancel
                                 </button>
                                 <button
                                   type="button"
-                                  className="btn-primary !px-3 !py-1.5 text-xs"
+                                  className="btn-sm btn-primary"
                                   onClick={() => {
                                     add(item, configuring.selections, configuring.qty);
                                     setConfiguring(null);
@@ -272,12 +272,12 @@ export function OrderLineEditor({
       <div>
         <p className="label">
           Order lines{' '}
-          <span className="font-normal text-stone-400">
+          <span className="font-normal text-stone-500">
             ({itemCount} item{itemCount === 1 ? '' : 's'})
           </span>
         </p>
         {lines.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-stone-300 px-4 py-5 text-center text-sm text-stone-400">
+          <p className="rounded-lg border border-dashed border-stone-300 px-4 py-5 text-center text-sm text-stone-500">
             Nothing added yet — pick dishes from the menu above.
           </p>
         ) : (
@@ -294,7 +294,7 @@ export function OrderLineEditor({
                     <div className="min-w-0 flex-1 basis-40">
                       <p className="text-sm font-medium text-stone-800">{dish?.name ?? line.fallback?.name ?? 'Unknown dish'}</p>
                       {priced.length ? <p className="text-xs text-stone-500">{modifierText(priced)}</p> : null}
-                      <p className="text-xs text-stone-400">{money(unit)} each</p>
+                      <p className="text-xs tabular-nums text-stone-500">{money(unit)} each</p>
                       {!dish ? (
                         <p className="text-xs font-medium text-amber-700">Not on the current menu</p>
                       ) : !dish.available ? (
@@ -307,12 +307,12 @@ export function OrderLineEditor({
                       ) : null}
                     </div>
                     <QtyStepper value={line.qty} name={dish?.name ?? 'item'} onChange={(qty) => update(line.key, { qty })} />
-                    <span className="w-16 text-right text-sm font-semibold text-stone-700">{money(lineTotal(unit, line.qty))}</span>
+                    <span className="w-16 text-right text-sm font-semibold tabular-nums text-stone-700">{money(lineTotal(unit, line.qty))}</span>
                     <div className="flex items-center gap-1">
                       {dish && dish.modifiers.length ? (
                         <button
                           type="button"
-                          className="btn-ghost !px-2 !py-1 text-xs"
+                          className="btn-sm btn-ghost !px-2"
                           aria-expanded={Boolean(editingOptions)}
                           onClick={() => setOptionsFor(editingOptions ? null : line.key)}
                         >
@@ -321,7 +321,7 @@ export function OrderLineEditor({
                       ) : null}
                       <button
                         type="button"
-                        className="rounded-md p-1.5 text-stone-400 transition hover:bg-red-50 hover:text-red-600"
+                        className="flex h-9 w-9 items-center justify-center rounded-md text-stone-500 transition hover:bg-red-50 hover:text-red-600"
                         onClick={() => remove(line.key)}
                         aria-label={`Remove ${dish?.name ?? 'line'}`}
                       >
@@ -343,9 +343,9 @@ export function OrderLineEditor({
         )}
         <div className="mt-3 flex items-baseline justify-between rounded-lg bg-stone-50 px-3 py-2">
           <span className="text-sm text-stone-500">
-            Subtotal <span className="text-xs text-stone-400">(tax &amp; service added at billing)</span>
+            Subtotal <span className="text-xs text-stone-500">(tax &amp; service added at billing)</span>
           </span>
-          <span className="text-base font-bold text-stone-900">{money(subtotal)}</span>
+          <span className="text-base font-bold tabular-nums text-stone-900">{money(subtotal)}</span>
         </div>
       </div>
     </div>

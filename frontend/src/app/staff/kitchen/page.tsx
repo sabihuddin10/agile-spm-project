@@ -10,6 +10,7 @@ import { useNow, usePolling } from '@/hooks/use-polling';
 import { StaffLayout } from '@/components/layout/staff-layout';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Spinner } from '@/components/ui/spinner';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useToast } from '@/components/ui/toast';
@@ -18,7 +19,7 @@ import { ReadyTicket } from '@/components/orders/ready-ticket';
 import { useMenuIndex } from '@/components/orders/use-order-menu';
 
 /**
- * Kitchen display system (US4.1–US4.5, US1.5): the live queue in server order
+ * Kitchen display system: the live queue in server order
  * (rush first, then oldest confirmed) with per-dish Start → Ready, delay flags
  * past the configured threshold, rush / reorder controls, and a separate
  * "Ready for pickup" list. Refreshes every 5 seconds.
@@ -71,10 +72,9 @@ export default function KitchenPage() {
         subtitle="Rush orders first, then oldest confirmed. Refreshes every 5 seconds."
         action={
           data ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 py-1 text-sm font-medium text-red-700">
-              <span className="h-2 w-2 rounded-full bg-red-500" aria-hidden="true" />
+            <Badge tone={delayedCount ? 'red' : 'stone'} className="!px-3 !py-1 !text-sm">
               Flag after {delayMinutes} min
-            </span>
+            </Badge>
           ) : null
         }
       />
@@ -82,7 +82,7 @@ export default function KitchenPage() {
       {error && data ? (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
           <span>Couldn&apos;t refresh the queue: {error} Retrying automatically…</span>
-          <button type="button" className="btn-ghost !px-2 !py-1 text-xs text-red-700" onClick={() => load()}>
+          <button type="button" className="btn-sm btn-ghost text-red-700 hover:bg-red-100" onClick={() => load()}>
             Retry now
           </button>
         </div>
@@ -106,7 +106,7 @@ export default function KitchenPage() {
         </Card>
       ) : (
         <>
-          <dl className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <dl className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Stat label="In queue" value={queue.length} />
             <Stat label="Delayed" value={delayedCount} tone={delayedCount ? 'red' : undefined} />
             <Stat label="Rush" value={rushCount} tone={rushCount ? 'amber' : undefined} />

@@ -12,7 +12,7 @@ export function Receipt({ invoice, showPrint = true }: { invoice: Invoice; showP
   const settled = invoice.paymentStatus !== 'unpaid';
   return (
     <div>
-      <div className="print-area mx-auto max-w-sm rounded-lg border border-stone-200 bg-white px-6 py-5 font-mono text-[13px] leading-relaxed text-stone-800">
+      <div className="print-area mx-auto max-w-sm rounded-lg border border-stone-200 bg-white px-6 py-5 font-mono text-sm leading-relaxed text-stone-800">
         <div className="text-center">
           <p className="text-base font-bold tracking-wide">{invoice.restaurant.name}</p>
           <p className="text-xs text-stone-500">{invoice.restaurant.address}</p>
@@ -41,7 +41,7 @@ export function Receipt({ invoice, showPrint = true }: { invoice: Invoice; showP
                 <span>{money(l.lineTotal)}</span>
               </p>
               {l.modifiers.length ? <p className="pl-4 text-xs text-stone-500">{modifierText(l.modifiers)}</p> : null}
-              {l.qty > 1 ? <p className="pl-4 text-xs text-stone-400">@ {money(l.unitPrice)} each</p> : null}
+              {l.qty > 1 ? <p className="pl-4 text-xs text-stone-500">@ {money(l.unitPrice)} each</p> : null}
             </div>
           ))}
         </div>

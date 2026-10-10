@@ -56,7 +56,6 @@ describe('ReservationsPage', () => {
     vi.mocked(tableApi.list).mockResolvedValue({ tables: [], zones: [], statuses: [] });
     vi.mocked(reservationApi.update).mockResolvedValue({ reservation: makeReservation({ status: 'confirmed' }) });
     vi.mocked(reservationApi.cancel).mockResolvedValue({ reservation: makeReservation({ status: 'cancelled' }) });
-    vi.stubGlobal('confirm', vi.fn(() => true));
   });
 
   it('shows a loading spinner, then bookings grouped by date', async () => {
@@ -111,8 +110,9 @@ describe('ReservationsPage', () => {
     expect(toastFn).toHaveBeenCalledWith('Confirmed — guest notified', 'success');
   });
 
-  it('cancels a booking after confirmation', async () => {
+  it('cancels a booking only after it is confirmed in a dialog', async () => {
     // Arrange
+    vi.mocked(reservationApi.cancel).mockClear();
     vi.mocked(reservationApi.list).mockResolvedValue({ reservations: [makeReservation()], slots: [] });
     const user = userEvent.setup({ delay: null });
     render(<ReservationsPage />);
@@ -122,7 +122,75 @@ describe('ReservationsPage', () => {
     await user.click(screen.getByRole('button', { name: 'Cancel Jordan Guest' }));
 
     // Assert
+    expect(screen.getByRole('dialog', { name: 'Cancel this booking?' })).toHaveTextContent("Jordan Guest's booking");
+    expect(reservationApi.cancel).not.toHaveBeenCalled();
+
+    // Act
+    await user.click(screen.getByRole('button', { name: 'Yes, cancel booking' }));
+
+    // Assert
     await waitFor(() => expect(reservationApi.cancel).toHaveBeenCalledWith('res_1'));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Cancel this booking?' })).not.toBeInTheDocument());
+  });
+
+  it('keeps the booking when the cancel dialog is dismissed', async () => {
+    // Arrange
+    vi.mocked(reservationApi.cancel).mockClear();
+    vi.mocked(reservationApi.list).mockResolvedValue({ reservations: [makeReservation()], slots: [] });
+    const user = userEvent.setup({ delay: null });
+    render(<ReservationsPage />);
+    await screen.findByTestId('reservation-res_1');
+    await user.click(screen.getByRole('button', { name: 'Cancel Jordan Guest' }));
+
+    // Act
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    // Assert
+    expect(screen.queryByRole('dialog', { name: 'Cancel this booking?' })).not.toBeInTheDocument();
+    expect(reservationApi.cancel).not.toHaveBeenCalled();
+  });
+
+  it('marks a no-show only after it is confirmed in a dialog', async () => {
+    // Arrange
+    vi.mocked(reservationApi.update).mockClear();
+    vi.mocked(reservationApi.list).mockResolvedValue({
+      reservations: [makeReservation({ status: 'confirmed', late: true })],
+      slots: [],
+    });
+    const user = userEvent.setup({ delay: null });
+    render(<ReservationsPage />);
+    await screen.findByTestId('reservation-res_1');
+
+    // Act
+    await user.click(screen.getByRole('button', { name: 'No-show Jordan Guest' }));
+
+    // Assert
+    expect(screen.getByRole('dialog', { name: 'Mark as no-show?' })).toBeInTheDocument();
+    expect(reservationApi.update).not.toHaveBeenCalled();
+
+    // Act
+    await user.click(screen.getByRole('button', { name: 'Mark no-show' }));
+
+    // Assert
+    await waitFor(() => expect(reservationApi.update).toHaveBeenCalledWith('res_1', { status: 'no_show' }));
+  });
+
+  it('moves between period tabs with the arrow keys', async () => {
+    // Arrange
+    vi.mocked(reservationApi.list).mockResolvedValue({ reservations: [], slots: [] });
+    const user = userEvent.setup({ delay: null });
+    render(<ReservationsPage />);
+    await screen.findByText('No bookings');
+    screen.getByRole('tab', { name: 'Upcoming' }).focus();
+
+    // Act
+    await user.keyboard('{ArrowLeft}');
+
+    // Assert
+    const all = screen.getByRole('tab', { name: 'All' });
+    expect(all).toHaveAttribute('aria-selected', 'true');
+    expect(all).toHaveFocus();
+    await waitFor(() => expect(reservationApi.list).toHaveBeenLastCalledWith({ scope: 'all' }));
   });
 
   it('opens the new-booking form and reloads once a booking is created', async () => {
