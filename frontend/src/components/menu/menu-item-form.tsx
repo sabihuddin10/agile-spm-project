@@ -2,7 +2,12 @@
 
 import { useState } from 'react';
 import type { MenuCategory, MenuItem, Modifier } from '@/types';
+import { XMarkIcon } from '@/components/ui/icons';
 import { modifierSummary } from './menu-item-list';
+
+/** Icon-only remove button for modifier groups and options. */
+const REMOVE_BTN =
+  'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-stone-500 transition hover:bg-red-50 hover:text-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-stone-500';
 
 const DEFAULT_TAGS = ['vegetarian', 'vegan', 'gluten-free', 'halal', 'keto', 'nut-free'];
 const DEFAULT_ALLERGENS = ['gluten', 'dairy', 'eggs', 'peanuts', 'tree nuts', 'shellfish', 'fish', 'soy', 'sesame'];
@@ -316,7 +321,7 @@ export function MenuItemForm({
         </div>
 
         {draft.modifiers.length === 0 ? (
-          <p className="rounded-lg bg-stone-50 px-3 py-2 text-sm text-stone-400">
+          <p className="rounded-lg bg-stone-50 px-3 py-2 text-sm text-stone-500">
             None. Add a group such as “Size” (pick one) or “Extras” (multi-select); each option can add to the price.
           </p>
         ) : (
@@ -342,11 +347,11 @@ export function MenuItemForm({
                   </select>
                   <button
                     type="button"
-                    className="rounded p-1.5 text-stone-400 hover:bg-red-50 hover:text-red-600"
+                    className={REMOVE_BTN}
                     aria-label={`Remove modifier group ${g.name || gi + 1}`}
                     onClick={() => setDraft((d) => ({ ...d, modifiers: d.modifiers.filter((x) => x.key !== g.key) }))}
                   >
-                    ✕
+                    <XMarkIcon className="h-4 w-4" />
                   </button>
                 </div>
 
@@ -354,18 +359,18 @@ export function MenuItemForm({
                   {g.options.map((o, oi) => (
                     <div key={o.key} className="grid grid-cols-[1fr_6.5rem_auto] items-center gap-2">
                       <input
-                        className="input !py-1.5"
+                        className="input"
                         placeholder={oi === 0 ? 'Option (e.g. Regular)' : 'Option'}
                         aria-label={`${g.name || 'Group'} option ${oi + 1} label`}
                         value={o.label}
                         onChange={(e) => patchOption(g.key, o.key, { label: e.target.value })}
                       />
                       <div className="relative">
-                        <span className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-xs text-stone-400">
+                        <span className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-xs text-stone-500">
                           +$
                         </span>
                         <input
-                          className="input !py-1.5 pl-7"
+                          className="input pl-7"
                           type="number"
                           min="0"
                           step="0.01"
@@ -378,12 +383,12 @@ export function MenuItemForm({
                       </div>
                       <button
                         type="button"
-                        className="rounded p-1 text-stone-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-30"
+                        className={REMOVE_BTN}
                         aria-label={`Remove option ${o.label || oi + 1}`}
                         disabled={g.options.length === 1}
                         onClick={() => patchGroup(g.key, { options: g.options.filter((x) => x.key !== o.key) })}
                       >
-                        ✕
+                        <XMarkIcon className="h-4 w-4" />
                       </button>
                     </div>
                   ))}

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import InventoryPage from '@/app/staff/inventory/page';
 import { useAuth } from '@/context/auth-context';
@@ -20,12 +20,21 @@ vi.mock('@/lib/api', async () => {
 });
 vi.mock('@/components/inventory/low-stock-banner', () => ({ LowStockBanner: () => <div data-testid="low-stock-banner" /> }));
 vi.mock('@/components/inventory/stock-table', () => ({
-  StockTable: ({ items, onEdit }: { items: InventoryItem[]; onEdit: (i: InventoryItem) => void }) => (
+  StockTable: ({
+    items,
+    onEdit,
+    onDelete,
+  }: {
+    items: InventoryItem[];
+    onEdit: (i: InventoryItem) => void;
+    onDelete: (i: InventoryItem) => void;
+  }) => (
     <div data-testid="stock-table">
       {items.map((i) => (
-        <button key={i.id} onClick={() => onEdit(i)}>
-          {i.name}
-        </button>
+        <span key={i.id}>
+          <button onClick={() => onEdit(i)}>{i.name}</button>
+          <button onClick={() => onDelete(i)}>{`Delete ${i.name}`}</button>
+        </span>
       ))}
     </div>
   ),
@@ -151,5 +160,76 @@ describe('InventoryPage', () => {
 
     // Assert
     expect(screen.getByText('editing Flour')).toBeInTheDocument();
+  });
+
+  it('describes the page without sprint or user-story labels', async () => {
+    // Arrange
+    vi.mocked(inventoryApi.list).mockResolvedValue({ inventory: [], units: [], categories: [] });
+    vi.mocked(useAuth).mockReturnValue({ user: makeUser() } as unknown as ReturnType<typeof useAuth>);
+
+    // Act
+    render(<InventoryPage />);
+    await screen.findByTestId('stock-table');
+
+    // Assert
+    expect(screen.getByText(/stock levels, recipes, automatic deduction on sale/i)).toBeInTheDocument();
+    expect(screen.queryByText(/sprint \d/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/US8\./)).not.toBeInTheDocument();
+  });
+
+  it('deletes an ingredient only after confirming in the dialog', async () => {
+    // Arrange
+    vi.mocked(inventoryApi.list).mockResolvedValue({ inventory: [makeItem({ name: 'Flour' })], units: [], categories: [] });
+    vi.mocked(inventoryApi.remove).mockResolvedValue({ deleted: true } as never);
+    vi.mocked(useAuth).mockReturnValue({ user: makeUser() } as unknown as ReturnType<typeof useAuth>);
+    const user = userEvent.setup({ delay: null });
+    render(<InventoryPage />);
+    await screen.findByTestId('stock-table');
+
+    // Act — cancel first
+    await user.click(screen.getByRole('button', { name: 'Delete Flour' }));
+    await user.click(within(screen.getByRole('dialog', { name: 'Delete Flour?' })).getByRole('button', { name: 'Cancel' }));
+
+    // Assert
+    expect(inventoryApi.remove).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    // Act — then confirm
+    await user.click(screen.getByRole('button', { name: 'Delete Flour' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete ingredient' }));
+
+    // Assert
+    await waitFor(() => expect(inventoryApi.remove).toHaveBeenCalledWith('inv_1'));
+    expect(toastFn).toHaveBeenCalledWith('Flour deleted.', 'success');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('moves between tabs with the arrow keys and keeps only the active tab in the tab order', async () => {
+    // Arrange
+    vi.mocked(inventoryApi.list).mockResolvedValue({ inventory: [], units: [], categories: [] });
+    vi.mocked(useAuth).mockReturnValue({ user: makeUser() } as unknown as ReturnType<typeof useAuth>);
+    const user = userEvent.setup({ delay: null });
+    render(<InventoryPage />);
+    await screen.findByTestId('stock-table');
+    const stockTab = screen.getByRole('tab', { name: /^Stock/ });
+    expect(stockTab).toHaveAttribute('tabindex', '0');
+    expect(screen.getByRole('tab', { name: 'Movements' })).toHaveAttribute('tabindex', '-1');
+
+    // Act
+    stockTab.focus();
+    await user.keyboard('{ArrowRight}');
+
+    // Assert
+    const movementsTab = screen.getByRole('tab', { name: 'Movements' });
+    expect(movementsTab).toHaveFocus();
+    expect(movementsTab).toHaveAttribute('aria-selected', 'true');
+    expect(movementsTab).toHaveAttribute('tabindex', '0');
+    expect(screen.getByTestId('stock-movements')).toBeInTheDocument();
+
+    // Act — ArrowLeft from the first tab wraps to the last
+    await user.keyboard('{ArrowLeft}{ArrowLeft}');
+
+    // Assert
+    expect(screen.getByRole('tab', { name: /Reorder & POs/ })).toHaveFocus();
   });
 });

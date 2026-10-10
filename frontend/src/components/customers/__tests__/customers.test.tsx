@@ -64,7 +64,10 @@ describe('CustomerDetail', () => {
     expect(screen.getByText('· +1 555-0103')).toBeInTheDocument();
     expect(screen.getByText('Prefers the window booth.')).toBeInTheDocument();
     expect(screen.getByText('vegan')).toBeInTheDocument();
-    expect(screen.getByText(/⚠\s*shellfish/)).toBeInTheDocument();
+    // Allergy pill carries an icon plus screen-reader text, not a bare glyph
+    const allergy = screen.getByText('shellfish', { exact: false, selector: 'span.bg-red-50' });
+    expect(allergy).toHaveTextContent('Allergy: shellfish');
+    expect(allergy.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
   });
 
   it('shows spend, order count, average order and Flame Points', () => {

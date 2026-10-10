@@ -11,6 +11,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Card } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import { Modal } from '@/components/ui/modal';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useToast } from '@/components/ui/toast';
 import { MenuItemList, type MenuItemPermissions } from '@/components/menu/menu-item-list';
 import { MenuItemForm } from '@/components/menu/menu-item-form';
@@ -55,6 +56,9 @@ export default function MenuPage() {
   const [recipeItem, setRecipeItem] = useState<MenuItem | null>(null);
   const [busyItemId, setBusyItemId] = useState<string | null>(null);
   const [busyCategoryId, setBusyCategoryId] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState<
+    { kind: 'item'; item: MenuItem } | { kind: 'category'; category: MenuCategory } | null
+  >(null);
 
   const load = useCallback(async () => {
     try {
@@ -130,14 +134,15 @@ export default function MenuPage() {
 
   async function removeItem(item: MenuItem) {
     if (!permissions.manage) return;
-    if (!window.confirm(`Delete ${item.name} from the menu? This cannot be undone.`)) return;
     setBusyItemId(item.id);
     try {
       await menuApi.removeItem(item.id);
       toast(`${item.name} deleted.`, 'success');
+      setConfirming(null);
       await load();
     } catch (err) {
       toast(errorMessage(err, 'Failed to delete menu item.'), 'error');
+      setConfirming(null);
     } finally {
       setBusyItemId(null);
     }
@@ -208,14 +213,15 @@ export default function MenuPage() {
   }
 
   async function deleteCategory(category: MenuCategory) {
-    if (!window.confirm(`Delete the "${category.name}" category?`)) return;
     setBusyCategoryId(category.id);
     try {
       await menuApi.removeCategory(category.id);
       toast(`Category "${category.name}" deleted.`, 'success');
+      setConfirming(null);
       await load();
     } catch (err) {
       toast(errorMessage(err, 'Failed to delete category.'), 'error');
+      setConfirming(null);
     } finally {
       setBusyCategoryId(null);
     }
@@ -224,10 +230,10 @@ export default function MenuPage() {
   /* ------------------------------------------------------------ render */
 
   const subtitle = permissions.manage
-    ? 'Sprint 2 · Items, categories, modifiers with prices, dietary/allergen tags, availability and recipes. (US2.1–US2.5, US8.2)'
+    ? 'Items, categories, modifiers with prices, dietary and allergen tags, availability and recipes.'
     : permissions.toggle
-      ? 'Sprint 2 · Mark dishes out of stock or back in stock as the kitchen runs. (US2.5)'
-      : 'Sprint 2 · Browse the current menu (read-only for your role).';
+      ? 'Mark dishes out of stock or back in stock as the kitchen runs.'
+      : 'Browse the current menu (read-only for your role).';
 
   const filters: { id: AvailabilityFilter; label: string; count: number; show: boolean }[] = [
     { id: 'all', label: 'All', count: allItems.length, show: true },
@@ -259,7 +265,7 @@ export default function MenuPage() {
               onCreate={createCategory}
               onRename={renameCategory}
               onToggleActive={toggleCategory}
-              onDelete={deleteCategory}
+              onDelete={(category) => setConfirming({ kind: 'category', category })}
             />
           </Card>
         ) : null}
@@ -283,13 +289,13 @@ export default function MenuPage() {
                     type="button"
                     aria-pressed={filter === f.id}
                     onClick={() => setFilter(f.id)}
-                    className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                    className={`rounded-full border px-3 py-1.5 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
                       filter === f.id
                         ? 'border-brand-300 bg-brand-50 text-brand-700'
-                        : 'border-stone-200 bg-white text-stone-500 hover:bg-stone-50'
+                        : 'border-stone-200 bg-white text-stone-600 hover:bg-stone-50'
                     }`}
                   >
-                    {f.label} <span className="text-stone-400">({f.count})</span>
+                    {f.label} <span className="opacity-70">({f.count})</span>
                   </button>
                 ))}
             </div>
@@ -298,7 +304,7 @@ export default function MenuPage() {
             {loading ? (
               <Spinner label="Loading menu…" />
             ) : categories.length === 0 ? (
-              <p className="py-10 text-center text-sm text-stone-400">
+              <p className="py-10 text-center text-sm text-stone-500">
                 {permissions.manage ? 'Add a category first, then add items to it.' : 'The menu is empty.'}
               </p>
             ) : (
@@ -308,7 +314,7 @@ export default function MenuPage() {
                 busyId={busyItemId}
                 filtered={filtered}
                 onEdit={(item) => setForm({ editing: item })}
-                onDelete={removeItem}
+                onDelete={(item) => setConfirming({ kind: 'item', item })}
                 onMarkOut={setMarkingOut}
                 onMarkIn={(item) => setAvailability(item, true)}
                 onRecipe={(item) => {
@@ -346,6 +352,30 @@ export default function MenuPage() {
             if (await setAvailability(markingOut, false, reason)) setMarkingOut(null);
           }}
         />
+      ) : null}
+
+      {confirming?.kind === 'item' ? (
+        <ConfirmDialog
+          title={`Delete ${confirming.item.name}?`}
+          confirmLabel="Delete item"
+          busy={busyItemId === confirming.item.id}
+          onConfirm={() => removeItem(confirming.item)}
+          onCancel={() => setConfirming(null)}
+        >
+          <p>{confirming.item.name} will be removed from the menu. This cannot be undone.</p>
+        </ConfirmDialog>
+      ) : null}
+
+      {confirming?.kind === 'category' ? (
+        <ConfirmDialog
+          title={`Delete the "${confirming.category.name}" category?`}
+          confirmLabel="Delete category"
+          busy={busyCategoryId === confirming.category.id}
+          onConfirm={() => deleteCategory(confirming.category)}
+          onCancel={() => setConfirming(null)}
+        >
+          <p>The category will be removed. This cannot be undone.</p>
+        </ConfirmDialog>
       ) : null}
 
       {recipeItem ? (
@@ -408,8 +438,8 @@ function OutOfStockDialog({
                 key={r}
                 type="button"
                 onClick={() => setReason(r)}
-                className={`rounded-full border px-2.5 py-0.5 text-xs transition ${
-                  reason === r ? 'border-red-300 bg-red-50 text-red-700' : 'border-stone-200 text-stone-500 hover:bg-stone-50'
+                className={`rounded-full border px-3 py-1.5 text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                  reason === r ? 'border-red-300 bg-red-50 text-red-700' : 'border-stone-200 text-stone-600 hover:bg-stone-50'
                 }`}
               >
                 {r}
@@ -417,7 +447,7 @@ function OutOfStockDialog({
             ))}
           </div>
         </div>
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button type="button" className="btn-secondary" onClick={onClose}>
             Cancel
           </button>

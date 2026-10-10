@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { KeyboardEvent } from 'react';
 import type { InventoryItem, MenuItem, PurchaseOrder, StockMovement } from '@/types';
 import { inventoryApi, menuApi } from '@/lib/api';
 import { errorMessage, money } from '@/lib/format';
@@ -11,6 +12,7 @@ import { StaffLayout } from '@/components/layout/staff-layout';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card } from '@/components/ui/card';
 import { Modal } from '@/components/ui/modal';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Spinner } from '@/components/ui/spinner';
 import { useToast } from '@/components/ui/toast';
 import { LowStockBanner } from '@/components/inventory/low-stock-banner';
@@ -65,6 +67,7 @@ export default function InventoryPage() {
   const [adjusting, setAdjusting] = useState<InventoryItem | null>(null);
   const [recipeDish, setRecipeDish] = useState<MenuItem | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<InventoryItem | null>(null);
 
   /* ---------------------------------------------------------- loading */
 
@@ -198,18 +201,29 @@ export default function InventoryPage() {
 
   async function removeIngredient(item: InventoryItem) {
     if (!canManage) return;
-    if (!window.confirm(`Delete ${item.name} from inventory? This cannot be undone.`)) return;
     setBusyId(item.id);
     try {
       await inventoryApi.remove(item.id);
       toast(`${item.name} deleted.`, 'success');
+      setDeleting(null);
       await loadStock();
     } catch (err) {
       // 409 explains which recipes still use it.
       toast(errorMessage(err, 'Failed to delete ingredient.'), 'error');
+      setDeleting(null);
     } finally {
       setBusyId(null);
     }
+  }
+
+  function onTabKey(e: KeyboardEvent<HTMLDivElement>) {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    e.preventDefault();
+    const ids = tabs.map((t) => t.id);
+    const i = ids.indexOf(tab);
+    const next = ids[(i + (e.key === 'ArrowRight' ? 1 : ids.length - 1)) % ids.length];
+    openTab(next);
+    document.getElementById(`tab-${next}`)?.focus();
   }
 
   function showHistory(item: InventoryItem) {
@@ -234,7 +248,7 @@ export default function InventoryPage() {
     <StaffLayout section="inventory">
       <PageHeader
         title="Inventory"
-        subtitle="Sprint 8 · Stock levels, recipes, automatic deduction on sale, low-stock alerts and supplier reorders. (US8.1–US8.5)"
+        subtitle="Stock levels, recipes, automatic deduction on sale, low-stock alerts and supplier reorders."
         action={
           canManage ? (
             <button className="btn-primary" onClick={() => setForm({ editing: null })} disabled={loading}>
@@ -256,14 +270,19 @@ export default function InventoryPage() {
         />
       ) : null}
 
-      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Ingredients" value={String(items.length)} />
         <Stat label="Low stock" value={String(low.length)} tone={low.length ? 'text-red-600' : undefined} />
         <Stat label="Near reorder" value={String(nearCount)} tone={nearCount ? 'text-amber-600' : undefined} />
         <Stat label="Stock value" value={money(stockValue)} />
       </div>
 
-      <div role="tablist" aria-label="Inventory sections" className="mb-4 flex gap-1 overflow-x-auto border-b border-stone-200">
+      <div
+        role="tablist"
+        aria-label="Inventory sections"
+        onKeyDown={onTabKey}
+        className="mb-4 flex gap-1 overflow-x-auto border-b border-stone-200"
+      >
         {tabs.map((t) => (
           <button
             key={t.id}
@@ -272,8 +291,9 @@ export default function InventoryPage() {
             type="button"
             aria-selected={tab === t.id}
             aria-controls={`panel-${t.id}`}
+            tabIndex={tab === t.id ? 0 : -1}
             onClick={() => openTab(t.id)}
-            className={`-mb-px flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium transition ${
+            className={`-mb-px flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500 ${
               tab === t.id
                 ? 'border-brand-600 text-brand-700'
                 : 'border-transparent text-stone-500 hover:border-stone-300 hover:text-stone-700'
@@ -281,7 +301,7 @@ export default function InventoryPage() {
           >
             {t.label}
             {t.badge !== undefined ? (
-              <span className={`rounded-full px-1.5 text-[11px] font-semibold ${t.tone ?? 'bg-stone-100 text-stone-500'}`}>
+              <span className={`rounded-full px-1.5 text-xs font-semibold tabular-nums ${t.tone ?? 'bg-stone-100 text-stone-500'}`}>
                 {t.badge}
               </span>
             ) : null}
@@ -302,7 +322,7 @@ export default function InventoryPage() {
                 busyId={busyId}
                 onAdjust={setAdjusting}
                 onEdit={(item) => setForm({ editing: item })}
-                onDelete={removeIngredient}
+                onDelete={setDeleting}
                 onHistory={showHistory}
               />
             )}
@@ -352,7 +372,7 @@ export default function InventoryPage() {
               />
             </Card>
             {openOrders > 0 ? (
-              <p className="no-print text-xs text-stone-400">
+              <p className="no-print text-xs text-stone-500">
                 Mark a purchase order received when the delivery arrives — each line is added to stock and logged as a
                 restock movement.
               </p>
@@ -387,6 +407,18 @@ export default function InventoryPage() {
         />
       ) : null}
 
+      {deleting ? (
+        <ConfirmDialog
+          title={`Delete ${deleting.name}?`}
+          confirmLabel="Delete ingredient"
+          busy={busyId === deleting.id}
+          onConfirm={() => removeIngredient(deleting)}
+          onCancel={() => setDeleting(null)}
+        >
+          <p>{deleting.name} will be removed from inventory. This cannot be undone.</p>
+        </ConfirmDialog>
+      ) : null}
+
       {recipeDish ? (
         <RecipeEditor
           item={recipeDish}
@@ -406,8 +438,8 @@ export default function InventoryPage() {
 function Stat({ label, value, tone }: { label: string; value: string; tone?: string }) {
   return (
     <div className="rounded-xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
-      <p className="text-xs font-medium uppercase tracking-wide text-stone-400">{label}</p>
-      <p className={`mt-0.5 text-xl font-bold ${tone ?? 'text-stone-900'}`}>{value}</p>
+      <p className="text-xs font-medium uppercase tracking-wide text-stone-500">{label}</p>
+      <p className={`mt-0.5 text-xl font-bold tabular-nums ${tone ?? 'text-stone-900'}`}>{value}</p>
     </div>
   );
 }

@@ -45,7 +45,7 @@ export function CategoryManager({
 
   return (
     <div className="space-y-3">
-      <p className="text-xs font-semibold uppercase tracking-wide text-stone-400">Categories</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Categories</p>
 
       <form onSubmit={submitCreate} className="flex gap-2">
         <input
@@ -84,7 +84,7 @@ export function CategoryManager({
                   <button type="submit" className="text-xs font-medium text-emerald-700" disabled={busy}>
                     Save
                   </button>
-                  <button type="button" className="text-xs font-medium text-stone-400" onClick={() => setEditingId(null)}>
+                  <button type="button" className="text-xs font-medium text-stone-500" onClick={() => setEditingId(null)}>
                     Cancel
                   </button>
                 </form>
@@ -116,7 +116,7 @@ export function CategoryManager({
                       {!c.active ? (
                         <span className="font-medium text-amber-700">Hidden from customers</span>
                       ) : count === 0 ? (
-                        <span className="text-stone-400">Visible · empty, so auto-hidden</span>
+                        <span className="text-stone-500">Visible · empty, so auto-hidden</span>
                       ) : (
                         <span>Visible</span>
                       )}
@@ -150,7 +150,7 @@ export function CategoryManager({
         })}
       </ul>
 
-      <p className="text-xs leading-relaxed text-stone-400">
+      <p className="text-xs leading-relaxed text-stone-500">
         Empty categories are hidden on the customer menu automatically. Switch a category off to hide it even when it has
         items. A category can only be deleted once it&apos;s empty.
       </p>

@@ -5,6 +5,7 @@ import type { PurchaseOrder } from '@/types';
 import { inventoryApi } from '@/lib/api';
 import { errorMessage, formatDateTime, money } from '@/lib/format';
 import { Badge } from '@/components/ui/badge';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Spinner } from '@/components/ui/spinner';
 import { useToast } from '@/components/ui/toast';
 import { qty } from './helpers';
@@ -25,13 +26,14 @@ export function PurchaseOrders({
   const toast = useToast();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState<PurchaseOrder | null>(null);
 
   async function receive(po: PurchaseOrder) {
-    if (!window.confirm(`Mark ${po.number} as received? Stock for all ${po.lines.length} lines will be added.`)) return;
     setBusyId(po.id);
     try {
       const { purchaseOrder } = await inventoryApi.receivePurchaseOrder(po.id);
       toast(`${purchaseOrder.number} received — stock updated for ${purchaseOrder.lines.length} ingredients.`, 'success');
+      setConfirming(null);
       onReceived(purchaseOrder);
     } catch (err) {
       toast(errorMessage(err, 'Failed to mark the order received.'), 'error');
@@ -46,7 +48,7 @@ export function PurchaseOrders({
     <div className="no-print">
       <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-stone-100 p-4">
         <h2 className="font-semibold text-stone-800">Purchase orders</h2>
-        <span className="text-xs text-stone-400">
+        <span className="text-xs text-stone-500">
           {orders.length} total · {openCount} awaiting delivery
         </span>
       </div>
@@ -54,7 +56,7 @@ export function PurchaseOrders({
       {loading && orders.length === 0 ? (
         <Spinner label="Loading purchase orders…" />
       ) : orders.length === 0 ? (
-        <p className="px-4 py-10 text-center text-sm text-stone-400">
+        <p className="px-4 py-10 text-center text-sm text-stone-500">
           No purchase orders yet. Submit the reorder form to send one.
         </p>
       ) : (
@@ -82,11 +84,11 @@ export function PurchaseOrders({
                       {po.lines.length} line{po.lines.length === 1 ? '' : 's'} · {suppliers.join(', ')}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-stone-900">{money(po.total)}</span>
+                  <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+                    <span className="mr-auto text-sm font-bold tabular-nums text-stone-900 sm:mr-0">{money(po.total)}</span>
                     <button
                       type="button"
-                      className="btn-ghost !px-2 !py-1 text-xs"
+                      className="btn-sm btn-ghost"
                       aria-expanded={open}
                       onClick={() => setExpanded(open ? null : po.id)}
                     >
@@ -95,9 +97,9 @@ export function PurchaseOrders({
                     {po.status === 'sent' ? (
                       <button
                         type="button"
-                        className="btn-primary !px-2.5 !py-1 text-xs"
+                        className="btn-sm btn-primary"
                         disabled={busyId === po.id}
-                        onClick={() => receive(po)}
+                        onClick={() => setConfirming(po)}
                       >
                         {busyId === po.id ? 'Receiving…' : 'Mark received'}
                       </button>
@@ -111,7 +113,7 @@ export function PurchaseOrders({
                       {po.lines.map((l) => (
                         <li key={l.inventoryId} className="flex flex-wrap justify-between gap-2 px-3 py-1.5">
                           <span className="text-stone-700">
-                            {l.name} <span className="text-xs text-stone-400">· {l.supplier || 'No supplier'}</span>
+                            {l.name} <span className="text-xs text-stone-500">· {l.supplier || 'No supplier'}</span>
                           </span>
                           <span className="tabular-nums text-stone-500">
                             {qty(l.qty)} {l.unit} × {money(l.costPerUnit)} ={' '}
@@ -128,6 +130,22 @@ export function PurchaseOrders({
           })}
         </ul>
       )}
+
+      {confirming ? (
+        <ConfirmDialog
+          title={`Mark ${confirming.number} as received?`}
+          confirmLabel="Mark received"
+          danger={false}
+          busy={busyId === confirming.id}
+          onConfirm={() => receive(confirming)}
+          onCancel={() => setConfirming(null)}
+        >
+          <p>
+            Stock for all {confirming.lines.length} line{confirming.lines.length === 1 ? '' : 's'} will be added and logged
+            as restock movements.
+          </p>
+        </ConfirmDialog>
+      ) : null}
     </div>
   );
 }

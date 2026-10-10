@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import CustomersPage from '@/app/staff/customers/page';
 import { ApiError, customerApi } from '@/lib/api';
@@ -66,7 +66,6 @@ describe('CustomersPage', () => {
     vi.mocked(customerApi.create).mockResolvedValue({ customer: makeCustomer({ id: 'cus_new' }) });
     vi.mocked(customerApi.update).mockResolvedValue({ customer: makeCustomer() });
     vi.mocked(customerApi.remove).mockResolvedValue({ deleted: true });
-    vi.stubGlobal('confirm', vi.fn(() => true));
   });
 
   it('shows a loading spinner, then the loaded customer ledger', async () => {
@@ -146,10 +145,31 @@ describe('CustomersPage', () => {
 
     // Act
     await user.click(screen.getByRole('button', { name: 'Delete customer' }));
+    const dialog = screen.getByRole('dialog', { name: 'Delete Jordan Guest?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Delete customer' }));
 
     // Assert
     await waitFor(() => expect(customerApi.remove).toHaveBeenCalledWith('cus_1'));
     expect(toastFn).toHaveBeenCalledWith('Customer deleted.', 'success');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('keeps the customer when the delete confirmation is cancelled', async () => {
+    // Arrange
+    vi.mocked(customerApi.list).mockResolvedValue({ customers: [makeCustomer({ name: 'Jordan Guest' })] });
+    vi.mocked(customerApi.remove).mockClear();
+    const user = userEvent.setup({ delay: null });
+    render(<CustomersPage />);
+    await user.click(await screen.findByRole('button', { name: 'Jordan Guest' }));
+
+    // Act
+    await user.click(screen.getByRole('button', { name: 'Delete customer' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }));
+
+    // Assert
+    expect(customerApi.remove).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByTestId('customer-detail')).toHaveTextContent('Jordan Guest');
   });
 
   it('does not offer Delete to a waiter, but still lets them edit', async () => {
@@ -178,6 +198,7 @@ describe('CustomersPage', () => {
 
     // Act
     await user.click(screen.getByRole('button', { name: 'Delete customer' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete customer' }));
 
     // Assert
     await waitFor(() => expect(toastFn).toHaveBeenCalledWith(reason, 'error'));

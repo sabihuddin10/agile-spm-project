@@ -58,13 +58,38 @@ export function StockMovements({
       {loading && movements.length === 0 ? (
         <Spinner label="Loading movements…" />
       ) : movements.length === 0 ? (
-        <p className="px-4 py-12 text-center text-sm text-stone-400">
+        <p className="px-4 py-12 text-center text-sm text-stone-500">
           No stock movements yet. Once an order is served and paid it closes and its recipes are deducted; stock
           adjustments and received purchase orders appear here too.
         </p>
       ) : (
         <>
-          <div className="overflow-x-auto">
+          {/* Phones */}
+          <ul className="divide-y divide-stone-100 sm:hidden" aria-label="Stock movements">
+            {movements.map((m) => (
+              <li key={m.id} className="space-y-1.5 px-4 py-3">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="min-w-0 font-medium text-stone-800">{m.name}</p>
+                  <p
+                    className={`shrink-0 font-semibold tabular-nums ${m.delta >= 0 ? 'text-emerald-700' : 'text-red-600'}`}
+                  >
+                    {signedQty(m.delta, m.unit)}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-stone-500">
+                  <Badge tone={MOVEMENT_REASON[m.reason]?.tone ?? 'stone'}>{movementLabel(m)}</Badge>
+                  <span className="tabular-nums">
+                    {qty(m.stockAfter)} {m.unit} after
+                  </span>
+                </div>
+                <p className="text-xs text-stone-500">
+                  {formatDateTime(m.at)} · {timeAgo(m.at)}
+                </p>
+              </li>
+            ))}
+          </ul>
+
+          <div className="hidden overflow-x-auto sm:block">
             <table className="table-base min-w-[640px]">
               <thead>
                 <tr>
@@ -80,7 +105,7 @@ export function StockMovements({
                   <tr key={m.id}>
                     <td className="whitespace-nowrap">
                       <span className="block text-stone-700">{formatDateTime(m.at)}</span>
-                      <span className="block text-xs text-stone-400">{timeAgo(m.at)}</span>
+                      <span className="block text-xs text-stone-500">{timeAgo(m.at)}</span>
                     </td>
                     <td className="font-medium text-stone-800">{m.name}</td>
                     <td
@@ -101,7 +126,7 @@ export function StockMovements({
               </tbody>
             </table>
           </div>
-          <p className="px-4 py-3 text-xs text-stone-400">
+          <p className="px-4 py-3 text-xs text-stone-500">
             Showing the latest {movements.length} movement{movements.length === 1 ? '' : 's'}
             {saleCount ? ` · ${saleCount} from order sales` : ''}. Refreshes every 10 seconds.
           </p>
