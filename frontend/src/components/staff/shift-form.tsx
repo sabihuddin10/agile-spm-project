@@ -9,6 +9,8 @@ import { useToast } from '@/components/ui/toast';
 import { ROLE_META, formatHours, hoursBetween, roleRank } from '@/components/staff/role-meta';
 
 const STATUSES: ShiftStatus[] = ['scheduled', 'completed', 'missed'];
+/** Shift notes are at most 500 characters (server/src/routes/staff.js). */
+const NOTES_MAX = 500;
 
 const STATUS_ACTIVE: Record<ShiftStatus, string> = {
   scheduled: 'border-blue-300 bg-blue-50 text-blue-700',
@@ -213,10 +215,15 @@ export function ShiftForm({
           <textarea
             id="shift-notes"
             className="input min-h-[64px]"
-            placeholder="e.g. Covering the terrace, opening duties…"
+            maxLength={NOTES_MAX}
+            placeholder="e.g. covering the terrace, opening duties"
             value={form.notes}
+            aria-describedby="shift-notes-count"
             onChange={(e) => set('notes', e.target.value)}
           />
+          <p id="shift-notes-count" className="mt-1 text-right text-xs text-stone-500">
+            {form.notes.length}/{NOTES_MAX}
+          </p>
         </div>
 
         <div className="flex flex-col-reverse gap-2 border-t border-stone-100 pt-4 sm:flex-row sm:items-center">

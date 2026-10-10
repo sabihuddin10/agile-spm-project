@@ -392,7 +392,7 @@ export function BookingForm() {
             aria-describedby={describedBy('bk-requests-count', errors.specialRequests && 'bk-requests-err')}
             onChange={(e) => set('specialRequests', e.target.value)}
             onBlur={() => v.blur('specialRequests')}
-            placeholder="Birthdays, window seat, allergies…"
+            placeholder="e.g. birthday cake, high chair, window seat"
           />
           <p id="bk-requests-count" className="mt-1 text-right text-xs text-bone-faint">
             {form.specialRequests.length}/{REQUESTS_MAX}

@@ -349,6 +349,7 @@ function SupplierGroup({
                   step="any"
                   inputMode="decimal"
                   aria-label={`Order quantity for ${l.name}`}
+                  placeholder="e.g. 8"
                   value={l.qty}
                   onChange={(e) => onQty(l.inventoryId, e.target.value)}
                 />
