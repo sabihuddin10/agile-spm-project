@@ -114,32 +114,29 @@ export const OrderCard = memo(function OrderCard({
   return (
     <article
       id={`order-${order.number}`}
-      className={`card flex scroll-mt-6 flex-col gap-4 !p-4 target:ring-2 target:ring-brand-500 sm:!p-5 ${
+      className={`card flex scroll-mt-6 flex-col gap-3 !p-3.5 target:ring-2 target:ring-brand-500 sm:gap-4 sm:!p-5 ${
         order.status === 'ready' ? 'border-emerald-300 ring-1 ring-emerald-200' : order.status === 'placed' ? 'border-amber-200' : ''
       }`}
       aria-label={`Order #${order.number}`}
     >
       {/* Header */}
-      <header className="flex items-start justify-between gap-3">
-        <div className="min-w-0 space-y-1.5">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-mono text-base font-bold text-stone-900">#{order.number}</span>
-            {placement}
-            {order.priority === 'rush' ? <Badge tone="red">Rush</Badge> : null}
-            {order.source === 'customer' ? <Badge tone="stone">Self-order</Badge> : null}
-          </div>
-          <p className="text-xs text-stone-500">
-            Placed {formatTime(order.createdAt)} · {timeAgo(order.createdAt, now)} · Waiter:{' '}
-            <span className="font-medium text-stone-700">{order.waiterName ?? 'Unassigned'}</span>
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-col items-end gap-1">
+      {/* One wrapping row of number + badges, so phones don't stack a second badge column. */}
+      <header className="space-y-1">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          <span className="font-mono text-sm font-bold text-stone-900 sm:text-base">#{order.number}</span>
+          {placement}
+          {order.priority === 'rush' ? <Badge tone="red">Rush</Badge> : null}
+          {order.source === 'customer' ? <Badge tone="stone">Self-order</Badge> : null}
           <Badge tone={status.tone}>{status.label}</Badge>
           <Badge tone={payment.tone}>
             {payment.label}
             {order.paymentMethod && order.paymentStatus !== 'unpaid' ? ` · ${titleCase(order.paymentMethod)}` : ''}
           </Badge>
         </div>
+        <p className="text-xs text-stone-500">
+          Placed {formatTime(order.createdAt)} · {timeAgo(order.createdAt, now)} · Waiter:{' '}
+          <span className="font-medium text-stone-700">{order.waiterName ?? 'Unassigned'}</span>
+        </p>
       </header>
 
       <OrderProgress status={order.status} />
@@ -182,11 +179,12 @@ export const OrderCard = memo(function OrderCard({
             const ready = item.status === 'ready';
             const itemStatus = ITEM_STATUS[item.status];
             return (
+              // Name and notes on the left, price over the status/Serve on the right: one row even at 320px.
               <li
                 key={item.id}
-                className={`flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3 py-2 ${ready ? 'bg-emerald-50' : ''}`}
+                className={`flex items-start gap-2.5 px-2.5 py-2 sm:gap-3 sm:px-3 ${ready ? 'bg-emerald-50' : ''}`}
               >
-                <div className="min-w-0 flex-1 basis-36">
+                <div className="min-w-0 flex-1">
                   <p className={`text-sm ${item.status === 'served' ? 'text-stone-500 line-through' : 'text-stone-800'}`}>
                     <span className="font-semibold">{item.qty}×</span> {item.name}
                   </p>
@@ -200,24 +198,28 @@ export const OrderCard = memo(function OrderCard({
                     </p>
                   ) : null}
                 </div>
-                <Badge tone={itemStatus.tone}>{itemStatus.label}</Badge>
-                <span className="w-16 text-right text-sm tabular-nums text-stone-600">{money(lineTotal(item.unitPrice, item.qty))}</span>
-                {ready && canServe ? (
-                  <button
-                    type="button"
-                    className="btn-sm btn-primary"
-                    disabled={Boolean(busy)}
-                    onClick={() =>
-                      run(
-                        `serve:${item.id}`,
-                        () => orderApi.setItemStatus(order.id, item.id, 'served'),
-                        () => `${item.qty}× ${item.name} served.`,
-                      )
-                    }
-                  >
-                    {busy === `serve:${item.id}` ? 'Serving…' : 'Serve'}
-                  </button>
-                ) : null}
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <span className="text-sm tabular-nums text-stone-600">{money(lineTotal(item.unitPrice, item.qty))}</span>
+                  {/* A ready dish already says "Ready for pickup", so Serve replaces its badge. */}
+                  {ready && canServe ? (
+                    <button
+                      type="button"
+                      className="btn-sm btn-primary"
+                      disabled={Boolean(busy)}
+                      onClick={() =>
+                        run(
+                          `serve:${item.id}`,
+                          () => orderApi.setItemStatus(order.id, item.id, 'served'),
+                          () => `${item.qty}× ${item.name} served.`,
+                        )
+                      }
+                    >
+                      {busy === `serve:${item.id}` ? 'Serving…' : 'Serve'}
+                    </button>
+                  ) : (
+                    <Badge tone={itemStatus.tone}>{itemStatus.label}</Badge>
+                  )}
+                </div>
               </li>
             );
           })}
