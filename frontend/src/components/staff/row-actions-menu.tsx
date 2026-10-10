@@ -112,7 +112,7 @@ export function RowActionsMenu({
       <button
         ref={triggerRef}
         type="button"
-        className="btn-sm btn-secondary px-2"
+        className="btn-secondary h-9 w-9 shrink-0 p-0 lg:h-9 lg:min-h-[36px] lg:px-0"
         aria-label={label}
         aria-haspopup="menu"
         aria-expanded={open}

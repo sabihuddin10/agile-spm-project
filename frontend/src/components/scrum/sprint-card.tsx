@@ -12,10 +12,10 @@ export function SprintCard({ sprint }: { sprint: SprintBacklog }) {
 
   return (
     <div className={`rounded-xl border bg-white shadow-sm transition ${done ? 'border-emerald-200' : 'border-stone-200'}`}>
-      <div className="flex items-start justify-between gap-3 border-b border-stone-100 px-5 py-4">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-stone-100 px-4 py-3 sm:px-5 sm:py-4">
+        <div className="flex min-w-0 items-center gap-3">
           <div
-            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-sm font-bold ${
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg sm:h-10 sm:w-10 text-sm font-bold ${
               done ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-100 text-stone-500'
             }`}
           >
@@ -36,7 +36,7 @@ export function SprintCard({ sprint }: { sprint: SprintBacklog }) {
         </div>
       </div>
 
-      <div className="px-5 py-3 text-xs text-stone-500">
+      <div className="px-4 py-3 text-xs sm:px-5 text-stone-500">
         Lead: <span className="font-semibold">{sprint.lead}</span> · Stakeholders:{' '}
         {sprint.stakeholders.join(', ')} · <span className="font-semibold">{total} pts</span> ·{' '}
         {sprint.stories.length} stories
@@ -70,7 +70,7 @@ function StoryRow({
 }) {
   return (
     <li>
-      <button onClick={onToggle} className="flex w-full items-start gap-3 px-3 py-3 text-left hover:bg-stone-50 rounded-lg">
+      <button onClick={onToggle} className="flex w-full items-start gap-2 px-2 py-2.5 text-left sm:gap-3 sm:px-3 sm:py-3 hover:bg-stone-50 rounded-lg">
         <span
           className={`mt-0.5 flex h-5 shrink-0 items-center justify-center rounded ${done ? 'bg-emerald-100' : 'bg-stone-100'}`}
         >
@@ -93,9 +93,9 @@ function StoryRow({
         </span>
       </button>
       {expanded ? (
-        <div className="space-y-3 px-4 pb-3 pl-[4.5rem]">
+        <div className="space-y-3 px-3 pb-3 sm:px-4 sm:pl-[4.5rem]">
           <div>
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-stone-400">
+            <p className="mb-1 text-2xs font-semibold uppercase tracking-wide text-stone-400">
               Acceptance criteria
             </p>
             <ul className="space-y-1">
@@ -114,7 +114,7 @@ function StoryRow({
             </p>
             <p>
               <span className="font-semibold text-stone-500">Verified by: </span>
-              <code className="font-mono text-stone-600">server/test/{story.evidence.test}</code>
+              <code className="break-all font-mono text-stone-600">server/test/{story.evidence.test}</code>
             </p>
           </div>
         </div>

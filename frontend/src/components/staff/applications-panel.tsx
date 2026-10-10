@@ -82,7 +82,7 @@ export function ApplicationsPanel({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-stone-600">
         <p>
           Candidates apply through the public{' '}
@@ -112,7 +112,7 @@ export function ApplicationsPanel({
               const busy = busyId === app.id;
               const role = roles[app.id] ?? app.desiredRole;
               return (
-                <Card key={app.id} className="flex flex-col">
+                <Card key={app.id} className="flex flex-col p-4 sm:p-5">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="font-semibold text-stone-900">{app.name}</p>
