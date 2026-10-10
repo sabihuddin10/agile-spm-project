@@ -251,7 +251,7 @@ function PreferenceChips({
               role="checkbox"
               aria-checked={on}
               onClick={() => onToggle(o)}
-              className={`rounded-full border px-3.5 py-1.5 text-sm capitalize transition ${
+              className={`rounded-full border px-3 py-1.5 text-sm capitalize transition ${
                 on
                   ? danger
                     ? 'border-red-400/50 bg-red-500/15 text-red-200'

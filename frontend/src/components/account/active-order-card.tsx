@@ -42,7 +42,7 @@ export function OrderProgress({ order }: { order: Order }) {
             }`}
           />
           <span
-            className={`mt-1.5 block truncate text-[10px] sm:text-xs ${
+            className={`mt-1.5 block truncate text-2xs ${
               i === current ? 'font-semibold text-bone' : i < current ? 'text-bone-dim' : 'text-bone-faint'
             }`}
           >
@@ -137,7 +137,7 @@ export function ActiveOrderCard({
         {order.status === 'placed' ? (
           <button
             type="button"
-            className="btn-ghost !px-3 !py-1.5 text-xs !text-red-300 hover:!text-red-200"
+            className="btn-sm btn-ghost !text-red-300 hover:!text-red-200"
             onClick={() => onCancel(order)}
             disabled={cancelling}
           >

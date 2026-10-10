@@ -36,7 +36,7 @@ export function CartLines({
         const options = modifierText(priceSelections(l.item, l.modifiers));
         const isFlagged = flagged.includes(l.key);
         return (
-          <li key={l.key} className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 py-4">
+          <li key={l.key} className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 py-3 sm:py-4">
             <div className="min-w-0">
               <p className="text-sm font-bold text-bone">{l.item.name}</p>
               {options ? <p className="mt-0.5 text-xs leading-relaxed text-bone-dim">{options}</p> : null}

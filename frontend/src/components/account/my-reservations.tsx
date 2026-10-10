@@ -103,7 +103,7 @@ export function MyReservations() {
                   {CANCELLABLE.includes(r.status) ? (
                     <button
                       type="button"
-                      className="btn-ghost !px-2.5 !py-1 text-xs !text-red-300 hover:!text-red-200"
+                      className="btn-sm btn-ghost !text-red-300 hover:!text-red-200"
                       onClick={() => cancel(r)}
                       disabled={cancellingId === r.id}
                     >

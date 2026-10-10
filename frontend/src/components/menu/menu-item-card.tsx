@@ -43,13 +43,13 @@ export function MenuItemCard({
   }
 
   return (
-    <div className={`card flex flex-col ${conflicts.length > 0 ? '!border-red-400/40' : ''}`}>
+    <div className={`card flex flex-col p-4 sm:p-5 ${conflicts.length > 0 ? '!border-red-400/40' : ''}`}>
       <div className="flex items-start justify-between gap-3">
         <h3 className="font-display text-xl font-semibold tracking-tight text-bone">{item.name}</h3>
         <span className="shrink-0 text-right font-medium text-ember-soft">
           {money(item.price)}
           {hasOptions && item.modifiers.some((g) => g.options.some((o) => o.priceDelta > 0)) ? (
-            <span className="block text-[11px] font-normal text-bone-faint">options available</span>
+            <span className="block text-2xs font-normal text-bone-faint">options available</span>
           ) : null}
         </span>
       </div>
@@ -62,7 +62,7 @@ export function MenuItemCard({
         </div>
       ) : null}
 
-      <div className="mt-4 flex flex-wrap items-center gap-1.5">
+      <div className="mt-3 flex flex-wrap items-center gap-1.5 sm:mt-4">
         {item.dietaryTags.map((t) => (
           <span key={t} className="chip chip-diet">
             {t}
@@ -85,7 +85,7 @@ export function MenuItemCard({
         disabled={unavailable}
         title={unavailable ? item.outOfStockReason || 'Temporarily unavailable' : undefined}
         onClick={handleAdd}
-        className="btn-primary mt-5 w-full !py-2 text-sm disabled:opacity-40"
+        className="btn-primary mt-4 w-full disabled:opacity-40"
         aria-label={unavailable ? `${item.name} is unavailable` : `Add ${item.name} to order`}
       >
         {unavailable ? 'Unavailable' : 'Add to order'}
