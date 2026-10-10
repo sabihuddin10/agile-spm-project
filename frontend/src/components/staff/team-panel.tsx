@@ -42,7 +42,7 @@ export function TeamPanel({
       </div>
 
       <div
-        className={`rounded-lg border px-4 py-3 text-sm ${
+        className={`rounded-lg border px-3 py-2.5 text-sm sm:px-4 sm:py-3 ${
           isAdmin ? 'border-blue-200 bg-blue-50 text-blue-800' : 'border-stone-200 bg-stone-100 text-stone-600'
         }`}
       >

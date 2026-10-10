@@ -103,14 +103,14 @@ export function PerformancePanel() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
-        <div className="inline-flex rounded-lg border border-stone-300 bg-white p-0.5" role="group" aria-label="Date range">
+        <div className="flex w-full rounded-lg border border-stone-300 bg-white p-0.5 sm:inline-flex sm:w-auto" role="group" aria-label="Date range">
           {PRESETS.map((n) => (
             <button
               key={n}
               type="button"
               aria-pressed={days === n}
               onClick={() => setDays(n)}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
+              className={`min-h-[32px] flex-1 whitespace-nowrap rounded-md px-2.5 py-1 text-xs font-medium transition sm:flex-none sm:px-3 sm:text-sm ${
                 days === n ? 'bg-brand-600 text-white' : 'text-stone-600 hover:bg-stone-100'
               }`}
             >
@@ -130,7 +130,7 @@ export function PerformancePanel() {
         ].map((k) => (
           <div key={k.label} className="card p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">{k.label}</p>
-            <p className="mt-1 text-xl font-bold tabular-nums text-stone-800">{loading && !data ? '–' : k.value}</p>
+            <p className="mt-1 text-2xl font-bold tabular-nums text-stone-800">{loading && !data ? '–' : k.value}</p>
             {k.sub ? <p className="text-xs text-stone-500">{k.sub}</p> : null}
           </div>
         ))}

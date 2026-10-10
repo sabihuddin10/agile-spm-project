@@ -110,7 +110,7 @@ export function SetPasswordModal({
           </p>
         ) : null}
 
-        <SubmitHint id="set-password-submit-hint" fields={v.invalidLabels} className="mt-6 sm:text-right" />
+        <SubmitHint id="set-password-submit-hint" fields={v.invalidLabels} className="mt-4 sm:mt-6 sm:text-right" />
         <div className="mt-2 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button type="button" className="btn-secondary" onClick={onClose} disabled={saving}>
             Cancel

@@ -115,7 +115,7 @@ export function ChangePasswordForm({ id }: { id?: string }) {
               <FieldError id="password-current-error" message={errors.current} />
             </div>
           ) : null}
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
             <div>
               <label htmlFor="password-new" className="label">
                 New password
@@ -155,7 +155,7 @@ export function ChangePasswordForm({ id }: { id?: string }) {
           </p>
         ) : null}
 
-        <div className="mt-5 space-y-2">
+        <div className="mt-4 space-y-2 sm:mt-5">
           <button
             type="submit"
             className="btn-primary"
