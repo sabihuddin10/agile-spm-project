@@ -164,7 +164,7 @@ describe('formatPhoneInput', () => {
 
   it('formats a number typed with its country code, key by key', () => {
     // Arrange
-    const typeKeys = (keys: string) => [...keys].reduce((value, key) => formatPhoneInput(value + key), '');
+    const typeKeys = (keys: string) => keys.split('').reduce((value, key) => formatPhoneInput(value + key), '');
 
     // Act
     const withPlus = typeKeys('+92 300 1234567');
