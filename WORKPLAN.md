@@ -25,8 +25,11 @@ If a phase grows too big, it is split, never stretched. Update this file wheneve
 | 3 | Shared UI base + late-booking fix | 15 | [x] |
 | 4 | Admin UI polish, batch 1 + input safety | 15 | [~] |
 | 5 | Admin UI polish, batch 2: staff, workforce, settings | 15 | [~] |
-| 6 | Formik/Yup-style form validation + placeholders | 16 | [~] |
-| 7 | Clean-up and hardening | 16 | [ ] |
+| 6a | Live validation, submit disabled until valid, customer rules | 16 | [~] |
+| 6b | Screen-side checks matching server limits | 16 | [~] |
+| 6c | Placeholders on every input | 16 | [~] |
+| 7a | Hardening and browser checks | 16 | [ ] |
+| 7b | Branch and worktree clean-up (needs team OK) | 16 | [ ] |
 | 8 | Open product questions | 16 | [ ] |
 
 ---
@@ -113,16 +116,24 @@ If a phase grows too big, it is split, never stretched. Update this file wheneve
 - [ ] Shift form: placeholder and the 500-character notes limit (moved from Phase 5)
 - [ ] Optional: block a 51st order line (server limit is 50)
 
-**Done when:** the forms and their tests are updated, all six checks pass, and it is merged into `main`.
+**Released in three slices, in order.** Each slice is one commit on `feat/form-guards`, merged and released on its own:
+- **6a:** live errors, submit disabled until valid, password checklist, customer name + contact rule (frontend and server)
+- **6b:** staff form checks matching the server limits, plus the shift-form notes limit
+- **6c:** placeholders everywhere
 
-## Phase 7: Clean-up and hardening [ ]
+**Done when (each slice):** its tests are updated, all six checks pass, and it is merged into `main` before the next slice merges.
 
-- [ ] Remove merged branches and old worktrees (after the team agrees)
+## Phase 7a: Hardening and browser checks [ ]
+
 - [ ] Redeploy the API Vercel project, which is not git-connected and is stale
 - [ ] Browser check of the phone layouts and print view, which jsdom cannot test
 - [ ] Phone card list for the customer table, which has no fixed width today
 - [ ] Page test for menu category delete through the confirm dialog
 - [ ] Inventory text fields: treat `null` as empty instead of the string "null"
+
+## Phase 7b: Clean-up [ ]
+
+- [ ] Remove merged branches and old worktrees (after the team agrees)
 
 ## Phase 8: Open product questions [ ]
 
@@ -132,7 +143,7 @@ If a phase grows too big, it is split, never stretched. Update this file wheneve
 
 ## Order of work
 
-Phases are finished and released one at a time: 4 → 5 → 6 → 7. Later phases can be built in parallel on their own branches, but they merge into `development` only after the phase before them reaches `main`. This keeps each gate small and quick.
+Phases are finished and released one at a time: 4 → 5 → 6a → 6b → 6c → 7a → 7b. Any phase that grows too big is split the same way. Later phases can be built in parallel on their own branches, but they merge into `development` only after the phase before them reaches `main`. This keeps each gate small and quick.
 
 ## Rules of the road
 
