@@ -173,10 +173,10 @@ describe('authApi account endpoints', () => {
     ],
     [
       'updateUserProfile',
-      () => authApi.updateUserProfile('usr_9', { phone: '555-0101' }),
+      () => authApi.updateUserProfile('usr_9', { phone: '+92 300 5550101' }),
       '/api/auth/users/usr_9/profile',
       'PATCH',
-      { phone: '555-0101' },
+      { phone: '+92 300 5550101' },
     ],
     ['resetPassword', () => authApi.resetPassword('usr_9'), '/api/auth/users/usr_9/reset-password', 'POST', undefined],
     [

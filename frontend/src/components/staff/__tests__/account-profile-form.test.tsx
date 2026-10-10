@@ -32,7 +32,7 @@ afterEach(() => vi.resetAllMocks());
 describe('AccountProfileForm', () => {
   it('saves name and phone without asking for a password', async () => {
     // Arrange
-    const updated = makeUser({ name: 'William Waiter', phone: '555-0199' });
+    const updated = makeUser({ name: 'William Waiter', phone: '+92 321 1110199' });
     vi.mocked(authApi.updateMe).mockResolvedValue({ user: updated });
     const user = userEvent.setup({ delay: null });
     render(<AccountProfileForm user={makeUser()} />);
@@ -40,12 +40,12 @@ describe('AccountProfileForm', () => {
     // Act
     await user.clear(screen.getByLabelText('Name'));
     await user.type(screen.getByLabelText('Name'), 'William Waiter');
-    await user.type(screen.getByLabelText('Phone (optional)'), '555-0199');
+    await user.type(screen.getByLabelText('Phone (optional)'), '03211110199');
     await user.click(screen.getByRole('button', { name: 'Save profile' }));
 
     // Assert
     expect(screen.queryByLabelText('Current password')).not.toBeInTheDocument();
-    expect(authApi.updateMe).toHaveBeenCalledWith({ name: 'William Waiter', phone: '555-0199' });
+    expect(authApi.updateMe).toHaveBeenCalledWith({ name: 'William Waiter', phone: '+92 321 1110199' });
     expect(updateSession).toHaveBeenCalledWith(updated);
     expect(toastMock).toHaveBeenCalledWith('Profile saved.', 'success');
   });
@@ -149,7 +149,7 @@ describe('AccountProfileForm', () => {
     vi.mocked(authApi.updateMe).mockReturnValue(new Promise(() => undefined));
     const user = userEvent.setup({ delay: null });
     render(<AccountProfileForm user={makeUser()} />);
-    await user.type(screen.getByLabelText('Phone (optional)'), '555-0101');
+    await user.type(screen.getByLabelText('Phone (optional)'), '03005550101');
 
     // Act
     await user.click(screen.getByRole('button', { name: 'Save profile' }));
@@ -179,14 +179,14 @@ describe('AccountProfileForm — live validation', () => {
     expect(phone).not.toHaveAttribute('aria-invalid');
 
     // Act
-    await user.type(phone, '12');
+    await user.type(phone, '0300 12');
 
     // Assert
     expect(phone).toHaveAttribute('aria-invalid', 'true');
-    expect(phone).toHaveAccessibleDescription('Phone numbers have 7 to 20 digits.');
+    expect(phone).toHaveAccessibleDescription('Enter a mobile number like 0300 1234567.');
 
     // Act — fixing it clears the error without another blur
-    await user.type(phone, '3-4567');
+    await user.type(phone, '34-567');
 
     // Assert
     expect(phone).not.toHaveAttribute('aria-invalid');

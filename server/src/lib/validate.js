@@ -67,17 +67,24 @@ export function email(value, { required = true, label = 'Email' } = {}) {
   return clean.toLowerCase();
 }
 
-/** A phone number: digits, spaces, + ( ) - . with 7–20 digits. Empty is allowed. */
+/**
+ * A Pakistani mobile number, stored in one format: "+92 300 1234567".
+ * Accepts 0300…, 92300…, +92 300…, 0092… or 300…, with any spaces, dashes or brackets.
+ * Empty is allowed.
+ */
 export function phone(value, label = 'Phone') {
   if (missing(value)) return undefined;
   if (typeof value !== 'string') badRequest('Please enter a valid phone number.');
   const clean = value.trim();
   if (!clean) return '';
-  const digits = clean.replace(/\D/g, '').length;
-  if (clean.length > PHONE_MAX || !PHONE_RE.test(clean) || digits < 7 || digits > 20) {
-    badRequest(`Please enter a valid ${label.toLowerCase()} number.`);
+  let digits = clean.length > PHONE_MAX || !PHONE_RE.test(clean) ? '' : clean.replace(/\D/g, '');
+  if (digits.startsWith('0092')) digits = digits.slice(4);
+  else if (digits.startsWith('92') && digits.length === 12) digits = digits.slice(2);
+  else if (digits.startsWith('0') && digits.length === 11) digits = digits.slice(1);
+  if (!/^3\d{9}$/.test(digits)) {
+    badRequest(`Please enter a valid ${label.toLowerCase()} number, e.g. 0300 1234567.`);
   }
-  return clean;
+  return `+92 ${digits.slice(0, 3)} ${digits.slice(3)}`;
 }
 
 /**

@@ -8,7 +8,7 @@ import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toast';
 import { TextField } from '@/components/staff/text-field';
 import { SubmitHint } from '@/components/forms/field-error';
-import { normalizeName, validateEmail, validateName, validatePhone, EMAIL_MAX, NAME_MAX, PHONE_MAX } from '@/lib/validation/fields';
+import { normalizeName, validateEmail, validateName, formatPhoneInput, validatePhone, EMAIL_MAX, NAME_MAX, PHONE_MAX } from '@/lib/validation/fields';
 import { useFormValidation, type Rules } from '@/lib/validation/use-form-validation';
 
 type Field = 'name' | 'email' | 'phone';
@@ -111,9 +111,9 @@ export function EditAccountModal({
             id="edit-account-phone"
             label="Phone"
             type="tel"
-            inputMode="tel"
+            inputMode="numeric"
             value={draft.phone}
-            onChange={(value) => set('phone', value)}
+            onChange={(value) => set('phone', formatPhoneInput(value))}
             onBlur={() => v.blur('phone')}
             maxLength={PHONE_MAX}
             placeholder="+92 300 1234567"

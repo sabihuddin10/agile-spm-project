@@ -17,7 +17,7 @@ function makeCustomer(overrides: Partial<Customer> = {}): Customer {
     id: 'cus_1',
     name: 'Sofia Ramirez',
     email: 'sofia@example.com',
-    phone: '+1 555-0103',
+    phone: '+92 300 5550103',
     type: 'online',
     loyaltyPoints: 540,
     totalSpend: 300,
@@ -61,7 +61,7 @@ describe('CustomerDetail', () => {
     expect(screen.getByRole('heading', { name: 'Sofia Ramirez' })).toBeInTheDocument();
     expect(screen.getByText('Online')).toBeInTheDocument();
     expect(screen.getByText('sofia@example.com')).toBeInTheDocument();
-    expect(screen.getByText('· +1 555-0103')).toBeInTheDocument();
+    expect(screen.getByText('· +92 300 5550103')).toBeInTheDocument();
     expect(screen.getByText('Prefers the window booth.')).toBeInTheDocument();
     expect(screen.getByText('vegan')).toBeInTheDocument();
     // Allergy pill carries an icon plus screen-reader text, not a bare glyph
@@ -192,7 +192,7 @@ describe('CustomerForm', () => {
     // Act
     await user.type(screen.getByLabelText('Full name *'), '  Lena Park ');
     await user.type(screen.getByLabelText('Email'), ' lena@example.com ');
-    await user.type(screen.getByLabelText('Phone'), '555-0199');
+    await user.type(screen.getByLabelText('Phone'), '0300 5550199');
     await user.selectOptions(screen.getByLabelText('Type'), 'online');
     await user.click(screen.getByRole('checkbox', { name: 'vegan' }));
     await user.click(screen.getByRole('checkbox', { name: 'peanuts' }));
@@ -203,7 +203,7 @@ describe('CustomerForm', () => {
     expect(onSubmit).toHaveBeenCalledWith({
       name: 'Lena Park',
       email: 'lena@example.com',
-      phone: '555-0199',
+      phone: '+92 300 5550199',
       type: 'online',
       preferences: { dietary: ['vegan'], allergies: ['peanuts'] },
       notes: 'Regular on Fridays',
@@ -258,7 +258,7 @@ describe('CustomerForm', () => {
     // Assert
     expect(screen.getByLabelText('Email')).toHaveAttribute('aria-invalid', 'true');
     expect(screen.getByLabelText('Email')).toHaveAccessibleDescription('Enter an email address like name@example.com.');
-    expect(screen.getByLabelText('Phone')).toHaveAccessibleDescription('Phone numbers have 7 to 20 digits.');
+    expect(screen.getByLabelText('Phone')).toHaveAccessibleDescription('Enter a mobile number like 0300 1234567.');
     expect(screen.getByRole('button', { name: 'Add customer' })).toBeDisabled();
   });
 

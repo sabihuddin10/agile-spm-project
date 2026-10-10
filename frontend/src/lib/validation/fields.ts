@@ -6,12 +6,9 @@
 
 export const NAME_MAX = 80;
 export const EMAIL_MAX = 254;
-export const PHONE_MIN_DIGITS = 7;
-export const PHONE_MAX_DIGITS = 20;
 export const PHONE_MAX = 30;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PHONE_RE = /^[0-9+()\-.\s]*$/;
 /** Letters (any script, with combining marks), spaces, apostrophes (straight or curly), hyphens, full stops. */
 // Built with RegExp() because the TS target predates the `u` flag in literals; every supported browser has it.
 const NAME_CHARS_RE = new RegExp("^[\\p{L}\\p{M}' ’.-]+$", 'u');
@@ -62,15 +59,41 @@ export function validateEmail(value: string, { required = true, missing = 'Pleas
   return undefined;
 }
 
-/** Digits, spaces, + ( ) - . with 7–20 digits. Optional unless `required`. */
+/** The one stored format for phone numbers: a Pakistani mobile, e.g. "+92 300 1234567". */
+export const PHONE_FORMAT_RE = /^\+92 3\d{2} \d{7}$/;
+
+/**
+ * Formats a phone field as the user types or pastes: anything but digits is dropped,
+ * and 0300…, 92300…, +92300…, 0092300… or 300… all become "+92 300 1234567".
+ * A country code still being typed ("+", "+9", "+92", "9") is kept as is, so typing
+ * "+92 300 1234567" key by key works too. Pakistani mobiles start with 3, so a
+ * leading 92 is always the country code.
+ */
+export function formatPhoneInput(raw: string): string {
+  const text = raw.trim();
+  let digits = text.replace(/\D/g, '');
+  if (text.startsWith('+') || digits.startsWith('9')) {
+    if (digits.startsWith('92')) {
+      digits = digits.slice(2);
+      if (!digits.replace(/^0+/, '')) return '+92';
+    } else if (digits === '') {
+      return text.startsWith('+') ? '+' : '';
+    } else if (digits === '9') {
+      return '+9';
+    }
+  } else if (digits.startsWith('0092')) {
+    digits = digits.slice(4);
+  }
+  digits = digits.replace(/^0+/, '').slice(0, 10);
+  if (!digits) return '';
+  return `+92 ${digits.length > 3 ? `${digits.slice(0, 3)} ${digits.slice(3)}` : digits}`;
+}
+
+/** A Pakistani mobile number in the stored format. Optional unless `required`. */
 export function validatePhone(value: string, { required = false } = {}): string | undefined {
   const clean = value.trim();
   if (!clean) return required ? 'Please enter a phone number.' : undefined;
-  if (!PHONE_RE.test(clean)) return 'Use digits, spaces and + ( ) - . only.';
-  const digits = clean.replace(/\D/g, '').length;
-  if (digits < PHONE_MIN_DIGITS || digits > PHONE_MAX_DIGITS || clean.length > PHONE_MAX) {
-    return `Phone numbers have ${PHONE_MIN_DIGITS} to ${PHONE_MAX_DIGITS} digits.`;
-  }
+  if (!PHONE_FORMAT_RE.test(clean)) return 'Enter a mobile number like 0300 1234567.';
   return undefined;
 }
 

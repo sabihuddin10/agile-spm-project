@@ -28,7 +28,7 @@ function makeReservation(overrides: Partial<Reservation> = {}): Reservation {
     id: 'res_1',
     customerName: 'Ana Silva',
     email: 'ana@example.com',
-    phone: '+1 555 0100',
+    phone: '+92 300 5550100',
     partySize: 4,
     date: '2026-10-08',
     time: '19:00',
@@ -156,7 +156,7 @@ describe('NewBookingForm', () => {
     // Assert
     expect(name).not.toHaveAttribute('aria-invalid');
     expect(screen.getByLabelText('Email')).toHaveAccessibleDescription('Enter an email address like name@example.com.');
-    expect(screen.getByLabelText(/^phone/i)).toHaveAccessibleDescription('Phone numbers have 7 to 20 digits.');
+    expect(screen.getByLabelText(/^phone/i)).toHaveAccessibleDescription('Enter a mobile number like 0300 1234567.');
 
     // Act — the textarea's maxLength stops typing at 500, so paste past the cap via change
     fireEvent.change(screen.getByLabelText(/special requests/i), { target: { value: 'x'.repeat(501) } });
@@ -353,7 +353,7 @@ describe('ReservationCard', () => {
     expect(screen.getByText('Confirmed')).toBeInTheDocument();
     expect(screen.getByText('Has account')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'ana@example.com' })).toHaveAttribute('href', 'mailto:ana@example.com');
-    expect(screen.getByRole('link', { name: '+1 555 0100' })).toHaveAttribute('href', 'tel:+15550100');
+    expect(screen.getByRole('link', { name: '+92 300 5550100' })).toHaveAttribute('href', 'tel:+923005550100');
     expect(screen.getByText('Birthday cake')).toBeInTheDocument();
     expect(screen.getByText('Table 2')).toBeInTheDocument();
   });

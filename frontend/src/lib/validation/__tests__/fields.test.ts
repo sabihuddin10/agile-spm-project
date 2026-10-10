@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  CONTACT_MISSING, isValidEmail, normalizeName, validateContact, validateNumberInRange, validateEmail, validateFutureDate, validateIntegerInRange, validateMaxLength, validateName, validatePhone, validateRequired,
+  CONTACT_MISSING, formatPhoneInput, isValidEmail, PHONE_FORMAT_RE,normalizeName, validateContact, validateNumberInRange, validateEmail, validateFutureDate, validateIntegerInRange, validateMaxLength, validateName, validatePhone, validateRequired,
 } from '@/lib/validation/fields';
 
 describe('field validators', () => {
@@ -28,7 +28,7 @@ describe('field validators', () => {
   it('validateContact and validateNumberInRange', () => {
     // Act / Assert
     expect(validateContact('', '  ')).toBe(CONTACT_MISSING);
-    expect(validateContact('', '555 0100')).toBeUndefined();
+    expect(validateContact('', '+92 300 1234567')).toBeUndefined();
     expect(validateContact('a@b.co', '')).toBeUndefined();
     expect(validateNumberInRange('12.5', 0, 10000, 'Price')).toBeUndefined();
     expect(validateNumberInRange('10001', 0, 10000, 'Price')).toBe('Price must be between 0 and 10,000.');
@@ -47,16 +47,26 @@ describe('field validators', () => {
     expect(isValidEmail('nope')).toBe(false);
   });
 
-  it('validatePhone: optional, allowed characters, 7–20 digits', () => {
+  it('validatePhone: optional, and only a full Pakistani mobile in "+92 3XX XXXXXXX" form', () => {
     // Act / Assert
     expect(validatePhone('')).toBeUndefined();
+    expect(validatePhone('   ')).toBeUndefined();
     expect(validatePhone('', { required: true })).toMatch(/phone number/);
-    expect(validatePhone('+1 (555) 010-2000')).toBeUndefined();
-    expect(validatePhone('call me')).toMatch(/digits, spaces/);
-    expect(validatePhone('12-34')).toMatch(/7 to 20 digits/);
-    expect(validatePhone('1'.repeat(21))).toMatch(/7 to 20 digits/);
+    expect(validatePhone('+92 300 1234567')).toBeUndefined();
+    expect(validatePhone(' +92 321 7654321 ')).toBeUndefined();
+    expect(validatePhone('+92 300 123456')).toMatch(/0300 1234567/);
+    expect(validatePhone('+92 212 1234567')).toMatch(/0300 1234567/);
+    expect(validatePhone('03001234567')).toMatch(/0300 1234567/);
+    expect(validatePhone('+1 (555) 010-2000')).toMatch(/0300 1234567/);
+    expect(validatePhone('call me')).toMatch(/0300 1234567/);
   });
 
+  it('PHONE_FORMAT_RE matches only the stored format', () => {
+    // Act / Assert
+    expect(PHONE_FORMAT_RE.test('+92 300 1234567')).toBe(true);
+    expect(PHONE_FORMAT_RE.test('+923001234567')).toBe(false);
+    expect(PHONE_FORMAT_RE.test('+92 300 12345678')).toBe(false);
+  });
   it('validateIntegerInRange, validateMaxLength and validateRequired', () => {
     // Act / Assert
     expect(validateIntegerInRange(4, 1, 12, 'Party size')).toBeUndefined();
@@ -74,5 +84,117 @@ describe('field validators', () => {
     expect(validateFutureDate('10/11/2026', '2026-10-10')).toBe('Choose a valid date.');
     expect(validateFutureDate('2026-10-09', '2026-10-10')).toBe('Please choose today or a later date.');
     expect(validateFutureDate('2026-10-10', '2026-10-10')).toBeUndefined();
+  });
+});
+
+describe('formatPhoneInput', () => {
+  it('drops everything that is not a digit', () => {
+    // Arrange
+    const typed = 'abc0300-12x34 567!';
+
+    // Act
+    const formatted = formatPhoneInput(typed);
+
+    // Assert
+    expect(formatted).toBe('+92 300 1234567');
+  });
+
+  it('returns an empty string when there are no digits to keep', () => {
+    // Arrange
+    const inputs = ['', '   ', 'abc', '0', '00'];
+
+    // Act
+    const formatted = inputs.map(formatPhoneInput);
+
+    // Assert
+    expect(formatted).toEqual(['', '', '', '', '']);
+  });
+
+  it('keeps a country code that is still being typed', () => {
+    // Arrange
+    const inputs = ['+', '+9', '9', '+92', '92', '+92 '];
+
+    // Act
+    const formatted = inputs.map(formatPhoneInput);
+
+    // Assert
+    expect(formatted).toEqual(['+', '+9', '+9', '+92', '+92', '+92']);
+  });
+
+  it('turns a leading 0 into the +92 country code', () => {
+    // Arrange
+    const local = '03001234567';
+
+    // Act
+    const formatted = formatPhoneInput(local);
+
+    // Assert
+    expect(formatted).toBe('+92 300 1234567');
+  });
+
+  it('keeps a number that already has the country code, in any spelling', () => {
+    // Arrange
+    const inputs = ['923001234567', '+923001234567', '+92 300 1234567', '0092 300 1234567', '3001234567'];
+
+    // Act
+    const formatted = inputs.map(formatPhoneInput);
+
+    // Assert
+    expect(formatted).toEqual(Array(inputs.length).fill('+92 300 1234567'));
+  });
+
+  it('formats a local number as it is typed, key by key', () => {
+    // Arrange
+    const keys = '03001234567';
+    let value = '';
+    const seen: string[] = [];
+
+    // Act
+    for (const key of keys) {
+      value = formatPhoneInput(value + key);
+      seen.push(value);
+    }
+
+    // Assert
+    expect(seen).toEqual([
+      '', '+92 3', '+92 30', '+92 300', '+92 300 1', '+92 300 12', '+92 300 123',
+      '+92 300 1234', '+92 300 12345', '+92 300 123456', '+92 300 1234567',
+    ]);
+  });
+
+  it('formats a number typed with its country code, key by key', () => {
+    // Arrange
+    const typeKeys = (keys: string) => keys.split('').reduce((value, key) => formatPhoneInput(value + key), '');
+
+    // Act
+    const withPlus = typeKeys('+92 300 1234567');
+    const withoutPlus = typeKeys('923001234567');
+
+    // Assert
+    expect(withPlus).toBe('+92 300 1234567');
+    expect(withoutPlus).toBe('+92 300 1234567');
+  });
+
+  it('caps the number at ten digits after +92', () => {
+    // Arrange
+    const full = '+92 300 1234567';
+
+    // Act
+    const formatted = formatPhoneInput(`${full}89`);
+
+    // Assert
+    expect(formatted).toBe(full);
+    expect(PHONE_FORMAT_RE.test(formatted)).toBe(true);
+  });
+
+  it('backspacing over the separator space keeps the remaining digits', () => {
+    // Arrange
+    const afterBackspace = '+92 300 ';
+
+    // Act
+    const formatted = formatPhoneInput(afterBackspace);
+
+    // Assert
+    expect(formatted).toBe('+92 300');
   });
 });
