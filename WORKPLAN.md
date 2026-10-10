@@ -128,10 +128,12 @@ If a phase grows too big, it is split, never stretched. Update this file wheneve
 
 - [ ] **Reconnect both Vercel projects to GitHub (needs the user or Burhan).** Found 2026-10-10: neither `plate-and-flame-web` nor `plate-and-flame-api` deploys from `main`, so the live site is about 3 days old and `/staff/workforce` returns 404. Set web root `frontend` and api root `server`, production branch `main`, then redeploy.
 - [ ] Browser check of the phone layouts and print view, which jsdom cannot test (manual, needs a person)
-- [~] Phone card list for the customer table (a193847, merging)
-- [~] Page test for menu category delete through the confirm dialog (a193847, merging)
-- [~] Inventory text fields: treat `null` as empty instead of the string "null" (0e17ef2, merging)
-- [~] "(optional)" field hint made readable, stone-500 (92ac7cf, merging)
+- [x] Phone card list for the customer table (a193847)
+- [x] Page test for menu category delete through the confirm dialog (a193847)
+- [x] Inventory text fields: treat `null` as empty instead of the string "null" (0e17ef2)
+- [x] "(optional)" field hint made readable, stone-500 (92ac7cf)
+- [x] Slot grid tests pinned to a far-future date; they failed after 19:00 on 2026-10-10 because they hard-coded that date
+- [x] Released to `main` as 7c9194d (398 server tests, 949 frontend tests)
 - [x] Audit of the interrupted staff/workforce/settings helper: all 9 brief tasks are on `main`; the remaining story IDs are only in code comments
 
 ## Phase 7b: Clean-up [ ]
