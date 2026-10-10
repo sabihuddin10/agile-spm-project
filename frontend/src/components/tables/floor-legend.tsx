@@ -8,13 +8,13 @@ export function FloorLegend({ tables, statuses }: { tables: Table[]; statuses: T
   const seats = tables.reduce((sum, t) => sum + t.seats, 0);
 
   return (
-    <div className="flex flex-wrap items-center gap-2" aria-label="Table status legend">
+    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2" aria-label="Table status legend">
       {statuses.map((status) => {
         const count = tables.filter((t) => t.status === status).length;
         return (
           <span
             key={status}
-            className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-3 py-1 text-sm shadow-sm"
+            className="inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-white px-2.5 py-0.5 text-xs shadow-sm sm:gap-2 sm:px-3 sm:py-1 sm:text-sm"
           >
             <span className={`h-2.5 w-2.5 rounded-full ${dotClass(status)}`} aria-hidden="true" />
             <span className="text-stone-600">{TABLE_STATUS[status].label}</span>
@@ -23,7 +23,7 @@ export function FloorLegend({ tables, statuses }: { tables: Table[]; statuses: T
         );
       })}
       {held > 0 ? (
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-sm text-brand-700">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-200 bg-brand-50 px-2.5 py-0.5 text-xs text-brand-700 sm:px-3 sm:py-1 sm:text-sm">
           Held <span className="font-semibold tabular-nums">{held}</span>
         </span>
       ) : null}

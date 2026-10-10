@@ -134,7 +134,7 @@ export function NewBookingForm({
   }
 
   return (
-    <form onSubmit={submit} noValidate className="space-y-4">
+    <form onSubmit={submit} noValidate className="space-y-3 sm:space-y-4">
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="sm:col-span-2">
           <label className="label" htmlFor="nb-name">

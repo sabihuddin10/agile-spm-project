@@ -54,39 +54,38 @@ export function TableTile({
 
   return (
     <article
-      className={`flex flex-col rounded-xl border border-l-4 p-4 shadow-sm ${tileClass(table.status)}`}
+      className={`flex flex-col rounded-xl border border-l-4 p-3.5 shadow-sm sm:p-4 ${tileClass(table.status)}`}
       aria-label={`Table ${table.number}, ${status.label}`}
     >
-      <header className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-base font-bold sm:h-11 sm:w-11 sm:text-lg text-stone-800 shadow-sm ring-1 ring-black/5">
-            {table.number}
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-stone-800">{table.seats} seats</p>
-            <p className="truncate text-xs text-stone-500">
-              {table.waiterName ? (
-                <>
-                  Waiter: <span className="font-medium text-stone-700">{mine ? 'You' : table.waiterName}</span>
-                </>
-              ) : (
-                'No waiter assigned'
-              )}
-            </p>
-          </div>
+      {/* Seats and badges share one wrapping row instead of a second badge column. */}
+      <header className="flex items-center gap-2.5 sm:gap-3">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-base font-bold text-stone-800 shadow-sm ring-1 ring-black/5 sm:h-11 sm:w-11 sm:text-lg">
+          {table.number}
         </div>
-        <div className="flex shrink-0 flex-col items-end gap-1">
-          <Badge tone={status.tone}>{status.label}</Badge>
-          {table.held ? (
-            <Badge tone="brand">
-              <LockIcon />
-              Held
-            </Badge>
-          ) : null}
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <p className="mr-0.5 text-sm font-semibold text-stone-800">{table.seats} seats</p>
+            <Badge tone={status.tone}>{status.label}</Badge>
+            {table.held ? (
+              <Badge tone="brand">
+                <LockIcon />
+                Held
+              </Badge>
+            ) : null}
+          </div>
+          <p className="truncate text-xs text-stone-500">
+            {table.waiterName ? (
+              <>
+                Waiter: <span className="font-medium text-stone-700">{mine ? 'You' : table.waiterName}</span>
+              </>
+            ) : (
+              'No waiter assigned'
+            )}
+          </p>
         </div>
       </header>
 
-      <div className="mt-3 space-y-1">
+      <div className="mt-2.5 space-y-1 sm:mt-3">
         {orders.length > 0 ? (
           orders.map((o) => (
             <Link
@@ -119,7 +118,7 @@ export function TableTile({
         </div>
       ) : null}
 
-      <div className="mt-auto space-y-2 pt-3">
+      <div className="mt-auto space-y-2 pt-2.5 sm:pt-3">
         <div className="grid grid-cols-4 gap-1.5" role="group" aria-label={`Set status of table ${table.number}`}>
           {STATUS_BUTTONS.map((s) => {
             const active = table.status === s;

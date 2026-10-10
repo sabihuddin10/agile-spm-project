@@ -49,10 +49,10 @@ export function ReadyTicket({
   }
 
   return (
-    <li className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+    <li className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 sm:p-3">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="font-mono text-base font-bold text-stone-900">#{order.number}</p>
+          <p className="font-mono text-sm font-bold text-stone-900 sm:text-base">#{order.number}</p>
           <p className="text-sm font-semibold text-emerald-800">{where}</p>
         </div>
         <p className={`shrink-0 text-right text-sm font-semibold tabular-nums ${waited >= 5 ? 'text-amber-700' : 'text-emerald-700'}`}>

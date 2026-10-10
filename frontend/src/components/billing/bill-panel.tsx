@@ -130,23 +130,23 @@ export function BillPanel({
   const settled = invoice.paymentStatus !== 'unpaid';
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 sm:space-y-5">
       <header className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-lg font-bold">
-            Bill <span className="font-mono">#{invoice.number}</span>
-            <span className="font-normal text-stone-500"> · </span>
-            <span>{billWhere(invoice)}</span>
-          </p>
+        <div className="min-w-0 space-y-1">
+          {/* Title and badges wrap as one row; "Ready to bill" already means served, so it stands in for that badge. */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <p className="mr-0.5 text-base font-bold sm:text-lg">
+              Bill <span className="font-mono">#{invoice.number}</span>
+              <span className="font-normal text-stone-500"> · </span>
+              <span>{billWhere(invoice)}</span>
+            </p>
+            {isReadyToBill(invoice) ? <Badge tone="brand">Ready to bill</Badge> : <Badge tone={status.tone}>{status.label}</Badge>}
+            <Badge tone={payment.tone}>{payment.label}</Badge>
+          </div>
           <p className="text-xs text-stone-500">
             {invoice.customerName ?? (invoice.type === 'dine-in' ? 'Walk-in' : 'Guest')}
             {invoice.waiterName ? ` · Server ${invoice.waiterName}` : ''} · opened {formatDateTime(invoice.createdAt)}
           </p>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {isReadyToBill(invoice) ? <Badge tone="brand">Ready to bill</Badge> : null}
-            <Badge tone={status.tone}>{status.label}</Badge>
-            <Badge tone={payment.tone}>{payment.label}</Badge>
-          </div>
         </div>
         {showHeaderClose ? (
           <button type="button" onClick={onClose} className="btn-sm btn-ghost !px-2" aria-label="Close bill details">
@@ -167,10 +167,10 @@ export function BillPanel({
       <RatesNote invoice={invoice} canEdit={can.editSettings(user?.role)} />
 
       {open ? (
-        <div className="space-y-5 border-t border-stone-200 pt-5">
+        <div className="space-y-4 border-t border-stone-200 pt-4 sm:space-y-5 sm:pt-5">
           <TipControl invoice={invoice} onUpdated={onUpdated} onConflict={onConflict} />
 
-          <div className="border-t border-stone-100 pt-5">
+          <div className="border-t border-stone-100 pt-4 sm:pt-5">
             {invoice.split ? (
               <SplitParts invoice={invoice} onUpdated={onUpdated} onConflict={onConflict} />
             ) : (
@@ -186,12 +186,12 @@ export function BillPanel({
             )}
           </div>
 
-          <div className="border-t border-stone-100 pt-5">
+          <div className="border-t border-stone-100 pt-4 sm:pt-5">
             <PayActions invoice={invoice} onUpdated={onUpdated} onConflict={onConflict} />
           </div>
         </div>
       ) : settled ? (
-        <div className="border-t border-stone-200 pt-5">
+        <div className="border-t border-stone-200 pt-4 sm:pt-5">
           <PaidActions
             invoice={invoice}
             role={user?.role}

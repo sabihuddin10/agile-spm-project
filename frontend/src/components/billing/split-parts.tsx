@@ -64,9 +64,9 @@ export function SplitParts({
 
       <ul className="mt-2 divide-y divide-stone-100 rounded-lg border border-stone-200">
         {parts.map((p, i) => (
-          <li key={`${p.label}-${i}`} className={`px-3 py-2.5 ${p.paid ? 'bg-emerald-50/50' : ''}`}>
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
+          <li key={`${p.label}-${i}`} className={`px-2.5 py-2 sm:px-3 sm:py-2.5 ${p.paid ? 'bg-emerald-50/50' : ''}`}>
+            <div className="flex items-center justify-between gap-2.5 sm:gap-3">
+              <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium">
                   {p.label} <span className="font-semibold tabular-nums">{money(p.amount)}</span>
                 </p>
@@ -82,7 +82,7 @@ export function SplitParts({
               ) : settled ? (
                 <Badge tone="stone">Settled with bill</Badge>
               ) : (
-                <div className="flex shrink-0 gap-1.5">
+                <div className="flex shrink-0 flex-col gap-1 sm:flex-row sm:gap-1.5">
                   <button
                     type="button"
                     className="btn-sm btn-primary"

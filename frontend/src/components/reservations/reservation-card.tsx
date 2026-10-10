@@ -36,9 +36,9 @@ export function ReservationCard({
     .sort((a, b) => a.seats - b.seats || a.number - b.number);
 
   return (
-    <li className={`card flex flex-col gap-4 p-4 md:flex-row md:items-start ${r.late ? 'border-red-200' : ''}`}>
-      <div className="flex shrink-0 items-baseline gap-3 md:w-20 md:flex-col md:gap-0.5">
-        <p className="text-xl font-bold tabular-nums text-stone-900">{r.time}</p>
+    <li className={`card flex flex-col gap-3 p-3.5 sm:gap-4 sm:p-4 md:flex-row md:items-start ${r.late ? 'border-red-200' : ''}`}>
+      <div className="flex shrink-0 items-baseline gap-2.5 sm:gap-3 md:w-20 md:flex-col md:gap-0.5">
+        <p className="text-lg font-bold tabular-nums text-stone-900 sm:text-xl">{r.time}</p>
         <p className="text-sm text-stone-500">
           {r.partySize} {r.partySize === 1 ? 'guest' : 'guests'}
         </p>
@@ -46,13 +46,13 @@ export function ReservationCard({
 
       <div className="min-w-0 flex-1 space-y-1.5">
         <div className="flex flex-wrap items-center gap-1.5">
-          <p className="mr-1 font-semibold text-stone-900">{r.customerName}</p>
+          <p className="mr-1 text-sm font-semibold text-stone-900 sm:text-base">{r.customerName}</p>
           <Badge tone={status.tone}>{status.label}</Badge>
           {r.late ? <Badge tone="red">Late — past grace period</Badge> : null}
           {r.hasAccount ? <Badge tone="stone">Has account</Badge> : null}
         </div>
-        <p className="flex flex-wrap gap-x-3 gap-y-0.5 text-sm text-stone-600">
-          <a href={`mailto:${r.email}`} className="truncate hover:text-brand-700 hover:underline">
+        <p className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-stone-600 sm:text-sm">
+          <a href={`mailto:${r.email}`} className="max-w-full truncate hover:text-brand-700 hover:underline">
             {r.email}
           </a>
           {r.phone ? (
@@ -62,7 +62,7 @@ export function ReservationCard({
           ) : null}
         </p>
         {r.specialRequests ? (
-          <p className="rounded-lg bg-amber-50 px-3 py-1.5 text-sm text-amber-900">
+          <p className="rounded-lg bg-amber-50 px-2.5 py-1.5 text-sm text-amber-900 sm:px-3">
             <span className="font-medium">Request:</span> {r.specialRequests}
           </p>
         ) : null}
@@ -90,7 +90,7 @@ export function ReservationCard({
             </label>
             <select
               id={`table-${r.id}`}
-              className="input !py-1.5"
+              className="input"
               value={r.tableId ?? ''}
               disabled={busy}
               onChange={(e) => onAssign(e.target.value || null)}

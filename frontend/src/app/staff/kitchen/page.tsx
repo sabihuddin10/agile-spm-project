@@ -106,7 +106,7 @@ export default function KitchenPage() {
         </Card>
       ) : (
         <>
-          <dl className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <dl className="mb-4 grid grid-cols-1 gap-2.5 sm:mb-5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4">
             <Stat label="In queue" value={queue.length} />
             <Stat label="Delayed" value={delayedCount} tone={delayedCount ? 'red' : undefined} />
             <Stat label="Rush" value={rushCount} tone={rushCount ? 'amber' : undefined} />
@@ -115,7 +115,7 @@ export default function KitchenPage() {
 
           <div className="grid gap-4 sm:gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
             <section aria-labelledby="queue-heading">
-              <h2 id="queue-heading" className="mb-3 text-lg font-semibold text-stone-900">
+              <h2 id="queue-heading" className="mb-2 text-base font-semibold text-stone-900 sm:mb-3 sm:text-lg">
                 Queue
               </h2>
               {queue.length === 0 ? (
@@ -123,7 +123,7 @@ export default function KitchenPage() {
                   <EmptyState title="Kitchen is clear" hint="Confirmed orders appear here automatically, rush orders first." />
                 </Card>
               ) : (
-                <ol className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+                <ol className="grid gap-3 sm:gap-4 md:grid-cols-2 2xl:grid-cols-3">
                   {queue.map((order, i) => {
                     const band = queue.filter((o) => o.priority === order.priority);
                     const idx = band.findIndex((o) => o.id === order.id);
@@ -148,8 +148,8 @@ export default function KitchenPage() {
             </section>
 
             <aside aria-labelledby="ready-heading">
-              <div className="mb-3 flex items-baseline justify-between gap-2">
-                <h2 id="ready-heading" className="text-lg font-semibold text-stone-900">
+              <div className="mb-2 flex items-baseline justify-between gap-2 sm:mb-3">
+                <h2 id="ready-heading" className="text-base font-semibold text-stone-900 sm:text-lg">
                   Ready for pickup
                 </h2>
                 <span className="text-xs text-stone-500">Floor staff notified</span>
@@ -159,7 +159,7 @@ export default function KitchenPage() {
                   <EmptyState title="Nothing at the pass" hint="Orders move here when every dish is ready." />
                 </Card>
               ) : (
-                <ul className="space-y-3">
+                <ul className="space-y-2 sm:space-y-3">
                   {ready.map((order) => (
                     <ReadyTicket key={order.id} order={order} now={now} role={role} onChanged={load} />
                   ))}
@@ -177,9 +177,10 @@ function Stat({ label, value, tone }: { label: string; value: number; tone?: 're
   const color =
     tone === 'red' ? 'text-red-600' : tone === 'amber' ? 'text-amber-600' : tone === 'emerald' ? 'text-emerald-600' : 'text-stone-900';
   return (
-    <div className="rounded-xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
+    // On phones label and number share one line, so the four tiles stay short.
+    <div className="flex items-baseline justify-between gap-3 rounded-xl border border-stone-200 bg-white p-3 shadow-sm sm:block sm:px-4 sm:py-3">
       <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">{label}</dt>
-      <dd className={`mt-1 text-2xl font-bold tabular-nums ${color}`}>{value}</dd>
+      <dd className={`text-xl font-bold tabular-nums sm:mt-1 sm:text-2xl ${color}`}>{value}</dd>
     </div>
   );
 }
