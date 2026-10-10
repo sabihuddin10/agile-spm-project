@@ -26,7 +26,7 @@ If a phase grows too big, it is split, never stretched. Update this file wheneve
 | 4 | Admin UI polish, batch 1 + input safety | 15 | [x] |
 | 5 | Admin UI polish, batch 2: staff, workforce, settings | 15 | [x] |
 | 6a | Live validation, submit disabled until valid, customer rules | 16 | [x] |
-| 6b | Screen-side checks matching server limits | 16 | [~] |
+| 6b | Screen-side checks matching server limits | 16 | [x] |
 | 6c | Placeholders on every input | 16 | [~] |
 | 7a | Hardening and browser checks | 16 | [ ] |
 | 7b | Branch and worktree clean-up (needs team OK) | 16 | [ ] |
@@ -105,7 +105,7 @@ If a phase grows too big, it is split, never stretched. Update this file wheneve
 - [x] **6a**: submit button stays disabled until the whole form is valid, with a short note saying what is missing
 - [x] **6a**: live password checklist on every password field
 - [x] **6a**: names need 3+ letters or two words, so "SS" is refused; customers need an email or a phone, enforced on the server as well
-- [~] **6b** (37ec310, merging): staff forms check the same rules as the server before submitting, and their save buttons stay disabled until valid:
+- [x] **6b** (37ec310, released to `main` as 3a46c0b: 397 server tests, 944 frontend tests): staff forms check the same rules as the server before submitting, and their save buttons stay disabled until valid:
   - staff booking
   - customer
   - account edit
@@ -113,9 +113,9 @@ If a phase grows too big, it is split, never stretched. Update this file wheneve
   - inventory
   - billing
   - tables
-- [ ] A correct, realistic placeholder on every text input (labels stay)
-- [ ] Shift form: placeholder and the 500-character notes limit (moved from Phase 5)
-- [~] **6b**: block a 51st order line in the cart and the staff order editor (server limit is 50)
+- [~] **6c** (fc8745e, merging): a correct, realistic placeholder on every text input (labels stay), with darker placeholder text so it stays readable
+- [~] **6c** (a938073): shift form placeholder, 500-character notes limit and counter (moved from Phase 5)
+- [x] **6b**: block a 51st order line in the cart and the staff order editor (server limit is 50)
 
 **Released in three slices, in order.** Each slice is one commit on `feat/form-guards`, merged and released on its own:
 - **6a:** live errors, submit disabled until valid, password checklist, customer name + contact rule (frontend and server)
