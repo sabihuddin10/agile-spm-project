@@ -31,9 +31,9 @@ If a phase grows too big, it is split, never stretched. Update this file wheneve
 | 7a | Hardening and browser checks | 16 | [~] |
 | 7b | Branch and worktree clean-up (needs team OK) | 16 | [ ] |
 | 8 | Open product questions | 16 | [ ] |
-| 9 | Phone numbers: digits only, one +92 format | 16 | [~] paused |
-| 10a | Harmic-style responsive sizes, site-wide | 16 | [~] paused |
-| 10b | Responsive sweep: storefront, admin ops, admin people | 16 | [~] paused |
+| 9 | Phone numbers: digits only, one +92 format | 16 | [x] |
+| 10a | Harmic-style responsive sizes, site-wide | 16 | [x] |
+| 10b | Responsive sweep: storefront, admin ops, admin people | 16 | [x] |
 
 ---
 
@@ -153,36 +153,39 @@ If a phase grows too big, it is split, never stretched. Update this file wheneve
 
 Phases are finished and released one at a time: 4 → 5 → 6a → 6b → 6c → 7a → 7b. Any phase that grows too big is split the same way. Later phases can be built in parallel on their own branches, but they merge into `development` only after the phase before them reaches `main`. This keeps each gate small and quick.
 
-## Phase 9: Phone number format [~] paused
+## Phase 9: Phone number format [x]
 
 **Goal:** like the university roll-number example (typed 22k4347, always stored as 22K-4347), phone fields accept digits only and always become one format.
 
 - [x] Shared `formatPhoneInput` formats as you type: 0300…, 92300…, 0092… or 300… → "+92 300 1234567"; non-digits vanish (`frontend/src/lib/validation/fields.ts`)
 - [x] Server `phone()` in `server/src/lib/validate.js` normalises the same way and rejects anything that is not a Pakistani mobile
 - [x] All 7 phone fields wired (register flow forms, careers, booking, profile, staff profile, customer, staff booking, account edit); seed phones converted to +92
-- [~] Server tests: mostly updated; auth.test.js (~line 186) and the customers search test still use old numbers
-- [ ] Frontend tests that type old-style numbers (customers, account-profile-form, edit-account-modal, booking-form, reservations, orders fixtures)
-- [ ] Unit tests for `formatPhoneInput`, then lint, tsc and the full gate
+- [x] Server tests updated (auth, customers search, validate); 398/398 pass
+- [x] Frontend tests moved to +92 numbers (customers, account-profile-form, edit-account-modal, booking-form, reservations, orders, staff, my-account, api)
+- [x] Unit tests for `formatPhoneInput`, `validatePhone` and `PHONE_FORMAT_RE`; a partly typed country code (+, +9, +92) is kept while typing
+- [x] Gate passed; released to `main` (dd51380)
 
-Branch `feat/phone-format`, WIP commit 90deb0b (pushed). **The user asked for this to go to `development` and `main` directly once green**, still through the gate.
+**Open question:** an account whose stored phone is still in the old format cannot save the edit-account form until the phone is retyped. Seed data is converted; production data in Neon may not be. Options: accept, have the server convert old phones, or run a one-off migration.
 
-## Phase 10a: Harmic-style responsive sizes [~] paused
+## Phase 10a: Harmic-style responsive sizes [x]
 
 **Goal:** buttons, headings and inputs are not oversized on phones. Sizes are copied from the user's Harmic storefront (`D:/SIRPProject-internship/front`, `src/index.css` type tokens; buttons h-9, lg:h-10, full-width CTA h-10, lg:h-12).
 
 - [x] Fluid type scale (clamp) for every Tailwind text size (`tailwind.config.ts` fontSize → CSS vars in `globals.css`)
 - [x] `.btn` min 36px (40px from lg), `.btn-sm` 32px, `.input` 40px; touch screens keep 16px input text (no iOS zoom); removed the 44px touch rule for text buttons
 - [x] Lint + tsc pass. Commit 137bba7 on `feat/responsive-scale` (pushed)
-- [ ] Merge into `development`, gate, release to `main`
+- [x] Merged into `development`, gate passed, released to `main` (40b368c)
 
-## Phase 10b: Responsive sweep [~] paused
+## Phase 10b: Responsive sweep [x]
 
 Three parallel branches built on 10a, each owning separate files:
-- [~] `feat/responsive-storefront`: customer pages and components (WIP commit)
-- [~] `feat/responsive-admin-ops`: staff shell, components/ui, orders, kitchen, tables, reservations, billing, staff menu, inventory, customers, analytics (WIP commit)
-- [~] `feat/responsive-admin-people`: users, workforce, My work, account, schedule, performance, settings; components staff/workforce/settings/forms (WIP commit)
+- [x] `feat/responsive-storefront`: customer pages, drawer, booking form, account stat boxes fit at 360px. Released (15fbf7e)
+- [x] `feat/responsive-admin-people`: performance toggle fits at 360px, shift/account/password/settings forms and modals tighter on phones. Released (9760f27)
+- [x] `feat/responsive-admin-ops`: shared card, page header and modal padding, staff shell 36px icon buttons, section spacing 4 on phones, smaller reservation headline and table badge. Released (dff2920)
 
-To resume: finish each branch (remove redundant breakpoint font steps, hand-sized buttons → .btn classes, icon buttons h-9 w-9, compact phone paddings, no horizontal scroll at 360px), run lint, tsc and touched tests, then merge after 10a, one at a time, each through the gate.
+Each branch was merged one at a time, gated, and released to `main` before the next. Card and modal are shared, so customer pages also got the tighter phone padding.
+
+**Still to do by hand:** browser check on a phone (360px) of the storefront and staff screens.
 
 ## Rules of the road
 
