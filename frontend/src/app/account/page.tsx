@@ -100,9 +100,9 @@ export default function AccountPage() {
 
 function Stat({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
   return (
-    <div className="flex flex-col-reverse rounded-xl border border-char-hairline bg-char-raised px-2 py-2.5 text-center sm:px-4 sm:py-3">
+    <div className="flex min-w-0 flex-col-reverse rounded-xl border border-char-hairline bg-char-raised px-2 py-2.5 text-center sm:px-4 sm:py-3">
       <dt className="mt-0.5 text-2xs font-medium uppercase tracking-wide text-bone-faint">{label}</dt>
-      <dd className={`font-display text-2xl font-semibold ${accent ? 'text-ember-soft' : 'text-bone'}`}>{value}</dd>
+      <dd className={`font-display text-xl font-semibold tabular-nums sm:text-2xl ${accent ? 'text-ember-soft' : 'text-bone'}`}>{value}</dd>
     </div>
   );
 }

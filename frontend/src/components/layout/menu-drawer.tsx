@@ -83,7 +83,7 @@ export function MenuDrawer({ open, onClose }: { open: boolean; onClose: () => vo
                   logout();
                   onClose();
                 }}
-                className="flex w-full items-center justify-between rounded-pill px-4 py-3 text-left text-[15px] font-medium text-bone-faint transition hover:bg-char-deep hover:text-bone"
+                className="flex w-full items-center justify-between rounded-pill px-4 py-2.5 text-left text-sm font-medium text-bone-faint transition hover:bg-char-deep hover:text-bone"
               >
                 Sign out
               </button>
