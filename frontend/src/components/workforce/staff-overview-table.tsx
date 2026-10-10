@@ -46,8 +46,8 @@ export function StaffOverviewTable({
 
   return (
     <section className="card !p-0" aria-labelledby="staff-table-heading">
-      <div className="px-4 pb-3 pt-4 sm:px-5 sm:pt-5">
-        <h2 id="staff-table-heading" className="text-lg font-semibold">
+      <div className="px-3.5 pb-3 pt-3.5 sm:px-5 sm:pt-5">
+        <h2 id="staff-table-heading" className="text-base font-semibold sm:text-lg">
           Team
         </h2>
         <p className="mt-0.5 text-sm text-stone-500">Select a person to see their hours, sessions{showPay ? ' and pay' : ''}.</p>
@@ -134,10 +134,10 @@ export function StaffOverviewTable({
           <ul className="divide-y divide-stone-100 border-t border-stone-100 md:hidden">
             {rows.map((r) => (
               <li key={r.user.id}>
-                <button type="button" onClick={() => onSelect(r.user.id)} className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left">
+                <button type="button" onClick={() => onSelect(r.user.id)} className="flex w-full items-start justify-between gap-2.5 px-3.5 py-2.5 text-left sm:gap-3 sm:px-4 sm:py-3">
                   <div className="min-w-0 space-y-1">
-                    <p className="flex flex-wrap items-center gap-2">
-                      <span className="font-medium text-stone-900">{r.user.name}</span>
+                    <p className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                      <span className="text-sm font-medium text-stone-900 sm:text-base">{r.user.name}</span>
                       <Badge tone={ROLE_META[r.user.role].tone}>{ROLE_META[r.user.role].label}</Badge>
                     </p>
                     <State row={r} />
@@ -145,11 +145,11 @@ export function StaffOverviewTable({
                       {hoursText(r.summary.paidMinutes)} of {hoursText(r.summary.scheduledMinutes)} · {r.summary.lateCount} late
                     </p>
                   </div>
-                  {showPay && r.pay ? <p className="shrink-0 font-semibold tabular-nums">{money(r.pay.net)}</p> : null}
+                  {showPay && r.pay ? <p className="shrink-0 text-sm font-semibold tabular-nums sm:text-base">{money(r.pay.net)}</p> : null}
                 </button>
               </li>
             ))}
-            <li className="flex items-center justify-between gap-3 bg-stone-50 px-4 py-3 text-sm font-semibold">
+            <li className="flex items-center justify-between gap-3 bg-stone-50 px-3.5 py-2.5 text-sm font-semibold sm:px-4 sm:py-3">
               <span>
                 Total · {hoursText(totals.paidMinutes)} · {totals.lateCount} late
               </span>

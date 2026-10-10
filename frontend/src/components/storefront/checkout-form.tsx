@@ -137,7 +137,7 @@ export function CheckoutForm({ onBack, onPlaced }: { onBack: () => void; onPlace
     }`;
 
   return (
-    <form onSubmit={placeOrder} className="space-y-5 px-4 py-4 sm:space-y-6 sm:px-5 sm:py-5">
+    <form onSubmit={placeOrder} className="space-y-4 px-4 py-4 sm:space-y-6 sm:px-5 sm:py-5">
       {loadIssue ? (
         <p className="rounded-xl border border-char-hairline bg-char-deep px-3.5 py-2.5 text-xs text-bone-dim">
           {loadIssue} Totals below are approximate.
@@ -234,8 +234,8 @@ export function CheckoutForm({ onBack, onPlaced }: { onBack: () => void; onPlace
         </div>
       </fieldset>
 
-      <div className="rounded-xl border border-char-hairline bg-char-deep p-4">
-        <div className="flex items-center justify-between gap-4">
+      <div className="rounded-xl border border-char-hairline bg-char-deep p-3.5 sm:p-4">
+        <div className="flex items-center justify-between gap-3 sm:gap-4">
           <div>
             <p className="text-sm font-medium text-bone">Flame Points</p>
             <p className="mt-0.5 text-xs text-bone-dim">
@@ -300,7 +300,7 @@ export function CheckoutForm({ onBack, onPlaced }: { onBack: () => void; onPlace
         <CartLines lines={lines} onQty={setQty} onRemove={removeLine} flagged={flagged} disabled={placing} />
       </div>
 
-      <div className="space-y-1.5 border-t border-char-hairline pt-4 text-sm text-bone-dim">
+      <div className="space-y-1.5 border-t border-char-hairline pt-3 text-sm text-bone-dim sm:pt-4">
         <Row label="Subtotal" value={money(subtotal)} />
         {estimate && settings ? (
           <>
@@ -332,10 +332,10 @@ export function CheckoutForm({ onBack, onPlaced }: { onBack: () => void; onPlace
       ) : null}
 
       <div className="flex gap-2 pt-1">
-        <button type="button" className="btn-ghost h-10 flex-1 lg:h-12" onClick={onBack} disabled={placing}>
+        <button type="button" className="btn-ghost flex-1 sm:h-10 lg:h-12" onClick={onBack} disabled={placing}>
           Back to cart
         </button>
-        <button type="submit" className="btn-primary h-10 flex-[2] lg:h-12" disabled={placing || Boolean(missing)}>
+        <button type="submit" className="btn-primary flex-[2] sm:h-10 lg:h-12" disabled={placing || Boolean(missing)}>
           {placing
             ? 'Placing…'
             : payment === 'card'

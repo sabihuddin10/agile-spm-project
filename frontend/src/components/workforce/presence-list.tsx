@@ -18,12 +18,12 @@ function Person({ p, isSelf }: { p: PresenceEntry; isSelf: boolean }) {
     <li className="flex items-start gap-3 py-2.5">
       <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${meta.dot}`} aria-hidden="true" />
       <div className="min-w-0 flex-1">
-        <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-          <span className="font-medium text-stone-900">{p.name}</span>
+        <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 sm:gap-x-2">
+          <span className="text-sm font-medium text-stone-900 sm:text-base">{p.name}</span>
           {isSelf ? <span className="text-xs text-stone-500">(you)</span> : null}
           <Badge tone={ROLE_META[p.role].tone}>{ROLE_META[p.role].label}</Badge>
         </p>
-        <p className="text-sm text-stone-600">
+        <p className="text-xs text-stone-600 sm:text-sm">
           <span className="font-medium">{meta.label}</span>
           {sinceText(p) ? <span> · {sinceText(p)}</span> : null}
         </p>
@@ -56,9 +56,9 @@ export function PresenceList({
   const counts = groups.map((g) => `${g.list.length} ${STATE_META[g.state].label.toLowerCase()}`).join(' · ');
 
   return (
-    <section className="card p-4 sm:p-5" aria-labelledby={`presence-${variant}-heading`}>
+    <section className="card p-3.5 sm:p-5" aria-labelledby={`presence-${variant}-heading`}>
       <div className="mb-2">
-        <h2 id={`presence-${variant}-heading`} className="text-lg font-semibold">
+        <h2 id={`presence-${variant}-heading`} className="text-base font-semibold sm:text-lg">
           {title}
         </h2>
         <p className="mt-0.5 text-sm text-stone-500">{subtitle ?? counts}</p>
@@ -66,7 +66,7 @@ export function PresenceList({
       {people.length === 0 ? (
         <EmptyState title="Nobody to show" />
       ) : variant === 'board' ? (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-3">
           {groups.map((g) => (
             <div key={g.state} className="min-w-0">
               <h3 className="flex items-center gap-2 border-b border-stone-200 pb-1.5 text-xs font-semibold uppercase tracking-wide text-stone-500">

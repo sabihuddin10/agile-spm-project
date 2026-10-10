@@ -97,7 +97,7 @@ export function ChangePasswordForm({ id }: { id?: string }) {
         />
       </div>
       <form onSubmit={submit} noValidate>
-        <fieldset disabled={saving} className="space-y-4">
+        <fieldset disabled={saving} className="space-y-3 sm:space-y-4">
           {needsCurrent ? (
             <div className="sm:w-1/2 sm:pr-2">
               <label htmlFor="password-current" className="label">

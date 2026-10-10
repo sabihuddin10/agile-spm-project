@@ -29,11 +29,11 @@ interface Tile {
 /** KPI tiles: a compact row (label left, number right) on phones, stacked cards from `sm` up. */
 function KpiTiles({ tiles }: { tiles: Tile[] }) {
   return (
-    <dl className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${tiles.length === 4 ? 'xl:grid-cols-4' : 'xl:grid-cols-3'}`}>
+    <dl className={`grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 ${tiles.length === 4 ? 'xl:grid-cols-4' : 'xl:grid-cols-3'}`}>
       {tiles.map((t) => (
-        <div key={t.label} className="card flex min-w-0 items-center justify-between gap-3 !p-4 sm:block">
+        <div key={t.label} className="card flex min-w-0 items-center justify-between gap-3 !p-3 sm:block sm:!p-4">
           <dt className="min-w-0 text-xs font-medium text-stone-500">{t.label}</dt>
-          <dd className="shrink-0 text-2xl font-semibold tabular-nums text-stone-900 sm:mt-1">{t.value}</dd>
+          <dd className="shrink-0 text-xl font-semibold tabular-nums text-stone-900 sm:mt-1 sm:text-2xl">{t.value}</dd>
           <dd className="mt-0.5 hidden text-xs text-stone-500 sm:block">{t.hint}</dd>
         </div>
       ))}
@@ -179,14 +179,14 @@ function WorkforceHubContent() {
           <Spinner label="Loading workforce…" />
         </Card>
       ) : (
-        <div className="space-y-4 sm:space-y-6">
+        <div className="space-y-3 sm:space-y-6">
           <section aria-label={`Totals for ${monthLabel(month)}`}>
             <KpiTiles tiles={tiles} />
           </section>
 
           <PresenceList people={people} selfId={user?.id} title="Who's in now" variant="board" />
 
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:gap-4 xl:grid-cols-3">
             <div className="min-w-0 xl:col-span-2">
               <LazyWorkCharts
                 series={overview.series}
@@ -195,7 +195,7 @@ function WorkforceHubContent() {
                 subtitle={`All visible staff, ${monthLabel(month)}.`}
               />
             </div>
-            <div className="min-w-0 space-y-4">
+            <div className="min-w-0 space-y-3 sm:space-y-4">
               <LazyHoursByRole rows={overview.rows} />
               <LazyLatenessTrend days={overview.series.day} />
             </div>

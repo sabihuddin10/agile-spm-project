@@ -38,10 +38,10 @@ export function OverviewDashboard({ user }: { user: User }) {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <header className="flex flex-wrap items-start justify-between gap-4">
+      <header className="flex flex-wrap items-start justify-between gap-2 sm:gap-4">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl font-bold text-stone-900">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <h1 className="text-xl font-bold text-stone-900 sm:text-2xl">
               {greeting(new Date(now).getHours())}, {firstName}
             </h1>
             <Badge tone={intro.tone}>{titleCase(user.role)}</Badge>

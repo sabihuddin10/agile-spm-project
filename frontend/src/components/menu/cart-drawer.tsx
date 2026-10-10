@@ -140,7 +140,7 @@ export function CartDrawer() {
                     </p>
                     <p className="text-xs text-bone-faint">Tax, service and Flame Points are worked out at checkout.</p>
                     {canOrder ? (
-                      <button type="button" className="btn-primary mt-1 h-10 w-full lg:h-12" onClick={() => setView('checkout')}>
+                      <button type="button" className="btn-primary mt-1 w-full sm:h-10 lg:h-12" onClick={() => setView('checkout')}>
                         Checkout · {money(subtotal)}
                       </button>
                     ) : user ? (
@@ -148,7 +148,7 @@ export function CartDrawer() {
                         Staff place orders from the staff console.
                       </p>
                     ) : (
-                      <Link href="/login" onClick={close} className="btn-primary mt-1 h-10 w-full lg:h-12">
+                      <Link href="/login" onClick={close} className="btn-primary mt-1 w-full sm:h-10 lg:h-12">
                         Sign in to check out
                       </Link>
                     )}

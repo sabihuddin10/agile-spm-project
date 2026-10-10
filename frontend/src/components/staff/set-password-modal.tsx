@@ -71,7 +71,7 @@ export function SetPasswordModal({
         <p className="mb-4 text-sm text-stone-600">
           Type the new password and tell {user.name} what it is. Their old password stops working and they are signed out on every device.
         </p>
-        <fieldset disabled={saving} className="space-y-4">
+        <fieldset disabled={saving} className="space-y-3 sm:space-y-4">
           <div>
             <label htmlFor="set-password-new" className="label">
               New password

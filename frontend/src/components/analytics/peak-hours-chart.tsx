@@ -98,7 +98,7 @@ export function PeakHoursChart({ hours, className = '' }: { hours: AnalyticsDash
               <span className="font-semibold text-stone-900">{peak.avgPerDay} orders/day</span> ({count(peak.orders)} in total).
             </p>
           ) : null}
-          <div className="relative h-56 sm:h-64" role="img" aria-label={description}>
+          <div className="relative h-48 sm:h-64" role="img" aria-label={description}>
             <Bar data={chartData} options={options} />
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-600">

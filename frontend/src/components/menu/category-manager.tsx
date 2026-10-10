@@ -76,7 +76,7 @@ export function CategoryManager({
               {editingId === c.id ? (
                 <form onSubmit={(e) => submitRename(e, c)} className="flex items-center gap-2">
                   <input
-                    className="input !py-1"
+                    className="input"
                     aria-label={`Rename ${c.name}`}
                     maxLength={CATEGORY_NAME_MAX}
                     placeholder="e.g. Desserts"

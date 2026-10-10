@@ -27,15 +27,15 @@ export function TeamPanel({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4">
         {STAFF_ROLE_ORDER.map((role) => {
           const members = roster.filter((u) => u.role === role);
           const suspended = members.filter((u) => !u.active).length;
           return (
-            <div key={role} className="card p-4">
+            <div key={role} className="card grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 p-3 sm:block sm:p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">{ROLE_META[role].plural}</p>
-              <p className="mt-1 text-2xl font-bold tabular-nums text-stone-800">{loading ? '–' : members.length}</p>
-              <p className="text-xs text-stone-500">{suspended ? `${suspended} suspended` : 'All active'}</p>
+              <p className="text-xl font-bold tabular-nums text-stone-800 sm:mt-1 sm:text-2xl">{loading ? '–' : members.length}</p>
+              <p className="col-span-2 text-xs text-stone-500">{suspended ? `${suspended} suspended` : 'All active'}</p>
             </div>
           );
         })}

@@ -12,7 +12,7 @@ export function LowStockBanner({ items }: { items: InventoryItem[] }) {
   return (
     <section
       aria-labelledby="low-stock-heading"
-      className="flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 p-4 sm:flex-row sm:items-start"
+      className="flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 p-3.5 sm:flex-row sm:p-4 sm:items-start"
     >
       <svg className="h-5 w-5 shrink-0 text-red-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
         <path

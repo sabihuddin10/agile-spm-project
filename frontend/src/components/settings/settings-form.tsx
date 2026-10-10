@@ -332,7 +332,7 @@ export function SettingsForm() {
         </div>
       ) : null}
 
-      <fieldset disabled={!editable || saving} className="min-w-0 space-y-4">
+      <fieldset disabled={!editable || saving} className="min-w-0 space-y-3 sm:space-y-4">
         <Card>
           <CardHeader title="Restaurant" subtitle="Printed on invoices and receipts." />
           <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
@@ -374,7 +374,7 @@ export function SettingsForm() {
           </p>
         </Card>
 
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader title="Kitchen" subtitle="Kitchen display." />
             <Field

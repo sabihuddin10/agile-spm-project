@@ -130,7 +130,7 @@ export function SplitDialog({
 
   return (
     <Modal title={`Split bill #${invoice.number}`} onClose={onClose} wide>
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         <div className="flex items-center justify-between gap-3 rounded-lg bg-stone-50 px-3 py-2 text-sm">
           <span className="text-stone-600">Bill total (incl. tax, service &amp; tip)</span>
           <span className="font-semibold tabular-nums">{money(invoice.total)}</span>
@@ -258,7 +258,7 @@ export function SplitDialog({
           <p className="text-xs text-stone-500">Add any tip before splitting — changing the tip later clears the split.</p>
         ) : null}
 
-        <div className="flex flex-col-reverse gap-2 border-t border-stone-200 pt-4 sm:flex-row sm:justify-end">
+        <div className="flex flex-col-reverse gap-2 border-t border-stone-200 pt-3 sm:flex-row sm:pt-4 sm:justify-end">
           <button type="button" className="btn-secondary" onClick={onClose} disabled={pending !== null}>
             Cancel
           </button>

@@ -79,53 +79,57 @@ export function ActiveOrderCard({
     order.status === 'served' && order.paymentStatus !== 'unpaid' ? 'Enjoy your meal!' : STEP_HINT[order.status];
 
   return (
-    <article className="rounded-2xl border border-char-hairline bg-char-deep p-4 sm:p-5">
-      <header className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h4 className="font-display text-lg font-semibold tracking-tight text-bone">Order #{order.number}</h4>
-          <p className="mt-0.5 text-xs text-bone-faint">
-            Placed {formatTime(order.createdAt)} · {timeAgo(order.createdAt, now)}
-          </p>
+    <article className="rounded-2xl border border-char-hairline bg-char-deep p-3.5 sm:p-5">
+      {/* Title and status in one wrapping row; time underneath. */}
+      <header className="space-y-0.5">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          <h4 className="font-display text-base font-semibold tracking-tight text-bone sm:text-lg">Order #{order.number}</h4>
+          <StatusPill tone={status.tone}>{stepLabel(order.status, order.fulfillment)}</StatusPill>
         </div>
-        <StatusPill tone={status.tone}>{stepLabel(order.status, order.fulfillment)}</StatusPill>
+        <p className="text-xs text-bone-faint">
+          Placed {formatTime(order.createdAt)} · {timeAgo(order.createdAt, now)}
+        </p>
       </header>
 
-      <div className="mt-4">
+      <div className="mt-3 sm:mt-4">
         <OrderProgress order={order} />
-        {hint ? <p className="mt-3 text-sm text-bone-dim">{hint}</p> : null}
+        {hint ? <p className="mt-2.5 text-sm text-bone-dim sm:mt-3">{hint}</p> : null}
       </div>
 
-      <ul className="mt-4 divide-y divide-char-hairline border-y border-char-hairline">
+      <ul className="mt-3 divide-y divide-char-hairline border-y border-char-hairline sm:mt-4">
         {order.items.map((i) => {
           const itemStatus = ITEM_STATUS[i.status];
           const options = modifierText(i.modifiers);
           return (
-            <li key={i.id} className="flex items-start justify-between gap-3 py-2.5">
-              <div className="min-w-0">
+            <li key={i.id} className="flex items-start gap-2.5 py-2 sm:gap-3 sm:py-2.5">
+              <div className="min-w-0 flex-1">
                 <p className="text-sm text-bone">
                   {i.qty} × {i.name}
                 </p>
                 {options ? <p className="text-xs text-bone-faint">{options}</p> : null}
               </div>
-              <StatusPill tone={itemStatus.tone}>{itemStatus.label}</StatusPill>
+              <StatusPill tone={itemStatus.tone} className="shrink-0">
+                {itemStatus.label}
+              </StatusPill>
             </li>
           );
         })}
       </ul>
 
-      <div className="mt-3 grid gap-1 text-sm sm:grid-cols-2">
+      <div className="mt-2.5 grid gap-1 text-sm sm:mt-3 sm:grid-cols-2">
         <p className="text-bone-dim">{fulfillmentText(order)}</p>
         <p className="text-bone-dim sm:text-right">{paymentText(order)}</p>
       </div>
       {order.notes ? <p className="mt-1 text-xs text-bone-faint">Note: “{order.notes}”</p> : null}
 
-      <footer className="mt-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+      {/* Total and receipt left, cancel (or why not) right — one row on phones. */}
+      <footer className="mt-3 flex items-center justify-between gap-3 sm:mt-4">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <p className="text-base font-semibold text-bone">{money(order.total)}</p>
           {onReceipt && order.paymentStatus !== 'unpaid' ? (
             <button
               type="button"
-              className="rounded-pill border border-char-hairline px-3 py-1 text-xs font-medium text-bone-dim transition hover:border-ember/40 hover:text-bone disabled:opacity-50"
+              className="btn-sm btn-secondary"
               onClick={() => onReceipt(order)}
               disabled={receiptLoading}
               aria-label={`Receipt for order ${order.number}`}
@@ -137,14 +141,14 @@ export function ActiveOrderCard({
         {order.status === 'placed' ? (
           <button
             type="button"
-            className="btn-sm btn-ghost !text-red-300 hover:!text-red-200"
+            className="btn-sm btn-ghost shrink-0 !text-red-300 hover:!text-red-200"
             onClick={() => onCancel(order)}
             disabled={cancelling}
           >
             {cancelling ? 'Cancelling…' : 'Cancel order'}
           </button>
         ) : (
-          <span className="text-xs text-bone-faint">Can no longer be cancelled online</span>
+          <span className="min-w-0 text-right text-xs text-bone-faint">Can no longer be cancelled online</span>
         )}
       </footer>
     </article>

@@ -54,7 +54,7 @@ export function MyReservations() {
   return (
     <Card>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="font-display text-xl font-semibold tracking-tight text-bone">My bookings</h3>
+        <h3 className="font-display text-base font-semibold tracking-tight text-bone sm:text-xl">My bookings</h3>
         <Link href="/book" className="text-sm text-ember-soft underline-offset-2 hover:underline">
           Book a table
         </Link>
@@ -86,9 +86,9 @@ export function MyReservations() {
             return (
               <li
                 key={r.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-char-hairline bg-char-deep px-4 py-3"
+                className="flex items-start gap-2.5 rounded-xl border border-char-hairline bg-char-deep px-2.5 py-2 sm:items-center sm:gap-3 sm:px-4 sm:py-3"
               >
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-bone">
                     {formatDate(r.date)} at {r.time}
                   </p>
@@ -98,7 +98,8 @@ export function MyReservations() {
                   </p>
                   {r.specialRequests ? <p className="mt-0.5 text-xs text-bone-faint">“{r.specialRequests}”</p> : null}
                 </div>
-                <div className="flex items-center gap-2">
+                {/* Status over Cancel on phones, side by side from sm. */}
+                <div className="flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-2">
                   <StatusPill tone={status.tone}>{status.label}</StatusPill>
                   {CANCELLABLE.includes(r.status) ? (
                     <button

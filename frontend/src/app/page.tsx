@@ -31,7 +31,7 @@ export default function HomePage() {
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(60%_100%_at_50%_0%,rgba(226,87,27,0.35),transparent)]"
               />
-              <div className="relative p-5 sm:p-7">
+              <div className="relative p-4 sm:p-7">
                 <p className="font-display text-2xl font-semibold tracking-tight text-bone">
                   Tonight at the pass
                 </p>
@@ -39,7 +39,7 @@ export default function HomePage() {
                   Kitchen open all week, noon to ten. Orders off the pass in about half an hour;
                   tables book from six.
                 </p>
-                <div className="mt-6 space-y-2.5 divide-y divide-char-hairline text-sm">
+                <div className="mt-4 space-y-2.5 divide-y divide-char-hairline text-sm sm:mt-6">
                   <p className="flex items-baseline justify-between pt-2.5 first:pt-0">
                     <span className="text-bone-dim">Kitchen</span>
                     <span className="text-bone">12:00–22:00</span>
@@ -53,7 +53,7 @@ export default function HomePage() {
                     <span className="text-bone">from 18:00</span>
                   </p>
                 </div>
-                <p className="mt-6 text-sm text-ember-soft">
+                <p className="mt-4 text-sm text-ember-soft sm:mt-6">
                   <Link href="/book" className="hover:text-bone">
                     Reserve tonight
                   </Link>

@@ -104,7 +104,7 @@ export function MyOrders({ onActivity }: { onActivity?: () => void }) {
     <section id="orders" className="scroll-mt-24" aria-labelledby="orders-title">
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 id="orders-title" className="font-display text-xl font-semibold tracking-tight text-bone">
+          <h3 id="orders-title" className="font-display text-base font-semibold tracking-tight text-bone sm:text-xl">
             Your orders
           </h3>
           {orders ? (
@@ -124,7 +124,7 @@ export function MyOrders({ onActivity }: { onActivity?: () => void }) {
             <Spinner label="Loading your orders…" />
           )
         ) : (
-          <div className="mt-5 space-y-8">
+          <div className="mt-4 space-y-6 sm:mt-5 sm:space-y-8">
             <div>
               <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-bone-faint">
                 In progress {active.length > 0 ? `(${active.length})` : ''}
@@ -137,7 +137,7 @@ export function MyOrders({ onActivity }: { onActivity?: () => void }) {
                   </Link>
                 </p>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {active.map((o) => (
                     <ActiveOrderCard
                       key={o.id}

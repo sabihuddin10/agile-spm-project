@@ -101,7 +101,7 @@ export function PublicMenu({ compact = false }: { compact?: boolean }) {
   return (
     <div>
       {customerId && allergies.length > 0 ? (
-        <p className="mb-6 rounded-xl border border-char-hairline bg-char-raised px-4 py-3 text-sm text-bone-dim">
+        <p className="mb-4 rounded-xl border border-char-hairline bg-char-raised px-3.5 py-2.5 text-sm text-bone-dim sm:mb-6 sm:px-4 sm:py-3">
           We&apos;re flagging dishes that contain <span className="font-medium text-bone">{allergies.join(', ')}</span>{' '}
           from your allergy list.{' '}
           <Link href="/account" className="text-ember-soft underline-offset-2 hover:underline">
@@ -129,16 +129,16 @@ export function PublicMenu({ compact = false }: { compact?: boolean }) {
         </div>
       ) : null}
 
-      <div className="space-y-8 md:space-y-12">
+      <div className="space-y-6 sm:space-y-8 md:space-y-12">
         {visible.map((cat) => (
           <section key={cat.id}>
-            <div className="mb-4 flex items-center gap-3">
+            <div className="mb-3 flex items-center gap-3 sm:mb-4">
               <h2 className="font-display text-2xl font-semibold tracking-tight text-bone">{cat.name}</h2>
               <span className="rounded-full border border-char-hairline bg-char-raised px-2.5 py-0.5 text-xs text-bone-faint">
                 {cat.items?.length ?? 0} {(cat.items?.length ?? 0) === 1 ? 'dish' : 'dishes'}
               </span>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
               {(cat.items ?? []).map((item) => (
                 <MenuItemCard key={item.id} item={item} onAdd={add} canOrder={canOrder} allergies={allergies} />
               ))}
