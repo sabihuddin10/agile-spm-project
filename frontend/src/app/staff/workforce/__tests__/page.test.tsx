@@ -3,7 +3,7 @@
  * (workforce-mock) as an admin and as a manager. Arrange-Act-Assert.
  */
 import { useSyncExternalStore } from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import WorkforcePage from '@/app/staff/workforce/page';
@@ -72,6 +72,15 @@ function signIn(user: User) {
   storeAuth('token', user);
   vi.mocked(useAuth).mockReturnValue({ user } as unknown as ReturnType<typeof useAuth>);
 }
+
+/*
+ * The charts load through next/dynamic. Warm those modules once up front so the
+ * first test that renders them doesn't pay Vitest's on-demand transform cost
+ * inside its own timeout (which flakes on a busy machine).
+ */
+beforeAll(async () => {
+  await Promise.all([import('@/components/workforce/work-charts'), import('@/components/workforce/team-charts')]);
+}, 30_000);
 
 beforeEach(() => {
   localStorage.clear();
