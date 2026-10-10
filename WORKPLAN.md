@@ -27,8 +27,8 @@ If a phase grows too big, it is split, never stretched. Update this file wheneve
 | 5 | Admin UI polish, batch 2: staff, workforce, settings | 15 | [x] |
 | 6a | Live validation, submit disabled until valid, customer rules | 16 | [x] |
 | 6b | Screen-side checks matching server limits | 16 | [x] |
-| 6c | Placeholders on every input | 16 | [~] |
-| 7a | Hardening and browser checks | 16 | [ ] |
+| 6c | Placeholders on every input | 16 | [x] |
+| 7a | Hardening and browser checks | 16 | [~] |
 | 7b | Branch and worktree clean-up (needs team OK) | 16 | [ ] |
 | 8 | Open product questions | 16 | [ ] |
 
@@ -97,7 +97,7 @@ If a phase grows too big, it is split, never stretched. Update this file wheneve
 
 **Left out of this phase on purpose:** shift form placeholder and 500-character notes limit → Phase 6.
 
-## Phase 6: Formik/Yup-style validation + placeholders [~]
+## Phase 6: Formik/Yup-style validation + placeholders [x]
 
 **Goal:** forms behave the way users expect from modern sites.
 
@@ -113,8 +113,8 @@ If a phase grows too big, it is split, never stretched. Update this file wheneve
   - inventory
   - billing
   - tables
-- [~] **6c** (fc8745e, merging): a correct, realistic placeholder on every text input (labels stay), with darker placeholder text so it stays readable
-- [~] **6c** (a938073): shift form placeholder, 500-character notes limit and counter (moved from Phase 5)
+- [x] **6c** (fc8745e, released to `main` as 52bd982: 397 server tests, 945 frontend tests): a correct, realistic placeholder on every text input (labels stay), with darker placeholder text so it stays readable
+- [x] **6c** (a938073): shift form placeholder, 500-character notes limit and counter (moved from Phase 5)
 - [x] **6b**: block a 51st order line in the cart and the staff order editor (server limit is 50)
 
 **Released in three slices, in order.** Each slice is one commit on `feat/form-guards`, merged and released on its own:
@@ -124,13 +124,15 @@ If a phase grows too big, it is split, never stretched. Update this file wheneve
 
 **Done when (each slice):** its tests are updated, all six checks pass, and it is merged into `main` before the next slice merges.
 
-## Phase 7a: Hardening and browser checks [ ]
+## Phase 7a: Hardening and browser checks [~]
 
 - [ ] **Reconnect both Vercel projects to GitHub (needs the user or Burhan).** Found 2026-10-10: neither `plate-and-flame-web` nor `plate-and-flame-api` deploys from `main`, so the live site is about 3 days old and `/staff/workforce` returns 404. Set web root `frontend` and api root `server`, production branch `main`, then redeploy.
-- [ ] Browser check of the phone layouts and print view, which jsdom cannot test
-- [ ] Phone card list for the customer table, which has no fixed width today
-- [ ] Page test for menu category delete through the confirm dialog
-- [ ] Inventory text fields: treat `null` as empty instead of the string "null"
+- [ ] Browser check of the phone layouts and print view, which jsdom cannot test (manual, needs a person)
+- [~] Phone card list for the customer table (a193847, merging)
+- [~] Page test for menu category delete through the confirm dialog (a193847, merging)
+- [~] Inventory text fields: treat `null` as empty instead of the string "null" (0e17ef2, merging)
+- [~] "(optional)" field hint made readable, stone-500 (92ac7cf, merging)
+- [x] Audit of the interrupted staff/workforce/settings helper: all 9 brief tasks are on `main`; the remaining story IDs are only in code comments
 
 ## Phase 7b: Clean-up [ ]
 
