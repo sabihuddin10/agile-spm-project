@@ -337,10 +337,10 @@ export function SettingsForm() {
           <CardHeader title="Restaurant" subtitle="Printed on invoices and receipts." />
           <div className="grid gap-4 sm:grid-cols-2">
             <Field id="setting-restaurantName" label="Restaurant name" error={errors.restaurantName} hint="Shown at the top of every bill and receipt.">
-              {input('restaurantName', { maxLength: 80 })}
+              {input('restaurantName', { maxLength: 80, placeholder: 'e.g. Plate & Flame' })}
             </Field>
             <Field id="setting-address" label="Address" error={errors.address} hint="Printed under the name on receipts.">
-              {input('address', { maxLength: 160 })}
+              {input('address', { maxLength: 160, placeholder: 'e.g. 12 MM Alam Road, Gulberg III, Lahore' })}
             </Field>
           </div>
         </Card>
@@ -352,13 +352,13 @@ export function SettingsForm() {
           />
           <div className="grid gap-4 sm:grid-cols-3">
             <Field id="setting-taxPercent" label="Tax rate" suffix="%" error={errors.taxPercent} hint="0–50%. Charged on the subtotal after any Flame Point discount.">
-              {input('taxPercent', { type: 'number', inputMode: 'decimal', min: 0, max: 50, step: 0.01, padRight: true })}
+              {input('taxPercent', { type: 'number', inputMode: 'decimal', min: 0, max: 50, step: 0.01, padRight: true, placeholder: '16' })}
             </Field>
             <Field id="setting-servicePercent" label="Service charge (dine-in)" suffix="%" error={errors.servicePercent} hint="0–50%. Added to dine-in bills only; online orders skip it.">
-              {input('servicePercent', { type: 'number', inputMode: 'decimal', min: 0, max: 50, step: 0.01, padRight: true })}
+              {input('servicePercent', { type: 'number', inputMode: 'decimal', min: 0, max: 50, step: 0.01, padRight: true, placeholder: '10' })}
             </Field>
             <Field id="setting-pointValue" label="Flame Point value" prefix="$" error={errors.pointValue} hint="$0–$1. What one point is worth when a customer redeems it.">
-              {input('pointValue', { type: 'number', inputMode: 'decimal', min: 0, max: 1, step: 0.01, padLeft: true })}
+              {input('pointValue', { type: 'number', inputMode: 'decimal', min: 0, max: 1, step: 0.01, padLeft: true, placeholder: '0.05' })}
             </Field>
           </div>
           {exampleOk ? (
@@ -384,7 +384,7 @@ export function SettingsForm() {
               error={errors.kitchenDelayMinutes}
               hint="1–240 min. The KDS flags tickets waiting longer than this as delayed."
             >
-              {input('kitchenDelayMinutes', { type: 'number', inputMode: 'numeric', min: 1, max: 240, step: 1, padRight: true })}
+              {input('kitchenDelayMinutes', { type: 'number', inputMode: 'numeric', min: 1, max: 240, step: 1, padRight: true, placeholder: '20' })}
             </Field>
           </Card>
 
@@ -434,7 +434,7 @@ export function SettingsForm() {
               error={errors.reservationDurationMinutes}
               hint="30–300 min. How long each booking holds its table when checking availability."
             >
-              {input('reservationDurationMinutes', { type: 'number', inputMode: 'numeric', min: 30, max: 300, step: 5, padRight: true })}
+              {input('reservationDurationMinutes', { type: 'number', inputMode: 'numeric', min: 30, max: 300, step: 5, padRight: true, placeholder: '90' })}
             </Field>
             <Field
               id="setting-reservationGraceMinutes"
@@ -443,7 +443,7 @@ export function SettingsForm() {
               error={errors.reservationGraceMinutes}
               hint="0–120 min. After this, a confirmed guest who hasn't arrived is flagged late and can be marked a no-show."
             >
-              {input('reservationGraceMinutes', { type: 'number', inputMode: 'numeric', min: 0, max: 120, step: 1, padRight: true })}
+              {input('reservationGraceMinutes', { type: 'number', inputMode: 'numeric', min: 0, max: 120, step: 1, padRight: true, placeholder: '15' })}
             </Field>
           </div>
           {timeSlots.length ? (
@@ -463,7 +463,7 @@ export function SettingsForm() {
               error={errors.lateGraceMinutes}
               hint="0–60 min. A check-in later than this after the shift start is marked late."
             >
-              {input('lateGraceMinutes', { type: 'number', inputMode: 'numeric', min: 0, max: 60, step: 1, padRight: true })}
+              {input('lateGraceMinutes', { type: 'number', inputMode: 'numeric', min: 0, max: 60, step: 1, padRight: true, placeholder: '10' })}
             </Field>
             <Field
               id="setting-latePenalty"
@@ -472,7 +472,7 @@ export function SettingsForm() {
               error={errors.latePenalty}
               hint="$0–$100. Taken off pay for each late session."
             >
-              {input('latePenalty', { type: 'number', inputMode: 'decimal', min: 0, max: 100, step: 0.5, padLeft: true })}
+              {input('latePenalty', { type: 'number', inputMode: 'decimal', min: 0, max: 100, step: 0.5, padLeft: true, placeholder: '5.00' })}
             </Field>
             <Field
               id="setting-autoBreakAfterHours"
@@ -481,7 +481,7 @@ export function SettingsForm() {
               error={errors.autoBreakAfterHours}
               hint="1–12 h. Sessions longer than this with no break recorded get an automatic unpaid break."
             >
-              {input('autoBreakAfterHours', { type: 'number', inputMode: 'decimal', min: 1, max: 12, step: 0.5, padRight: true })}
+              {input('autoBreakAfterHours', { type: 'number', inputMode: 'decimal', min: 1, max: 12, step: 0.5, padRight: true, placeholder: '6' })}
             </Field>
             <Field
               id="setting-autoBreakMinutes"
@@ -490,7 +490,7 @@ export function SettingsForm() {
               error={errors.autoBreakMinutes}
               hint="0–120 min. Deducted from those sessions. Recorded breaks are always unpaid."
             >
-              {input('autoBreakMinutes', { type: 'number', inputMode: 'numeric', min: 0, max: 120, step: 5, padRight: true })}
+              {input('autoBreakMinutes', { type: 'number', inputMode: 'numeric', min: 0, max: 120, step: 5, padRight: true, placeholder: '30' })}
             </Field>
           </div>
         </Card>

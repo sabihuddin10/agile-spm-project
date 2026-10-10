@@ -60,6 +60,7 @@ export function WageEditor({
             min={0}
             max={500}
             step={0.25}
+            placeholder="e.g. 15.50"
             value={value}
             onChange={(e) => {
               setValue(e.target.value);
