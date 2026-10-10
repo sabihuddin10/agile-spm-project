@@ -24,7 +24,7 @@ If a phase grows too big, it is split, never stretched. Update this file wheneve
 | 2 | Web `/api/health` page on the main site | 14 | [x] |
 | 3 | Shared UI base + late-booking fix | 15 | [x] |
 | 4 | Admin UI polish, batch 1 + input safety | 15 | [x] |
-| 5 | Admin UI polish, batch 2: staff, workforce, settings | 15 | [~] |
+| 5 | Admin UI polish, batch 2: staff, workforce, settings | 15 | [x] |
 | 6a | Live validation, submit disabled until valid, customer rules | 16 | [~] |
 | 6b | Screen-side checks matching server limits | 16 | [~] |
 | 6c | Placeholders on every input | 16 | [~] |
@@ -84,14 +84,14 @@ If a phase grows too big, it is split, never stretched. Update this file wheneve
 - Category delete through the dialog has no page test, because CategoryManager is mocked → Phase 7.
 - Inventory text fields sent as `null` are stored as the string "null" (old behaviour) → Phase 7.
 
-## Phase 5: Admin UI polish, batch 2 [~]
+## Phase 5: Admin UI polish, batch 2 [x]
 
 **Goal:** the same polish for the staff, workforce and settings screens.
 
 - [x] Row-actions menu, confirm dialogs, lazy-loaded charts, phone-first tables (branch verified: 854/854 tests, build OK)
 - [x] Fix: warm the lazy chart modules before the workforce page tests (14b7ae5)
 - [x] Merged into `development` after the Phase 4 release
-- [ ] Gate passes and it is released to `main`
+- [x] Gate passed (396 server tests, 920 frontend tests, build) and released to `main` as 64c50c3 on 2026-10-10
 
 **Done when:** the branch is merged and released. Nothing else is in scope.
 
@@ -101,10 +101,10 @@ If a phase grows too big, it is split, never stretched. Update this file wheneve
 
 **Goal:** forms behave the way users expect from modern sites.
 
-- [ ] Errors update live while typing; an untouched form shows no red
-- [ ] Submit button stays disabled until the whole form is valid, with a short note saying what is missing
-- [ ] Live password checklist on every password field
-- [ ] Customers need a real name (3+ letters or two words) plus an email or a phone, enforced on the server as well
+- [~] **6a** (06866dc, merging): errors update live while typing; an untouched form shows no red
+- [~] **6a**: submit button stays disabled until the whole form is valid, with a short note saying what is missing
+- [~] **6a**: live password checklist on every password field
+- [~] **6a**: names need 3+ letters or two words, so "SS" is refused; customers need an email or a phone, enforced on the server as well
 - [ ] Staff forms check the same rules as the server before submitting:
   - staff booking
   - customer
