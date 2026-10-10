@@ -2,11 +2,12 @@
 
 import type { Reservation, Table } from '@/types';
 import { Badge } from '@/components/ui/badge';
+import { CheckIcon } from '@/components/ui/icons';
 import { RESERVATION_STATUS, formatDateTime } from '@/lib/format';
 
 /**
- * One booking in the reservation book with its staff actions: confirm (US7.2),
- * assign a table (US7.3), seat, cancel and no-show (US7.4).
+ * One booking in the reservation book with its staff actions: confirm, assign
+ * a table, seat, cancel and no-show.
  */
 export function ReservationCard({
   reservation: r,
@@ -71,7 +72,10 @@ export function ReservationCard({
             <span className="font-medium text-stone-700">{r.tableNumber ? `Table ${r.tableNumber}` : 'Not assigned'}</span>
           </span>
           {r.notifiedAt ? (
-            <span className="text-emerald-700">✓ Confirmation sent {formatDateTime(r.notifiedAt)}</span>
+            <span className="inline-flex items-center gap-1 text-emerald-700">
+              <CheckIcon className="h-3.5 w-3.5" />
+              Confirmation sent {formatDateTime(r.notifiedAt)}
+            </span>
           ) : null}
           {r.seatedAt ? <span>Seated {formatDateTime(r.seatedAt)}</span> : null}
           {r.cancelledAt ? <span>Cancelled {formatDateTime(r.cancelledAt)}</span> : null}
@@ -98,7 +102,7 @@ export function ReservationCard({
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-[11px] leading-snug text-stone-500">
+            <p className="mt-1 text-xs leading-snug text-stone-500">
               {choices.length === 0
                 ? `No table seats ${r.partySize}.`
                 : 'Once confirmed, the table shows Reserved on the floor plan from an hour before the booking.'}
@@ -107,12 +111,12 @@ export function ReservationCard({
 
           <div className="flex flex-wrap gap-1.5">
             {r.status === 'requested' ? (
-              <button type="button" className="btn-primary !px-3 !py-1.5 text-xs" disabled={busy} onClick={onConfirm}>
+              <button type="button" className="btn-sm btn-primary" disabled={busy} onClick={onConfirm}>
                 Confirm
               </button>
             ) : null}
             {r.status === 'confirmed' ? (
-              <button type="button" className="btn-primary !px-3 !py-1.5 text-xs" disabled={busy} onClick={onSeat}>
+              <button type="button" className="btn-sm btn-primary" disabled={busy} onClick={onSeat}>
                 Seat party
               </button>
             ) : null}
@@ -120,8 +124,9 @@ export function ReservationCard({
               <span title={noShowHint}>
                 <button
                   type="button"
-                  className="btn-secondary !px-3 !py-1.5 text-xs"
+                  className="btn-sm btn-secondary"
                   title={noShowHint}
+                  aria-describedby={!r.late ? `noshow-hint-${r.id}` : undefined}
                   disabled={busy || !r.late}
                   onClick={onNoShow}
                 >
@@ -131,13 +136,18 @@ export function ReservationCard({
             ) : null}
             <button
               type="button"
-              className="btn-ghost !px-3 !py-1.5 text-xs text-red-600 hover:bg-red-50"
+              className="btn-sm btn-ghost text-red-700 hover:bg-red-50"
               disabled={busy}
               onClick={onCancel}
             >
               Cancel
             </button>
           </div>
+          {r.status === 'confirmed' && !r.late ? (
+            <p id={`noshow-hint-${r.id}`} className="text-xs text-stone-500">
+              No-show becomes available after the grace period.
+            </p>
+          ) : null}
         </div>
       ) : null}
     </li>

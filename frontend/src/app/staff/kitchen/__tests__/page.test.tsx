@@ -66,6 +66,34 @@ describe('KitchenPage', () => {
     expect(screen.getByText('Nothing at the pass')).toBeInTheDocument();
   });
 
+  it('shows the delay threshold as a neutral note while nothing is late', async () => {
+    // Arrange
+    vi.mocked(useAuth).mockReturnValue({ user: makeUser() } as unknown as ReturnType<typeof useAuth>);
+    vi.mocked(orderApi.kitchen).mockResolvedValue(
+      makeKitchen({ queue: [makeOrder({ confirmedAt: new Date().toISOString() })], delayMinutes: 20 }),
+    );
+
+    // Act
+    render(<KitchenPage />);
+
+    // Assert
+    const note = await screen.findByText('Flag after 20 min');
+    expect(note).toHaveClass('bg-stone-100');
+    expect(note).not.toHaveClass('bg-red-100');
+  });
+
+  it('turns the delay threshold red once a ticket is late', async () => {
+    // Arrange
+    vi.mocked(useAuth).mockReturnValue({ user: makeUser() } as unknown as ReturnType<typeof useAuth>);
+    vi.mocked(orderApi.kitchen).mockResolvedValue(makeKitchen({ queue: [makeOrder()], delayMinutes: 15 }));
+
+    // Act
+    render(<KitchenPage />);
+
+    // Assert
+    expect(await screen.findByText('Flag after 15 min')).toHaveClass('bg-red-100');
+  });
+
   it('shows an error state with a retry button when the queue fails to load', async () => {
     // Arrange
     vi.mocked(useAuth).mockReturnValue({ user: makeUser() } as unknown as ReturnType<typeof useAuth>);

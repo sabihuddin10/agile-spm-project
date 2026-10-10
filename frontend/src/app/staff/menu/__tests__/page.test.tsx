@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import MenuPage from '@/app/staff/menu/page';
 import { useAuth } from '@/context/auth-context';
@@ -19,10 +19,13 @@ vi.mock('@/lib/api', async () => {
   };
 });
 vi.mock('@/components/menu/menu-item-list', () => ({
-  MenuItemList: ({ categories }: { categories: MenuCategory[] }) => (
+  MenuItemList: ({ categories, onDelete }: { categories: MenuCategory[]; onDelete: (i: MenuItem) => void }) => (
     <div data-testid="menu-item-list">
       {categories.flatMap((c) => c.items ?? []).map((i) => (
-        <span key={i.id}>{i.name}</span>
+        <span key={i.id}>
+          <span>{i.name}</span>
+          <button onClick={() => onDelete(i)}>{`Delete ${i.name}`}</button>
+        </span>
       ))}
     </div>
   ),
@@ -145,5 +148,47 @@ describe('MenuPage', () => {
     // Assert
     await waitFor(() => expect(menuApi.createCategory).toHaveBeenCalledWith('Desserts'));
     expect(toastFn).toHaveBeenCalledWith(expect.stringContaining('Desserts'), 'success');
+  });
+
+  it('describes the page without sprint or user-story labels', async () => {
+    // Arrange
+    vi.mocked(useAuth).mockReturnValue({ user: makeUser() } as unknown as ReturnType<typeof useAuth>);
+    vi.mocked(menuApi.get).mockResolvedValue({ menu: [makeCategory()], tags: [], allergens: [] });
+
+    // Act
+    render(<MenuPage />);
+    await screen.findByText('Margherita Pizza');
+
+    // Assert
+    expect(screen.getByText(/items, categories, modifiers with prices/i)).toBeInTheDocument();
+    expect(screen.queryByText(/sprint \d/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/US2\./)).not.toBeInTheDocument();
+  });
+
+  it('deletes a menu item only after confirming in the dialog', async () => {
+    // Arrange
+    vi.mocked(useAuth).mockReturnValue({ user: makeUser() } as unknown as ReturnType<typeof useAuth>);
+    vi.mocked(menuApi.get).mockResolvedValue({ menu: [makeCategory()], tags: [], allergens: [] });
+    vi.mocked(menuApi.removeItem).mockResolvedValue({ deleted: true } as never);
+    const user = userEvent.setup({ delay: null });
+    render(<MenuPage />);
+    await screen.findByText('Margherita Pizza');
+
+    // Act — cancel first
+    await user.click(screen.getByRole('button', { name: 'Delete Margherita Pizza' }));
+    await user.click(
+      within(screen.getByRole('dialog', { name: 'Delete Margherita Pizza?' })).getByRole('button', { name: 'Cancel' }),
+    );
+
+    // Assert
+    expect(menuApi.removeItem).not.toHaveBeenCalled();
+
+    // Act — then confirm
+    await user.click(screen.getByRole('button', { name: 'Delete Margherita Pizza' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete item' }));
+
+    // Assert
+    await waitFor(() => expect(menuApi.removeItem).toHaveBeenCalledWith('item_1'));
+    expect(toastFn).toHaveBeenCalledWith('Margherita Pizza deleted.', 'success');
   });
 });

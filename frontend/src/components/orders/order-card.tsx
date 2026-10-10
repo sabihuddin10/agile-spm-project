@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import Link from 'next/link';
 import type { MenuItem, Order, Role, Table } from '@/types';
 import { orderApi } from '@/lib/api';
@@ -24,13 +24,14 @@ import { OrderProgress } from './order-progress';
 import { ACTIVE_ORDER_STATUSES, lineTotal } from './labels';
 
 /**
- * One live order on the floor view. Shows lifecycle status + progress (US3.3),
- * per-item status with "Serve" on ready dishes and "Mark served" (US3.4), the
- * table or pickup/delivery details with table assignment (US3.5, US6.3), the
- * guest's allergies, dietary notes and order notes (US1.5), and the
- * confirm / edit / cancel actions for placed orders (US3.2).
+ * One live order on the floor view. Shows lifecycle status + progress,
+ * per-item status with "Serve" on ready dishes and "Mark served", the table or
+ * pickup/delivery details with table assignment, the guest's allergies,
+ * dietary notes and order notes, and the confirm / edit / cancel actions for
+ * placed orders. Memoised: the floor view polls every few seconds and only
+ * cards whose order actually changed should re-render.
  */
-export function OrderCard({
+export const OrderCard = memo(function OrderCard({
   order,
   role,
   tables,
@@ -62,6 +63,7 @@ export function OrderCard({
   const flags = orderAllergyFlags(order, menuById);
   const flaggedDishes = order.items.filter((i) => flags[i.id]).map((i) => i.name);
   const readyCount = order.items.filter((i) => i.status === 'ready').length;
+  const actionsDisabled = Boolean(busy);
 
   async function run(key: string, action: () => Promise<{ order: Order }>, success: (o: Order) => string) {
     setBusy(key);
@@ -84,7 +86,7 @@ export function OrderCard({
       <Badge tone="blue">Table {order.tableNumber}</Badge>
     ) : canEdit && active ? (
       <select
-        className="input !w-44 !py-1 !pl-2 !pr-8 text-xs"
+        className="input !w-48 !py-1.5 !pl-2 !pr-8 text-sm"
         aria-label={`Assign a table to order #${order.number}`}
         value=""
         disabled={Boolean(busy)}
@@ -111,7 +113,8 @@ export function OrderCard({
 
   return (
     <article
-      className={`card flex flex-col gap-4 !p-4 sm:!p-5 ${
+      id={`order-${order.number}`}
+      className={`card flex scroll-mt-6 flex-col gap-4 !p-4 target:ring-2 target:ring-brand-500 sm:!p-5 ${
         order.status === 'ready' ? 'border-emerald-300 ring-1 ring-emerald-200' : order.status === 'placed' ? 'border-amber-200' : ''
       }`}
       aria-label={`Order #${order.number}`}
@@ -184,7 +187,7 @@ export function OrderCard({
                 className={`flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3 py-2 ${ready ? 'bg-emerald-50' : ''}`}
               >
                 <div className="min-w-0 flex-1 basis-36">
-                  <p className={`text-sm ${item.status === 'served' ? 'text-stone-400' : 'text-stone-800'}`}>
+                  <p className={`text-sm ${item.status === 'served' ? 'text-stone-500 line-through' : 'text-stone-800'}`}>
                     <span className="font-semibold">{item.qty}×</span> {item.name}
                   </p>
                   {item.modifiers.length ? <p className="text-xs text-stone-500">{modifierText(item.modifiers)}</p> : null}
@@ -198,11 +201,11 @@ export function OrderCard({
                   ) : null}
                 </div>
                 <Badge tone={itemStatus.tone}>{itemStatus.label}</Badge>
-                <span className="w-16 text-right text-sm text-stone-600">{money(lineTotal(item.unitPrice, item.qty))}</span>
+                <span className="w-16 text-right text-sm tabular-nums text-stone-600">{money(lineTotal(item.unitPrice, item.qty))}</span>
                 {ready && canServe ? (
                   <button
                     type="button"
-                    className="btn-primary !px-2.5 !py-1 text-xs"
+                    className="btn-sm btn-primary"
                     disabled={Boolean(busy)}
                     onClick={() =>
                       run(
@@ -225,19 +228,19 @@ export function OrderCard({
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-stone-100 pt-3">
         <p className="text-sm">
           <span className="text-stone-500">Total</span>{' '}
-          <span className="font-semibold text-stone-900">{money(order.total)}</span>
+          <span className="font-semibold tabular-nums text-stone-900">{money(order.total)}</span>
         </p>
         <div className="flex flex-wrap items-center gap-2">
           {order.status === 'placed' && canEdit && order.paymentStatus === 'unpaid' ? (
-            <button type="button" className="btn-secondary !px-3 !py-1.5 text-xs" disabled={Boolean(busy)} onClick={() => onEditItems(order)}>
+            <button type="button" className="btn-sm btn-secondary" disabled={actionsDisabled} onClick={() => onEditItems(order)}>
               Edit items
             </button>
           ) : null}
           {order.status === 'placed' && floor ? (
             <button
               type="button"
-              className="btn-primary !px-3 !py-1.5 text-xs"
-              disabled={Boolean(busy)}
+              className="btn-sm btn-primary"
+              disabled={actionsDisabled}
               onClick={() =>
                 run('confirm', () => orderApi.setStatus(order.id, 'confirmed'), (o) => `Order #${o.number} confirmed and sent to the kitchen.`)
               }
@@ -248,8 +251,8 @@ export function OrderCard({
           {order.status === 'ready' && canServe ? (
             <button
               type="button"
-              className="btn-primary !px-3 !py-1.5 text-xs"
-              disabled={Boolean(busy)}
+              className="btn-sm btn-primary"
+              disabled={actionsDisabled}
               onClick={() => run('served', () => orderApi.setStatus(order.id, 'served'), (o) => `Order #${o.number} served.`)}
             >
               {busy === 'served' ? 'Saving…' : 'Mark served'}
@@ -257,7 +260,7 @@ export function OrderCard({
           ) : null}
           {order.status === 'served' && order.paymentStatus === 'unpaid' ? (
             canAccess(role, 'billing') ? (
-              <Link href="/staff/billing" className="btn-secondary !px-3 !py-1.5 text-xs">
+              <Link href={`/staff/billing?bill=${encodeURIComponent(order.id)}`} className="btn-sm btn-secondary">
                 Take payment
               </Link>
             ) : (
@@ -267,8 +270,8 @@ export function OrderCard({
           {active && canCancel && !confirmCancel ? (
             <button
               type="button"
-              className="btn-ghost !px-3 !py-1.5 text-xs text-red-600 hover:bg-red-50"
-              disabled={Boolean(busy)}
+              className="btn-sm btn-ghost text-red-700 hover:bg-red-50"
+              disabled={actionsDisabled}
               onClick={() => setConfirmCancel(true)}
             >
               Cancel order
@@ -290,16 +293,16 @@ export function OrderCard({
           <div className="flex gap-2">
             <button
               type="button"
-              className="btn-ghost !px-3 !py-1.5 text-xs"
-              disabled={Boolean(busy)}
+              className="btn-sm btn-ghost"
+              disabled={actionsDisabled}
               onClick={() => setConfirmCancel(false)}
             >
               Keep order
             </button>
             <button
               type="button"
-              className="btn-danger !px-3 !py-1.5 text-xs"
-              disabled={Boolean(busy)}
+              className="btn-sm btn-danger"
+              disabled={actionsDisabled}
               onClick={() => run('cancel', () => orderApi.setStatus(order.id, 'cancelled'), (o) => `Order #${o.number} cancelled.`)}
             >
               {busy === 'cancel' ? 'Cancelling…' : 'Yes, cancel'}
@@ -309,4 +312,4 @@ export function OrderCard({
       ) : null}
     </article>
   );
-}
+});

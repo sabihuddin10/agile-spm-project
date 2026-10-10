@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import type { Role, User } from '@/types';
 import { formatTime, titleCase } from '@/lib/format';
 import { useNow } from '@/hooks/use-polling';
@@ -51,7 +50,7 @@ export function OverviewDashboard({ user }: { user: User }) {
         </div>
         <p className="flex items-center gap-2 text-xs text-stone-500">
           <span className="relative flex h-2 w-2" aria-hidden="true">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60 motion-reduce:animate-none" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
           </span>
           {updatedAt ? `Live · updated ${formatTime(new Date(updatedAt).toISOString())}` : 'Connecting…'}
@@ -77,13 +76,6 @@ export function OverviewDashboard({ user }: { user: User }) {
           <QuickLinks role={user.role} />
         </div>
       </div>
-
-      <p className="text-xs text-stone-400">
-        Building this platform?{' '}
-        <Link href="/dev" className="font-medium text-stone-500 underline-offset-2 hover:text-brand-700 hover:underline">
-          Open the Scrum board
-        </Link>
-      </p>
     </div>
   );
 }

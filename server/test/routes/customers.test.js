@@ -133,3 +133,57 @@ test('DELETE /customers/:id refuses a customer with order history, keeping their
   assert.match(res.body.error, /order history/);
   assert.equal((await api.call('GET', `/customers/${emma.id}`, { token: manager })).status, 200);
 });
+
+test('customer records are type-checked, and null preferences no longer crash the request', async () => {
+  // Arrange
+  const token = await api.login('waiter');
+  const create = (extra) => api.call('POST', '/customers', { token, body: { name: 'Type Check', ...extra } });
+
+  // Act
+  const nullPrefs = await create({ preferences: null });
+  const badEmail = await create({ email: 'nope' });
+  const badPhone = await create({ phone: 'abc' });
+  const longNotes = await create({ notes: 'x'.repeat(501) });
+  const objectName = await create({ name: { first: 'A' } });
+  const objectTags = await create({ preferences: { dietary: [{ a: 1 }] } });
+  const badType = await create({ type: 'vip' });
+
+  // Assert
+  assert.equal(nullPrefs.status, 201);
+  for (const res of [badEmail, badPhone, longNotes, objectName, objectTags, badType]) assert.equal(res.status, 400);
+});
+
+test('loyalty points, id and account link cannot be set through the body', async () => {
+  // Arrange
+  const waiter = await api.login('waiter');
+  const customer = await api.login('customer');
+  const before = (await api.call('GET', '/customers/me', { token: customer })).body.customer;
+
+  // Act
+  const created = await api.call('POST', '/customers', { token: waiter, body: { name: 'Mass Assign', loyaltyPoints: 99999, id: 'cus_hijack', userId: 'usr_admin' } });
+  const self = await api.call('PATCH', '/customers/me', { token: customer, body: { loyaltyPoints: 99999, userId: 'usr_admin', id: 'cus_hijack' } });
+
+  // Assert
+  assert.equal(created.status, 201);
+  assert.equal(created.body.customer.loyaltyPoints, 0);
+  assert.notEqual(created.body.customer.id, 'cus_hijack');
+  assert.equal(created.body.customer.userId, null);
+  assert.equal(self.status, 200);
+  assert.equal(self.body.customer.loyaltyPoints, before.loyaltyPoints);
+  assert.equal(self.body.customer.id, before.id);
+  assert.equal(self.body.customer.userId, before.userId);
+});
+
+test('a rejected self-service edit changes nothing', async () => {
+  // Arrange
+  const token = await api.login('customer');
+  const before = (await api.call('GET', '/customers/me', { token })).body.customer;
+
+  // Act
+  const res = await api.call('PATCH', '/customers/me', { token, body: { name: 'Changed Name', phone: 'not a phone' } });
+  const after = (await api.call('GET', '/customers/me', { token })).body.customer;
+
+  // Assert
+  assert.equal(res.status, 400);
+  assert.equal(after.name, before.name);
+});

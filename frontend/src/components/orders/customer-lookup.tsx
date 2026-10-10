@@ -59,7 +59,7 @@ export function CustomerLookup({
           </div>
           <button
             type="button"
-            className="btn-ghost !px-2 !py-1 text-xs"
+            className="btn-sm btn-ghost"
             onClick={() => {
               onChange(null);
               setQuery('');
@@ -70,7 +70,7 @@ export function CustomerLookup({
         </div>
         <AllergyBanner allergies={value.preferences.allergies} dietary={value.preferences.dietary} />
         {value.preferences.allergies.length === 0 && value.preferences.dietary.length === 0 ? (
-          <p className="text-xs text-stone-400">No allergies or dietary preferences on file.</p>
+          <p className="text-xs text-stone-500">No allergies or dietary preferences on file.</p>
         ) : null}
       </div>
     );
@@ -89,9 +89,9 @@ export function CustomerLookup({
       {query.trim().length >= 2 ? (
         <div className="mt-1 rounded-lg border border-stone-200 bg-white shadow-sm">
           {searching && results.length === 0 ? (
-            <p className="px-3 py-2 text-xs text-stone-400">Searching…</p>
+            <p className="px-3 py-2 text-xs text-stone-500">Searching…</p>
           ) : results.length === 0 ? (
-            <p className="px-3 py-2 text-xs text-stone-400">No customers match “{query.trim()}”.</p>
+            <p className="px-3 py-2 text-xs text-stone-500">No customers match “{query.trim()}”.</p>
           ) : (
             <ul className="divide-y divide-stone-100">
               {results.map((c) => (

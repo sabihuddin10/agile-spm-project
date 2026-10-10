@@ -86,7 +86,7 @@ export function TableUtilization({
                     <td className="font-medium text-stone-900">
                       T{t.number}
                       {busiest && busiest.tableId === t.tableId && t.occupancyRate > 0 ? (
-                        <span className="ml-2 rounded bg-brand-50 px-1.5 py-0.5 text-[10px] font-semibold text-brand-700">Busiest</span>
+                        <span className="ml-2 rounded bg-brand-50 px-1.5 py-0.5 text-xs font-semibold text-brand-700">Busiest</span>
                       ) : null}
                     </td>
                     <td className="text-stone-600">{t.zone}</td>

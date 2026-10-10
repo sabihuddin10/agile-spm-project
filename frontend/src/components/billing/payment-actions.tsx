@@ -53,7 +53,7 @@ export function PayActions({ invoice, onUpdated, onConflict }: ActionProps) {
         <h3 id="pay-heading" className="text-sm font-semibold text-stone-800">
           {invoice.split ? 'Or take the whole bill in one payment' : 'Mark paid'}
         </h3>
-        <span className="text-lg font-bold">{money(invoice.total)}</span>
+        <span className="text-lg font-bold tabular-nums">{money(invoice.total)}</span>
       </div>
       <div className="mt-2 grid grid-cols-2 gap-2">
         <button type="button" className="btn-primary" onClick={() => pay('card')} disabled={pending !== null}>
@@ -150,10 +150,10 @@ export function PaidActions({
             and a closed order re-opens as served{invoice.tableNumber ? ` (${billWhere(invoice)} is occupied again)` : ''}.
           </p>
           <div className="mt-3 flex gap-2">
-            <button type="button" className="btn-secondary !py-1.5 text-xs" onClick={() => setConfirming(false)} disabled={pending !== null}>
+            <button type="button" className="btn-sm btn-secondary" onClick={() => setConfirming(false)} disabled={pending !== null}>
               Keep as paid
             </button>
-            <button type="button" className="btn-danger !py-1.5 text-xs" onClick={unpay} disabled={pending !== null}>
+            <button type="button" className="btn-sm btn-danger" onClick={unpay} disabled={pending !== null}>
               {pending === 'unpay' ? 'Reversing…' : 'Yes, mark unpaid'}
             </button>
           </div>
@@ -161,7 +161,7 @@ export function PaidActions({
       ) : null}
 
       {invoice.paymentStatus === 'paid' && !can.refund(role) ? (
-        <p className="text-xs text-stone-400">Refunds and payment reversals are handled by a manager.</p>
+        <p className="text-xs text-stone-500">Refunds and payment reversals are handled by a manager.</p>
       ) : null}
     </section>
   );

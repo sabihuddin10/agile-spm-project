@@ -34,7 +34,7 @@ afterEach(() => {
 });
 
 describe('ChangePasswordForm', () => {
-  it('rejects a new password shorter than 6 characters', async () => {
+  it('rejects a new password that misses the policy rules', async () => {
     // Arrange
     render(<ChangePasswordForm />);
 
@@ -42,7 +42,7 @@ describe('ChangePasswordForm', () => {
     await fill('oldpass', 'abc', 'abc');
 
     // Assert
-    expect(screen.getByLabelText('New password')).toHaveAccessibleDescription('Use at least 6 characters.');
+    expect(screen.getByLabelText('New password')).toHaveAccessibleDescription(/does not meet all the requirements yet/);
     expect(authApi.changePassword).not.toHaveBeenCalled();
   });
 
@@ -51,10 +51,10 @@ describe('ChangePasswordForm', () => {
     render(<ChangePasswordForm />);
 
     // Act
-    await fill('oldpass', 'newpass1', 'newpass2');
+    await fill('oldpass', 'Newpass-12', 'Newpass-13');
 
     // Assert
-    expect(screen.getByLabelText('Confirm new password')).toHaveAccessibleDescription('Passwords do not match.');
+    expect(screen.getByLabelText('Confirm new password')).toHaveAccessibleDescription(/Passwords don.t match/);
     expect(authApi.changePassword).not.toHaveBeenCalled();
   });
 
@@ -63,11 +63,11 @@ describe('ChangePasswordForm', () => {
     render(<ChangePasswordForm />);
 
     // Act
-    await fill('samepass', 'samepass', 'samepass');
+    await fill('Same-pass1', 'Same-pass1', 'Same-pass1');
 
     // Assert
     expect(screen.getByLabelText('New password')).toHaveAccessibleDescription(
-      'Choose a password different from your current one.',
+      /Choose a password different from your current one./,
     );
   });
 
@@ -76,7 +76,7 @@ describe('ChangePasswordForm', () => {
     render(<ChangePasswordForm />);
 
     // Act
-    await fill('', 'newpass1', 'newpass1');
+    await fill('', 'Newpass-12', 'Newpass-12');
 
     // Assert
     expect(screen.getByLabelText('Current password')).toHaveAccessibleDescription('Enter your current password.');
@@ -89,10 +89,10 @@ describe('ChangePasswordForm', () => {
     render(<ChangePasswordForm />);
 
     // Act
-    await fill('oldpass', 'newpass1', 'newpass1');
+    await fill('oldpass', 'Newpass-12', 'Newpass-12');
 
     // Assert
-    expect(authApi.changePassword).toHaveBeenCalledWith('oldpass', 'newpass1');
+    expect(authApi.changePassword).toHaveBeenCalledWith('oldpass', 'Newpass-12');
     expect(updateSession).toHaveBeenCalledWith(updated, 'tok_fresh');
     expect(toastMock).toHaveBeenCalledWith('Password changed. Other sessions were signed out.', 'success');
     expect(screen.getByLabelText('Current password')).toHaveValue('');
@@ -105,7 +105,7 @@ describe('ChangePasswordForm', () => {
     render(<ChangePasswordForm />);
 
     // Act
-    await fill('wrongpass', 'newpass1', 'newpass1');
+    await fill('wrongpass', 'Newpass-12', 'Newpass-12');
 
     // Assert
     expect(screen.getByLabelText('Current password')).toHaveAccessibleDescription('Current password is incorrect.');
@@ -118,7 +118,7 @@ describe('ChangePasswordForm', () => {
     render(<ChangePasswordForm />);
 
     // Act
-    await fill('oldpass', 'newpass1', 'newpass1');
+    await fill('oldpass', 'Newpass-12', 'Newpass-12');
 
     // Assert
     expect(screen.getByRole('alert')).toHaveTextContent('Something broke.');
@@ -130,7 +130,7 @@ describe('ChangePasswordForm', () => {
     render(<ChangePasswordForm />);
 
     // Act
-    await fill('oldpass', 'newpass1', 'newpass1');
+    await fill('oldpass', 'Newpass-12', 'Newpass-12');
 
     // Assert
     expect(screen.getByRole('button', { name: 'Changing…' })).toBeDisabled();
@@ -146,11 +146,11 @@ describe('ChangePasswordForm — admin', () => {
     render(<ChangePasswordForm />);
 
     // Act
-    await fill('', 'admin-new', 'admin-new');
+    await fill('', 'Admin-new-1', 'Admin-new-1');
 
     // Assert
     expect(screen.queryByLabelText('Current password')).not.toBeInTheDocument();
-    expect(authApi.changePassword).toHaveBeenCalledWith(undefined, 'admin-new');
+    expect(authApi.changePassword).toHaveBeenCalledWith(undefined, 'Admin-new-1');
     expect(updateSession).toHaveBeenCalledWith(auth.user, 'tok_admin');
   });
 
@@ -163,5 +163,56 @@ describe('ChangePasswordForm — admin', () => {
 
     // Assert
     expect(screen.getByLabelText('Current password')).toBeInTheDocument();
+  });
+});
+
+describe('ChangePasswordForm — live feedback', () => {
+  it('updates the requirement checklist and strength as you type', async () => {
+    // Arrange
+    const user = userEvent.setup({ delay: null });
+    render(<ChangePasswordForm />);
+
+    // Act
+    await user.type(screen.getByLabelText('New password'), 'abcdefgh');
+
+    // Assert
+    expect(screen.getByRole('status')).toHaveTextContent('2 of 5 requirements met');
+    expect(screen.getByText('Strength: Weak')).toBeInTheDocument();
+
+    // Act
+    await user.type(screen.getByLabelText('New password'), 'A1!xyzw');
+
+    // Assert
+    expect(screen.getByRole('status')).toHaveTextContent('5 of 5 requirements met');
+    expect(screen.getByText('Strength: Strong')).toBeInTheDocument();
+  });
+
+  it('shows "Passwords match" live and lets you reveal the password', async () => {
+    // Arrange
+    const user = userEvent.setup({ delay: null });
+    render(<ChangePasswordForm />);
+    await user.type(screen.getByLabelText('New password'), 'Newpass-12');
+
+    // Act
+    await user.type(screen.getByLabelText('Confirm new password'), 'Newpass-12');
+    const [toggle] = screen.getAllByRole('button', { name: 'Show password' });
+    await user.click(toggle);
+
+    // Assert
+    expect(screen.getByText('Passwords match')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Hide password' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByLabelText('Current password')).toHaveAttribute('type', 'text');
+  });
+
+  it('shows a server policy message under the new password', async () => {
+    // Arrange
+    vi.mocked(authApi.changePassword).mockRejectedValue(new ApiError('Password needs: to be less common.', 400, null));
+    render(<ChangePasswordForm />);
+
+    // Act
+    await fill('oldpass', 'Newpass-12', 'Newpass-12');
+
+    // Assert
+    expect(screen.getByLabelText('New password')).toHaveAccessibleDescription(/Password needs: to be less common\./);
   });
 });

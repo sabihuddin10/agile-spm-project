@@ -13,6 +13,7 @@ import { Card } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Modal } from '@/components/ui/modal';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useToast } from '@/components/ui/toast';
 import { FloorLegend } from '@/components/tables/floor-legend';
 import { TableTile } from '@/components/tables/table-tile';
@@ -22,7 +23,7 @@ type FloorData = { tables: Table[]; zones: string[]; statuses: TableStatus[] };
 
 const zoneId = (zone: string) => `zone-${zone.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
 
-/** Live floor plan (US6.1, US6.2, US6.4). */
+/** Live floor plan: tables by zone with status, orders, bookings and layout edits. */
 export default function FloorPlanPage() {
   return (
     <StaffLayout section="tables">
@@ -42,6 +43,7 @@ function FloorPlan() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [form, setForm] = useState<{ table: Table | null } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [removing, setRemoving] = useState<Table | null>(null);
 
   const request = useRef(0);
 
@@ -105,9 +107,10 @@ function FloorPlan() {
   const take = (t: Table) =>
     user && run(t, () => tableApi.update(t.id, { waiterId: user.id }), `You're now looking after table ${t.number}.`);
 
-  function remove(t: Table) {
-    if (!window.confirm(`Remove table ${t.number} (${t.zone}) from the floor plan?`)) return;
-    run(t, () => tableApi.remove(t.id), `Table ${t.number} removed.`);
+  async function confirmRemove() {
+    if (!removing) return;
+    await run(removing, () => tableApi.remove(removing.id), `Table ${removing.number} removed.`);
+    setRemoving(null);
   }
 
   async function save(values: TableFormValues) {
@@ -208,7 +211,7 @@ function FloorPlan() {
                       onToggleHold={() => toggleHold(t)}
                       onTake={() => take(t)}
                       onEdit={() => setForm({ table: t })}
-                      onRemove={() => remove(t)}
+                      onRemove={() => setRemoving(t)}
                     />
                   ))}
                 </div>
@@ -229,6 +232,20 @@ function FloorPlan() {
             onCancel={() => setForm(null)}
           />
         </Modal>
+      ) : null}
+
+      {removing ? (
+        <ConfirmDialog
+          title={`Remove table ${removing.number}?`}
+          confirmLabel="Remove table"
+          busy={busyId === removing.id}
+          onConfirm={confirmRemove}
+          onCancel={() => setRemoving(null)}
+        >
+          <p>
+            Table {removing.number} ({removing.zone}) will be taken off the floor plan. Past orders keep their table number.
+          </p>
+        </ConfirmDialog>
       ) : null}
     </>
   );

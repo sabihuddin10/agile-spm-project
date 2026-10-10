@@ -277,6 +277,20 @@ describe('StockMovements', () => {
     expect(screen.getByText(/showing the latest 3 movements · 1 from order sales/i)).toBeInTheDocument();
   });
 
+  it('also lists movements as stacked cards for phones', () => {
+    // Arrange
+    const movements = [makeMovement({ id: 'mv_1', reason: 'restock', delta: 5, stockAfter: 15 })];
+
+    // Act
+    render(<StockMovements movements={movements} inventory={[makeItem()]} inventoryId="" onFilterChange={vi.fn()} />);
+
+    // Assert
+    const card = within(screen.getByRole('list', { name: 'Stock movements' })).getByRole('listitem');
+    expect(within(card).getByText('+5 kg')).toBeInTheDocument();
+    expect(within(card).getByText('Restock')).toBeInTheDocument();
+    expect(within(card).getByText('15 kg after')).toBeInTheDocument();
+  });
+
   it('filters by ingredient through the select', async () => {
     // Arrange
     const onFilterChange = vi.fn();
@@ -333,15 +347,16 @@ describe('PurchaseOrders', () => {
     const onReceived = vi.fn();
     const received = makePo({ status: 'received', receivedAt: '2026-10-03T10:00:00.000Z' });
     vi.mocked(inventoryApi.receivePurchaseOrder).mockResolvedValue({ purchaseOrder: received });
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
     const user = userEvent.setup({ delay: null });
     render(<PurchaseOrders orders={[makePo()]} onReceived={onReceived} />);
 
     // Act
     await user.click(screen.getByRole('button', { name: 'Mark received' }));
+    const dialog = screen.getByRole('dialog', { name: 'Mark PO-0001 as received?' });
+    expect(within(dialog).getByText(/stock for all 2 lines will be added/i)).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Mark received' }));
 
     // Assert
-    expect(confirm).toHaveBeenCalledWith(expect.stringContaining('Mark PO-0001 as received?'));
     expect(inventoryApi.receivePurchaseOrder).toHaveBeenCalledWith('po_1');
     await waitFor(() => expect(onReceived).toHaveBeenCalledWith(received));
     expect(toastFn).toHaveBeenCalledWith('PO-0001 received — stock updated for 2 ingredients.', 'success');
@@ -350,15 +365,16 @@ describe('PurchaseOrders', () => {
   it('does nothing when the confirm is dismissed', async () => {
     // Arrange
     vi.mocked(inventoryApi.receivePurchaseOrder).mockClear();
-    vi.spyOn(window, 'confirm').mockReturnValue(false);
     const onReceived = vi.fn();
     const user = userEvent.setup({ delay: null });
     render(<PurchaseOrders orders={[makePo()]} onReceived={onReceived} />);
 
     // Act
     await user.click(screen.getByRole('button', { name: 'Mark received' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }));
 
     // Assert
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(inventoryApi.receivePurchaseOrder).not.toHaveBeenCalled();
     expect(onReceived).not.toHaveBeenCalled();
   });
@@ -479,7 +495,6 @@ describe('ReorderForm', () => {
     vi.mocked(inventoryApi.reorder).mockResolvedValue({ lines: [makeReorderLine()], estimatedTotal: 16 });
     const po = makePo({ number: 'PO-0009', total: 20 });
     vi.mocked(inventoryApi.createPurchaseOrder).mockResolvedValue({ purchaseOrder: po });
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
     const onSubmitted = vi.fn();
     const user = userEvent.setup({ delay: null });
     render(<ReorderForm inventory={[makeItem({ stock: 2 })]} onSubmitted={onSubmitted} />);
@@ -490,9 +505,11 @@ describe('ReorderForm', () => {
     await user.type(qtyInput, '10');
     await user.type(screen.getByLabelText('Notes for suppliers'), ' Deliver by Friday ');
     await user.click(screen.getByRole('button', { name: 'Submit to supplier' }));
+    const dialog = screen.getByRole('dialog', { name: 'Send this order?' });
+    expect(dialog).toHaveTextContent('Send this order (1 line, $20.00) to 1 supplier?');
+    await user.click(within(dialog).getByRole('button', { name: 'Send order' }));
 
     // Assert
-    expect(confirm).toHaveBeenCalledWith('Send this order (1 line, $20.00) to 1 supplier?');
     expect(inventoryApi.createPurchaseOrder).toHaveBeenCalledWith([{ inventoryId: 'inv_1', qty: 10 }], 'Deliver by Friday');
     await waitFor(() => expect(onSubmitted).toHaveBeenCalledWith(po));
     expect(toastFn).toHaveBeenCalledWith('PO-0009 sent to suppliers · $20.00.', 'success');
@@ -504,7 +521,6 @@ describe('ReorderForm', () => {
       lines: [makeReorderLine(), makeReorderLine({ inventoryId: 'inv_2', name: 'Basil', supplier: 'Herb Farm' })],
       estimatedTotal: 32,
     });
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
     const user = userEvent.setup({ delay: null });
     render(
       <ReorderForm
@@ -516,9 +532,13 @@ describe('ReorderForm', () => {
 
     // Act
     await user.click(screen.getByRole('button', { name: 'Submit to supplier' }));
+    const dialog = screen.getByRole('dialog', { name: 'Send this order?' });
+    const summary = dialog.textContent;
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
 
     // Assert
-    expect(confirm).toHaveBeenCalledWith(expect.stringMatching(/^Send this order \(2 lines, \$[\d.]+\) to 2 suppliers\?$/));
+    expect(summary).toMatch(/Send this order \(2 lines, \$[\d.]+\) to 2 suppliers\?/);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(inventoryApi.createPurchaseOrder).not.toHaveBeenCalled();
   });
 
@@ -564,8 +584,16 @@ describe('StockTable', () => {
   ];
   const handlers = { onAdjust: vi.fn(), onEdit: vi.fn(), onDelete: vi.fn(), onHistory: vi.fn() };
 
+  // Both layouts are in the DOM (CSS picks one), so assertions scope to the desktop table or the phone card list.
+  const table = () => within(screen.getByRole('table'));
+  const cards = () => within(screen.getByRole('list', { name: 'Ingredients' }));
+
   function rowFor(name: string) {
-    return screen.getByText(name).closest('tr')!;
+    return table().getByText(name).closest('tr')!;
+  }
+
+  function cardFor(name: string) {
+    return cards().getByText(name).closest('li')!;
   }
 
   it('lists ingredients alphabetically with a health badge each', () => {
@@ -582,6 +610,22 @@ describe('StockTable', () => {
     expect(within(rowFor('Mozzarella')).getByText('+1 more')).toBeInTheDocument();
   });
 
+  it('shows the same ingredients as stacked cards for phones, with stock, health and actions', () => {
+    // Arrange / Act
+    render(<StockTable items={items} canAdjust canManage {...handlers} />);
+
+    // Assert
+    const names = cards()
+      .getAllByRole('listitem')
+      .map((li) => li.querySelector('p')!.textContent);
+    expect(names).toEqual(['Basil', 'Flour', 'Mozzarella']);
+    const basil = within(cardFor('Basil'));
+    expect(basil.getByText('Low · reorder')).toBeInTheDocument();
+    expect(basil.getByText('1 kg')).toBeInTheDocument();
+    expect(basil.getByRole('button', { name: 'Adjust Basil' })).toBeInTheDocument();
+    expect(basil.getByRole('button', { name: 'Delete Basil' })).toBeInTheDocument();
+  });
+
   it('filters by health with counts on each filter', async () => {
     // Arrange
     const user = userEvent.setup({ delay: null });
@@ -592,7 +636,7 @@ describe('StockTable', () => {
 
     // Assert
     expect(screen.getByRole('button', { name: 'Low (1)' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByText('Basil')).toBeInTheDocument();
+    expect(table().getByText('Basil')).toBeInTheDocument();
     expect(screen.queryByText('Flour')).not.toBeInTheDocument();
     expect(screen.queryByText('Mozzarella')).not.toBeInTheDocument();
 
@@ -600,7 +644,7 @@ describe('StockTable', () => {
     await user.click(screen.getByRole('button', { name: 'Near (1)' }));
 
     // Assert
-    expect(screen.getByText('Mozzarella')).toBeInTheDocument();
+    expect(table().getByText('Mozzarella')).toBeInTheDocument();
     expect(screen.queryByText('Basil')).not.toBeInTheDocument();
   });
 
@@ -613,7 +657,7 @@ describe('StockTable', () => {
     await user.type(screen.getByLabelText('Search ingredients'), 'herb farm');
 
     // Assert
-    expect(screen.getByText('Basil')).toBeInTheDocument();
+    expect(table().getByText('Basil')).toBeInTheDocument();
     expect(screen.queryByText('Flour')).not.toBeInTheDocument();
 
     // Act
@@ -621,7 +665,7 @@ describe('StockTable', () => {
     await user.type(screen.getByLabelText('Search ingredients'), 'calzone');
 
     // Assert
-    expect(screen.getByText('Mozzarella')).toBeInTheDocument();
+    expect(table().getByText('Mozzarella')).toBeInTheDocument();
     expect(screen.queryByText('Basil')).not.toBeInTheDocument();
 
     // Act
@@ -640,14 +684,14 @@ describe('StockTable', () => {
     render(<StockTable items={[items[0]]} canAdjust canManage={false} {...handlers} onAdjust={onAdjust} onHistory={onHistory} />);
 
     // Act
-    await user.click(screen.getByRole('button', { name: 'Adjust' }));
-    await user.click(screen.getByRole('button', { name: 'Stock history for Flour' }));
+    await user.click(table().getByRole('button', { name: 'Adjust Flour' }));
+    await user.click(cards().getByRole('button', { name: 'Stock history for Flour' }));
 
     // Assert
     expect(onAdjust).toHaveBeenCalledWith(items[0]);
     expect(onHistory).toHaveBeenCalledWith(items[0]);
-    expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit Flour' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Delete Flour' })).not.toBeInTheDocument();
   });
 
   it('disables a busy row and lets a manager edit or delete', async () => {
@@ -656,13 +700,14 @@ describe('StockTable', () => {
     const user = userEvent.setup({ delay: null });
     const { rerender } = render(<StockTable items={[items[0]]} canAdjust canManage busyId="inv_1" {...handlers} onDelete={onDelete} />);
 
-    // Assert — busy row actions are disabled
-    expect(screen.getByRole('button', { name: 'Adjust' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Delete' })).toBeDisabled();
+    // Assert — busy actions are disabled in both layouts
+    for (const button of screen.getAllByRole('button', { name: /^(Adjust|Edit|Delete) Flour$/ })) {
+      expect(button).toBeDisabled();
+    }
 
     // Act
     rerender(<StockTable items={[items[0]]} canAdjust canManage busyId={null} {...handlers} onDelete={onDelete} />);
-    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    await user.click(cards().getByRole('button', { name: 'Delete Flour' }));
 
     // Assert
     expect(onDelete).toHaveBeenCalledWith(items[0]);

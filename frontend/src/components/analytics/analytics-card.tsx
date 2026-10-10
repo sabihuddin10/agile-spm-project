@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
+import { ChevronRightIcon } from '@/components/ui/icons';
 
-/** Card shell for one analytics panel: heading, user-story tag, optional action. */
+/** Card shell for one analytics panel: heading, optional subtitle and action. The user story is kept as a data attribute. */
 export function AnalyticsCard({
   title,
   story,
@@ -18,17 +19,12 @@ export function AnalyticsCard({
 }) {
   const headingId = `${story.replace(/\W/g, '')}-heading`;
   return (
-    <section className={`card flex min-w-0 flex-col ${className}`} aria-labelledby={headingId}>
+    <section className={`card flex min-w-0 flex-col ${className}`} aria-labelledby={headingId} data-story={story}>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 id={headingId} className="text-base font-semibold text-stone-900">
-              {title}
-            </h2>
-            <span className="rounded bg-stone-100 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-stone-500">
-              {story}
-            </span>
-          </div>
+          <h2 id={headingId} className="text-base font-semibold text-stone-900">
+            {title}
+          </h2>
           {subtitle ? <p className="mt-0.5 text-sm text-stone-500">{subtitle}</p> : null}
         </div>
         {action ? <div className="shrink-0">{action}</div> : null}
@@ -43,9 +39,7 @@ export function DataTableToggle({ children, label = 'View data table' }: { child
   return (
     <details className="group mt-3 text-sm">
       <summary className="inline-flex cursor-pointer select-none items-center gap-1 rounded text-xs font-medium text-stone-500 hover:text-stone-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
-        <span className="transition group-open:rotate-90" aria-hidden="true">
-          ▸
-        </span>
+        <ChevronRightIcon className="h-3.5 w-3.5 transition group-open:rotate-90 motion-reduce:transition-none" />
         {label}
       </summary>
       <div className="mt-2 max-h-72 overflow-auto rounded-lg border border-stone-200">{children}</div>

@@ -106,7 +106,7 @@ export function InventoryHealth({ items, className = '' }: { items: AnalyticsDas
           </button>
         </>
       ) : null}
-      <p className="mt-3 text-[11px] text-stone-400">Bar: stock vs. reorder level (tick = reorder level, full = 2× reorder level).</p>
+      <p className="mt-3 text-xs text-stone-500">Bar: stock vs. reorder level (tick = reorder level, full = 2× reorder level).</p>
     </AnalyticsCard>
   );
 }

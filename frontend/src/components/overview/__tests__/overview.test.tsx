@@ -98,6 +98,20 @@ describe('LiveTile / TileGroup', () => {
     // Assert
     expect(screen.getByRole('region', { name: 'Front of house' })).toBeInTheDocument();
   });
+
+  it('stacks tiles one per row on phones and widens the grid from the sm breakpoint', () => {
+    // Arrange / Act
+    render(
+      <TileGroup title="Kitchen" cols={6}>
+        <LiveTile href="/a" label="A" value={1} />
+      </TileGroup>,
+    );
+
+    // Assert
+    const grid = screen.getByRole('link', { name: /A/ }).parentElement as HTMLElement;
+    expect(grid).toHaveClass('grid-cols-1', 'sm:grid-cols-2');
+    expect(grid).not.toHaveClass('grid-cols-2');
+  });
 });
 
 describe('LowStockBanner', () => {

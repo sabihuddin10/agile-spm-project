@@ -7,7 +7,12 @@ import { errorMessage, formatDateTime, money } from '@/lib/format';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/components/ui/toast';
 import { Spinner } from '@/components/ui/spinner';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { XMarkIcon } from '@/components/ui/icons';
 import { qty, suggestedQty, toNumber } from './helpers';
+
+/** Secondary numeric columns: hidden on phones (shown under the name instead), always printed. */
+const WIDE_COL = 'hidden text-right tabular-nums sm:table-cell print:table-cell';
 
 interface Line {
   inventoryId: string;
@@ -43,6 +48,7 @@ export function ReorderForm({
   const [addId, setAddId] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [restaurant, setRestaurant] = useState({ name: 'Plate & Flame', address: '' });
   const [preparedAt, setPreparedAt] = useState(() => new Date().toISOString());
 
@@ -126,10 +132,10 @@ export function ReorderForm({
     if (lines.length === 0) return toast('Add at least one ingredient to the reorder form.', 'error');
     const bad = lines.find((l) => !(toNumber(l.qty) > 0));
     if (bad) return toast(`Quantity for ${bad.name} must be greater than zero.`, 'error');
-    const suppliers = groups.length;
-    if (!window.confirm(`Send this order (${lines.length} line${lines.length === 1 ? '' : 's'}, ${money(total)}) to ${suppliers} supplier${suppliers === 1 ? '' : 's'}?`)) {
-      return;
-    }
+    setConfirming(true);
+  }
+
+  async function send() {
     setSubmitting(true);
     try {
       const { purchaseOrder } = await inventoryApi.createPurchaseOrder(
@@ -138,6 +144,7 @@ export function ReorderForm({
       );
       toast(`${purchaseOrder.number} sent to suppliers · ${money(purchaseOrder.total)}.`, 'success');
       setNotes('');
+      setConfirming(false);
       onSubmitted(purchaseOrder);
       await loadSuggestions();
     } catch (err) {
@@ -177,21 +184,22 @@ export function ReorderForm({
         {loading ? (
           <Spinner label="Loading reorder suggestions…" />
         ) : lines.length === 0 ? (
-          <p className="py-8 text-center text-sm text-stone-400">
+          <p className="py-8 text-center text-sm text-stone-500">
             Nothing is low right now. Add any ingredient below to order it anyway.
           </p>
         ) : (
           <div className="-mx-4 overflow-x-auto sm:-mx-5">
-            <table className="table-base min-w-[720px]">
+            {/* Below sm the stock, reorder level and unit cost columns fold under the ingredient name. */}
+            <table className="table-base sm:min-w-[720px]">
               <thead>
                 <tr>
                   <th>Ingredient</th>
-                  <th className="text-right">In stock</th>
-                  <th className="text-right">Reorder at</th>
+                  <th className={WIDE_COL}>In stock</th>
+                  <th className={WIDE_COL}>Reorder at</th>
                   <th>Order qty</th>
-                  <th className="text-right">Unit cost</th>
+                  <th className={WIDE_COL}>Unit cost</th>
                   <th className="text-right">Est. cost</th>
-                  <th className="no-print w-8">
+                  <th className="no-print w-12">
                     <span className="sr-only">Remove</span>
                   </th>
                 </tr>
@@ -261,6 +269,22 @@ export function ReorderForm({
           {submitting ? 'Submitting…' : 'Submit to supplier'}
         </button>
       </div>
+
+      {confirming ? (
+        <ConfirmDialog
+          title="Send this order?"
+          confirmLabel="Send order"
+          danger={false}
+          busy={submitting}
+          onConfirm={send}
+          onCancel={() => setConfirming(false)}
+        >
+          <p>
+            Send this order ({lines.length} line{lines.length === 1 ? '' : 's'}, {money(total)}) to {groups.length} supplier
+            {groups.length === 1 ? '' : 's'}?
+          </p>
+        </ConfirmDialog>
+      ) : null}
     </div>
   );
 }
@@ -282,27 +306,37 @@ function SupplierGroup({
   return (
     <>
       <tr className="bg-stone-50">
-        <td colSpan={5} className="text-xs font-semibold uppercase tracking-wide text-stone-600">
-          {supplier}
+        <td colSpan={7} className="text-xs font-semibold uppercase tracking-wide text-stone-600">
+          <span className="flex items-center justify-between gap-3">
+            <span>{supplier}</span>
+            <span className="tabular-nums">{money(subtotal)}</span>
+          </span>
         </td>
-        <td className="text-right text-xs font-semibold text-stone-600">{money(subtotal)}</td>
-        <td className="no-print" />
       </tr>
       {lines.map((l) => {
         const q = toNumber(l.qty);
+        const lowNow = l.stock <= l.reorderLevel;
         return (
           <tr key={l.inventoryId}>
-            <td className="font-medium text-stone-800">{l.name}</td>
-            <td className={`text-right tabular-nums ${l.stock <= l.reorderLevel ? 'font-semibold text-red-600' : 'text-stone-500'}`}>
+            <td className="font-medium text-stone-800">
+              {l.name}
+              <span className="mt-0.5 block text-xs font-normal tabular-nums text-stone-500 sm:hidden print:hidden">
+                <span className={lowNow ? 'font-semibold text-red-600' : ''}>
+                  {qty(l.stock)} {l.unit}
+                </span>{' '}
+                of {qty(l.reorderLevel)} · {money(l.costPerUnit)}/{l.unit}
+              </span>
+            </td>
+            <td className={`${WIDE_COL} ${lowNow ? 'font-semibold text-red-600' : 'text-stone-500'}`}>
               {qty(l.stock)} {l.unit}
             </td>
-            <td className="text-right tabular-nums text-stone-500">
+            <td className={`${WIDE_COL} text-stone-500`}>
               {qty(l.reorderLevel)} {l.unit}
             </td>
             <td>
               <div className="flex items-center gap-1.5 print:hidden">
                 <input
-                  className={`input !w-24 !py-1 ${q > 0 ? '' : '!border-red-400'}`}
+                  className={`input !w-20 sm:!w-24 ${q > 0 ? '' : '!border-red-400'}`}
                   type="number"
                   min="0"
                   step="any"
@@ -317,21 +351,21 @@ function SupplierGroup({
                 {l.qty} {l.unit}
               </span>
               {q > 0 && q !== l.suggested ? (
-                <span className="no-print mt-0.5 block text-[11px] text-stone-400">
+                <span className="no-print mt-0.5 block text-xs text-stone-500">
                   suggested {qty(l.suggested)}
                 </span>
               ) : null}
             </td>
-            <td className="text-right tabular-nums text-stone-500">{money(l.costPerUnit)}</td>
+            <td className={`${WIDE_COL} text-stone-500`}>{money(l.costPerUnit)}</td>
             <td className="text-right tabular-nums font-medium">{money(lineCost(l))}</td>
             <td className="no-print text-right">
               <button
                 type="button"
-                className="rounded p-1 text-stone-400 hover:bg-red-50 hover:text-red-600"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-stone-500 transition hover:bg-red-50 hover:text-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                 aria-label={`Remove ${l.name} from the order`}
                 onClick={() => onRemove(l.inventoryId)}
               >
-                ✕
+                <XMarkIcon className="h-4 w-4" />
               </button>
             </td>
           </tr>

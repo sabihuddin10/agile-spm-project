@@ -85,7 +85,7 @@ export function SlotGrid({
                   }`}
                 >
                   <span className={hint ? 'line-through decoration-1' : ''}>{slot.time}</span>
-                  {hint ? <span className="text-[10px] font-medium uppercase tracking-wide no-underline">{hint}</span> : null}
+                  {hint ? <span className="text-xs font-medium no-underline">{hint}</span> : null}
                 </button>
               );
             })}

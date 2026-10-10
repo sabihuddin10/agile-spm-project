@@ -6,6 +6,17 @@ import Link from 'next/link';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/format';
+import { validateEmail, validateRequired, EMAIL_MAX } from '@/lib/validation/fields';
+import { useFormValidation, type Rules } from '@/lib/validation/use-form-validation';
+import { FieldError, describedBy } from '@/components/forms/field-error';
+import { PasswordInput } from '@/components/forms/password-input';
+
+// Sign-in only checks that something sensible was typed; the password policy
+// applies when a password is set, so older (and demo) passwords still work.
+const RULES: Rules<{ email: string; password: string }> = {
+  email: (v) => validateEmail(v),
+  password: (v) => validateRequired(v, 'Please enter your password.'),
+};
 
 const DEMO_ACCOUNTS = [
   { label: 'Admin', email: 'admin@rest.test' },
@@ -28,6 +39,7 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [expired, setExpired] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const v = useFormValidation({ email, password }, RULES);
 
   // Read the query string directly (useSearchParams would need a Suspense boundary).
   useEffect(() => {
@@ -37,6 +49,7 @@ export function LoginForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    if (!v.touchAll()) return;
     setSubmitting(true);
     try {
       const user = await login(email.trim(), password);
@@ -66,7 +79,7 @@ export function LoginForm() {
           </p>
         ) : null}
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        <form onSubmit={handleSubmit} className="mt-6 space-y-4" noValidate>
           <div>
             <label htmlFor="email" className="label">
               Email
@@ -76,26 +89,33 @@ export function LoginForm() {
               type="email"
               required
               autoComplete="email"
+              inputMode="email"
+              maxLength={EMAIL_MAX}
               className="input"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              onBlur={() => v.blur('email')}
+              aria-invalid={Boolean(v.errors.email) || undefined}
+              aria-describedby={describedBy(v.errors.email && 'login-email-error')}
               placeholder="you@example.com"
             />
+            <FieldError id="login-email-error" message={v.errors.email} tone="dark" />
           </div>
           <div>
             <label htmlFor="password" className="label">
               Password
             </label>
-            <input
+            <PasswordInput
               id="password"
-              type="password"
-              required
+              tone="dark"
               autoComplete="current-password"
-              className="input"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              onChange={setPassword}
+              onBlur={() => v.blur('password')}
+              invalid={Boolean(v.errors.password)}
+              describedBy={describedBy(v.errors.password && 'login-password-error')}
             />
+            <FieldError id="login-password-error" message={v.errors.password} tone="dark" />
           </div>
 
           {error ? (

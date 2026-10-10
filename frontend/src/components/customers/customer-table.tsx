@@ -2,6 +2,7 @@
 
 import type { Customer } from '@/types';
 import { Badge } from '@/components/ui/badge';
+import { ExclamationTriangleIcon } from '@/components/ui/icons';
 import { money, titleCase } from '@/lib/format';
 import { ALLERGY_OPTIONS, DIETARY_OPTIONS } from '@/components/customers/preference-options';
 
@@ -30,38 +31,47 @@ export function CustomerTable({
           </tr>
         </thead>
         <tbody>
-          {customers.map((c) => (
-            <tr
-              key={c.id}
-              onClick={() => onSelect(c)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  onSelect(c);
-                }
-              }}
-              tabIndex={0}
-              aria-selected={selectedId === c.id}
-              className={`cursor-pointer transition focus:outline-none focus-visible:bg-brand-50 ${
-                selectedId === c.id ? 'bg-brand-50' : 'hover:bg-stone-50'
-              }`}
-            >
-              <td className="font-medium text-stone-800">{c.name}</td>
-              <td className="text-stone-600">
-                <div>{c.email || '—'}</div>
-                <div className="text-xs text-stone-400">{c.phone || ''}</div>
-              </td>
-              <td>
-                <Badge tone={c.type === 'online' ? 'blue' : 'stone'}>{titleCase(c.type)}</Badge>
-              </td>
-              <td className="text-right font-medium">{money(c.totalSpend)}</td>
-              <td className="text-right text-stone-600">{c.orderCount ?? c.orderHistory?.length ?? 0}</td>
-              <td className="text-right text-stone-600">{c.loyaltyPoints}</td>
-              <td>
-                <PreferencePills dietary={c.preferences?.dietary ?? []} allergies={c.preferences?.allergies ?? []} />
-              </td>
-            </tr>
-          ))}
+          {customers.map((c) => {
+            const selected = selectedId === c.id;
+            return (
+              <tr
+                key={c.id}
+                onClick={() => onSelect(c)}
+                aria-current={selected ? 'true' : undefined}
+                className={`cursor-pointer transition ${
+                  selected ? 'bg-brand-50 shadow-[inset_3px_0_0_theme(colors.brand.600)]' : 'hover:bg-stone-50'
+                }`}
+              >
+                <td>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelect(c);
+                    }}
+                    className={`-mx-1 rounded px-1 text-left font-medium hover:text-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                      selected ? 'text-brand-800' : 'text-stone-800'
+                    }`}
+                  >
+                    {c.name}
+                  </button>
+                </td>
+                <td className="text-stone-600">
+                  <div>{c.email || '—'}</div>
+                  <div className="text-xs text-stone-500">{c.phone || ''}</div>
+                </td>
+                <td>
+                  <Badge tone={c.type === 'online' ? 'blue' : 'stone'}>{titleCase(c.type)}</Badge>
+                </td>
+                <td className="text-right font-medium tabular-nums">{money(c.totalSpend)}</td>
+                <td className="text-right tabular-nums text-stone-600">{c.orderCount ?? c.orderHistory?.length ?? 0}</td>
+                <td className="text-right tabular-nums text-stone-600">{c.loyaltyPoints}</td>
+                <td>
+                  <PreferencePills dietary={c.preferences?.dietary ?? []} allergies={c.preferences?.allergies ?? []} />
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -69,21 +79,26 @@ export function CustomerTable({
 }
 
 function PreferencePills({ dietary, allergies }: { dietary: string[]; allergies: string[] }) {
-  if (dietary.length + allergies.length === 0) return <span className="text-xs text-stone-400">None recorded</span>;
+  if (dietary.length + allergies.length === 0) return <span className="text-xs text-stone-500">None recorded</span>;
   const extra = Math.max(0, dietary.length - 2) + Math.max(0, allergies.length - 2);
   return (
     <div className="flex flex-wrap gap-1">
       {dietary.slice(0, 2).map((d) => (
-        <span key={d} className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">
+        <span key={d} className="rounded bg-emerald-50 px-1.5 py-0.5 text-xs font-medium text-emerald-700">
           {d}
         </span>
       ))}
       {allergies.slice(0, 2).map((a) => (
-        <span key={a} className="rounded bg-red-50 px-1.5 py-0.5 text-[10px] font-medium text-red-600">
-          ⚠ {a}
+        <span
+          key={a}
+          className="inline-flex items-center gap-1 rounded bg-red-50 px-1.5 py-0.5 text-xs font-semibold text-red-700"
+        >
+          <ExclamationTriangleIcon className="h-3.5 w-3.5" />
+          <span className="sr-only">Allergy: </span>
+          {a}
         </span>
       ))}
-      {extra > 0 ? <span className="text-[10px] text-stone-400">+{extra}</span> : null}
+      {extra > 0 ? <span className="text-xs text-stone-500">+{extra}</span> : null}
     </div>
   );
 }
@@ -184,7 +199,7 @@ export function CustomerFilters({
           Clear filters
         </button>
       ) : null}
-      {busy ? <span className="pb-2 text-xs text-stone-400" aria-live="polite">Updating…</span> : null}
+      {busy ? <span className="pb-2 text-xs text-stone-500" aria-live="polite">Updating…</span> : null}
     </div>
   );
 }

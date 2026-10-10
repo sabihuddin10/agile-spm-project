@@ -46,6 +46,45 @@ describe('CustomerTable', () => {
     expect(onSelect).toHaveBeenCalledWith(customer);
   });
 
+  it('opens a customer from the keyboard through the name button', async () => {
+    // Arrange
+    const onSelect = vi.fn();
+    const customer = makeCustomer();
+    const user = userEvent.setup({ delay: null });
+    render(<CustomerTable customers={[customer]} onSelect={onSelect} selectedId={null} />);
+
+    // Act
+    await user.tab();
+    await user.keyboard('{Enter}');
+
+    // Assert
+    expect(screen.getByRole('button', { name: 'Sofia Ramirez' })).toHaveFocus();
+    expect(onSelect).toHaveBeenCalledWith(customer);
+  });
+
+  it('marks only the selected row with aria-current, without row-level tabIndex or aria-selected', () => {
+    // Arrange
+    const customers = [makeCustomer(), makeCustomer({ id: 'cus_2', name: 'Liam Chen' })];
+
+    // Act
+    render(<CustomerTable customers={customers} onSelect={vi.fn()} selectedId="cus_2" />);
+
+    // Assert
+    const [, sofiaRow, liamRow] = screen.getAllByRole('row');
+    expect(liamRow).toHaveAttribute('aria-current', 'true');
+    expect(sofiaRow).not.toHaveAttribute('aria-current');
+    expect(liamRow).not.toHaveAttribute('tabindex');
+    expect(liamRow).not.toHaveAttribute('aria-selected');
+  });
+
+  it('labels allergy pills for screen readers', () => {
+    // Arrange / Act
+    render(<CustomerTable customers={[makeCustomer()]} onSelect={vi.fn()} selectedId={null} />);
+
+    // Assert
+    expect(screen.getByText('Allergy:').parentElement).toHaveTextContent('Allergy: shellfish');
+  });
+
   it('shows "None recorded" when there are no preferences', () => {
     // Arrange / Act
     render(<CustomerTable customers={[makeCustomer({ preferences: { dietary: [], allergies: [] } })]} onSelect={vi.fn()} selectedId={null} />);

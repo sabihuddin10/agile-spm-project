@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import OrdersPage from '@/app/staff/orders/page';
 import { useAuth } from '@/context/auth-context';
@@ -40,6 +40,38 @@ function makeOrder(overrides: Partial<Order> = {}): Order {
 }
 
 describe('OrdersPage', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.mocked(orderApi.list).mockReset();
+    vi.mocked(tableApi.list).mockReset();
+  });
+
+  it('polls orders every 5 s but loads tables once, refreshing them on a 30 s cycle', async () => {
+    // Arrange
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.mocked(useAuth).mockReturnValue({ user: makeUser() } as unknown as ReturnType<typeof useAuth>);
+    vi.mocked(orderApi.list).mockResolvedValue({ orders: [makeOrder({ id: 'o1' })] });
+    vi.mocked(tableApi.list).mockResolvedValue({ tables: [], zones: [], statuses: [] });
+    render(<OrdersPage />);
+    await screen.findByTestId('order-card-o1');
+
+    // Act
+    await act(async () => {
+      vi.advanceTimersByTime(10000);
+    });
+
+    // Assert
+    expect(orderApi.list).toHaveBeenCalledTimes(3);
+    expect(tableApi.list).toHaveBeenCalledTimes(1);
+
+    // Act
+    await act(async () => {
+      vi.advanceTimersByTime(20000);
+    });
+
+    // Assert
+    expect(tableApi.list).toHaveBeenCalledTimes(2);
+  });
   it('shows a loading spinner, then the loaded active orders', async () => {
     // Arrange
     vi.mocked(useAuth).mockReturnValue({ user: makeUser() } as unknown as ReturnType<typeof useAuth>);

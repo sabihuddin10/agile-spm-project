@@ -141,15 +141,19 @@ export const ROUTE_DOCS = {
   /* ---- auth */
   'POST /api/auth/register': {
     summary: 'Create a customer account and its linked customer profile.',
-    body: { name: req('string'), email: req('string', 'Valid email, unique'), password: req('string', 'At least 6 characters') },
+    body: {
+      name: req('string', '1–80 characters'),
+      email: req('string', 'Valid email, unique, max 254'),
+      password: req('string', 'Password policy: 8–128 characters with a lowercase and an uppercase letter, a number and a special character; not your email/name or a very common password'),
+    },
     response: ok({ user: { ...USER, role: 'customer' }, token: '<jwt>' }, 201),
-    errors: ['400 missing/invalid fields', '409 email already registered'],
+    errors: ['400 missing/invalid fields, or "Password needs: …" listing the unmet rules (any role in the body is ignored)', '409 email already registered'],
   },
   'POST /api/auth/login': {
     summary: 'Sign in with email and password (any role) and receive a JWT.',
-    body: { email: req('string'), password: req('string') },
+    body: { email: req('string'), password: req('string', 'Not checked against the password policy, so older passwords still work') },
     response: ok({ user: USER, token: '<jwt>' }),
-    errors: ['401 wrong email or password', '403 account suspended'],
+    errors: ['400 email or password missing / not text', '401 wrong email or password', '403 account suspended'],
   },
   'GET /api/auth/me': {
     summary: 'The signed-in user.',
@@ -157,15 +161,15 @@ export const ROUTE_DOCS = {
   },
   'PATCH /api/auth/me': {
     summary: 'Staff edit their own name, email and phone. Changing the email (the login) needs the current password.',
-    body: { name: opt('string'), email: opt('string'), phone: opt('string', 'digits, spaces, + ( ) - .; max 30'), currentPassword: opt('string', 'Required when the email changes') },
+    body: { name: opt('string', '1–80 characters'), email: opt('string'), phone: opt('string', 'digits, spaces, + ( ) - .; 7–20 digits; max 30'), currentPassword: opt('string', 'Required when the email changes') },
     response: ok({ user: USER }),
     errors: ['400 blank name / invalid email or phone / wrong or missing current password', '409 email already in use'],
   },
   'POST /api/auth/me/password': {
     summary: 'Change your own password. Your other sessions are signed out; use the returned token for this one. Admins do not need their current password.',
-    body: { currentPassword: opt('string', 'Required for everyone except admins'), newPassword: req('string', 'At least 6 characters, different from the current one') },
+    body: { currentPassword: opt('string', 'Required for everyone except admins'), newPassword: req('string', 'Meets the password policy, different from the current one') },
     response: ok({ user: USER, token: '<jwt>' }),
-    errors: ['400 wrong current password / too short / unchanged'],
+    errors: ['400 wrong current password / unchanged / "Password needs: …" listing the unmet rules'],
   },
   'PATCH /api/auth/users/:id/profile': {
     summary: 'Edit the name, email or phone of a staff account below your rank (managers: waiters and chefs; admins: also managers).',
@@ -177,15 +181,15 @@ export const ROUTE_DOCS = {
   'POST /api/auth/users/:id/reset-password': {
     summary: 'Issue a one-time temporary password for a staff account below your rank. They must set their own on next sign-in, and their sessions are signed out.',
     access: 'Handler checks rank: admin > manager > chef = waiter, strictly lower only, never yourself.',
-    response: ok({ user: { ...USER, mustChangePassword: true }, tempPassword: '<generated>' }),
+    response: ok({ user: { ...USER, mustChangePassword: true }, tempPassword: '<generated, 12 characters, meets the password policy>' }),
     errors: ['403 account is not below your rank', '404 user not found'],
   },
   'POST /api/auth/users/:id/password': {
     summary: 'An admin sets a new password for a staff account below them, without the old one. Their sessions are signed out.',
     access: 'Admin only, and only for accounts below admin rank (not other admins).',
-    body: { newPassword: req('string', 'At least 6 characters') },
+    body: { newPassword: req('string', 'Meets the password policy') },
     response: ok({ user: USER }),
-    errors: ['400 password too short', '403 another admin', '404 user not found'],
+    errors: ['400 "Password needs: …" listing the unmet rules', '403 another admin', '404 user not found'],
   },
   'GET /api/auth/roles': {
     summary: 'The five stakeholder roles.',
@@ -471,8 +475,8 @@ export const ROUTE_DOCS = {
   'POST /api/reservations': {
     summary: 'Request a booking (guests or customers). Fully booked slots return up to three alternatives.',
     body: {
-      customerName: req('string', 'Defaults to the signed-in customer'), email: req('string', 'Defaults to the signed-in customer'), phone: opt('string'),
-      partySize: req('integer', '1-12'), date: req('YYYY-MM-DD'), time: req('HH:MM', 'Not in the past'), specialRequests: opt('string'),
+      customerName: req('string', 'Defaults to the signed-in customer'), email: req('string', 'Valid email; defaults to the signed-in customer'), phone: opt('string', '7–20 digits'),
+      partySize: req('integer', '1-12'), date: req('YYYY-MM-DD'), time: req('HH:MM', 'Not in the past'), specialRequests: opt('string', 'max 500 characters'),
     },
     response: ok({ reservation: RESERVATION }, 201),
     errors: ['400 invalid fields', '409 fully booked: { error, alternatives: [{ date, time }] }', '429 guests: more than 5 booking requests in 10 minutes from one address (signed-in staff are exempt)'],
@@ -544,9 +548,9 @@ export const ROUTE_DOCS = {
   },
   'POST /api/staff/applications': {
     summary: 'Public "join our team" form.',
-    body: { name: req('string'), email: req('string'), phone: opt('string'), desiredRole: req('string', 'waiter|chef'), experience: opt('string') },
+    body: { name: req('string', '1–80 characters'), email: req('string'), phone: opt('string', '7–20 digits'), desiredRole: req('string', 'waiter|chef'), experience: opt('string', 'max 1000 characters') },
     response: ok({ application: APPLICATION }, 201),
-    errors: ['409 account exists / application pending', '429 more than 3 applications an hour from one address'],
+    errors: ['400 missing/invalid fields', '409 account exists / application pending', '429 more than 3 applications an hour from one address'],
   },
   'GET /api/staff/applications': {
     summary: 'Application review queue, newest first.',

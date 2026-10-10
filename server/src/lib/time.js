@@ -28,12 +28,16 @@ export function addDays(d, n) {
   return out;
 }
 
+/** A real 'YYYY-MM-DD' calendar date given as a string (rejects arrays and 2026-02-31). */
 export function isValidDate(value) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(String(value)) && !Number.isNaN(combine(value, '00:00').getTime());
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const d = combine(value, '00:00');
+  return !Number.isNaN(d.getTime()) && localDate(d) === value;
 }
 
+/** An 'HH:MM' time given as a string. */
 export function isValidTime(value) {
-  return /^([01]\d|2[0-3]):[0-5]\d$/.test(String(value));
+  return typeof value === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
 }
 
 /** Monday of the week containing `d`, as 'YYYY-MM-DD'. */

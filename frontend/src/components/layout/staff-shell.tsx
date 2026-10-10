@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth-context';
 import { Badge } from '@/components/ui/badge';
 import { NotificationBell } from '@/components/layout/notification-bell';
 import { canAccess, type Section } from '@/lib/permissions';
+import { FlameMark } from '@/components/storefront/flame-mark';
+import { XMarkIcon } from '@/components/ui/icons';
 
 interface NavItem {
   href: string;
@@ -36,6 +38,7 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
       { href: '/staff/users', label: 'Staff management', icon: 'shield', section: 'staff' },
       { href: '/staff/workforce', label: 'Workforce', icon: 'team', section: 'workforce' },
       { href: '/staff/analytics', label: 'Analytics', icon: 'chart', section: 'analytics' },
+      { href: '/staff/settings', label: 'Settings', icon: 'cog', section: 'settings' },
     ],
   },
   {
@@ -44,7 +47,6 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
       { href: '/staff/account', label: 'My account', icon: 'user', section: 'account' },
       { href: '/staff/schedule', label: 'My schedule', icon: 'clock', section: 'schedule' },
       { href: '/staff/my-work', label: 'My work', icon: 'briefcase', section: 'mywork' },
-      { href: '/staff/settings', label: 'Settings', icon: 'cog', section: 'settings' },
     ],
   },
 ];
@@ -81,10 +83,28 @@ export function StaffShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const drawerRef = useRef<HTMLElement>(null);
+  const openerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
+
+  // Mobile drawer: focus the first link on open, close on Escape, hand focus
+  // back to the menu button on close.
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const opener = openerRef.current;
+    drawerRef.current?.querySelector<HTMLElement>('nav a')?.focus();
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setMobileOpen(false);
+    }
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      opener?.focus();
+    };
+  }, [mobileOpen]);
 
   if (!user) return null;
 
@@ -102,7 +122,9 @@ export function StaffShell({ children }: { children: React.ReactNode }) {
   const sidebar = (
     <>
       <div className="flex items-center gap-3 border-b border-stone-200 px-5 py-4">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 font-bold text-white">RO</div>
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-white">
+          <FlameMark />
+        </div>
         <div className="flex-1">
           <p className="text-sm font-semibold leading-tight">Staff console</p>
           <p className="text-xs text-stone-500">Plate &amp; Flame</p>
@@ -115,7 +137,7 @@ export function StaffShell({ children }: { children: React.ReactNode }) {
       <nav className="flex-1 overflow-y-auto px-3 py-3">
         {groups.map((group) => (
           <div key={group.title} className="mb-3">
-            <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-stone-400">{group.title}</p>
+            <p className="mb-1 px-3 text-xs font-semibold uppercase tracking-wider text-stone-500">{group.title}</p>
             <ul className="space-y-0.5">
               {group.items.map((item) => {
                 const active = item.href === '/staff' ? pathname === '/staff' : pathname.startsWith(item.href);
@@ -123,6 +145,7 @@ export function StaffShell({ children }: { children: React.ReactNode }) {
                   <li key={item.href}>
                     <Link
                       href={item.href}
+                      aria-current={active ? 'page' : undefined}
                       className={`group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${
                         active ? 'bg-brand-50 font-medium text-brand-700' : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'
                       }`}
@@ -141,11 +164,13 @@ export function StaffShell({ children }: { children: React.ReactNode }) {
         ))}
 
         <div className="mt-2 border-t border-stone-200 pt-3">
-          <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Other zones</p>
-          <Link href="/dev" className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-stone-600 hover:bg-stone-100 hover:text-stone-900">
-            <NavIcon name="book" className="h-[18px] w-[18px] text-stone-400" />
-            Scrum board
-          </Link>
+          <p className="mb-1 px-3 text-xs font-semibold uppercase tracking-wider text-stone-500">Other zones</p>
+          {process.env.NODE_ENV === 'development' ? (
+            <Link href="/dev" className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-stone-600 hover:bg-stone-100 hover:text-stone-900">
+              <NavIcon name="book" className="h-[18px] w-[18px] text-stone-400" />
+              Scrum board
+            </Link>
+          ) : null}
           <Link href="/" className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-stone-600 hover:bg-stone-100 hover:text-stone-900">
             <NavIcon name="grid" className="h-[18px] w-[18px] text-stone-400" />
             Public site
@@ -188,8 +213,14 @@ export function StaffShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen">
       {/* Mobile top bar */}
       <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-stone-200 bg-white px-4 lg:hidden">
-        <button onClick={() => setMobileOpen(true)} className="btn-ghost !px-2" aria-label="Open navigation">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="h-5 w-5">
+        <button
+          ref={openerRef}
+          onClick={() => setMobileOpen(true)}
+          className="btn-ghost !px-2"
+          aria-label="Open navigation"
+          aria-expanded={mobileOpen}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="h-5 w-5" aria-hidden="true">
             <path strokeLinecap="round" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
@@ -199,8 +230,24 @@ export function StaffShell({ children }: { children: React.ReactNode }) {
 
       {mobileOpen ? (
         <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="absolute inset-0 bg-stone-900/40" onClick={() => setMobileOpen(false)} />
-          <aside className="relative flex h-full w-72 flex-col bg-white shadow-xl">{sidebar}</aside>
+          <div className="absolute inset-0 bg-stone-900/40" onClick={() => setMobileOpen(false)} aria-hidden="true" />
+          <aside
+            ref={drawerRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation"
+            className="relative flex h-full w-72 max-w-[85vw] flex-col bg-white shadow-xl"
+          >
+            <button
+              type="button"
+              onClick={() => setMobileOpen(false)}
+              className="absolute right-2 top-2.5 z-10 inline-flex h-9 w-9 items-center justify-center rounded-lg text-stone-500 hover:bg-stone-100 hover:text-stone-700"
+              aria-label="Close navigation"
+            >
+              <XMarkIcon className="h-5 w-5" />
+            </button>
+            {sidebar}
+          </aside>
         </div>
       ) : null}
 

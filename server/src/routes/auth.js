@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import {
   users,
@@ -14,29 +13,29 @@ import {
 import { authenticate, requireRole, requireAdmin } from '../middleware/auth.js';
 import { signToken } from '../lib/jwt.js';
 import { canManage, BELOW_RANK_ERROR } from '../lib/hierarchy.js';
+import { passwordError, generateTempPassword, PASSWORD_MAX } from '../lib/password-policy.js';
+import { personName, email as readEmail, phone as readPhone, bool, oneOf, EMAIL_MAX } from '../lib/validate.js';
 
 const router = Router();
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 /** POST /api/auth/register — create a Customer account (public). */
 router.post('/register', (req, res) => {
-  const { name, email, password } = req.body || {};
-
-  if (!String(name || '').trim() || !email || !password) {
+  // Only these three fields are read: a "role" (or anything else) in the body is ignored.
+  const body = req.body || {};
+  if (!body.name || !body.email || !body.password) {
     return res.status(400).json({ error: 'Name, email and password are required.' });
   }
-  if (!EMAIL_RE.test(String(email))) {
-    return res.status(400).json({ error: 'Please enter a valid email address.' });
-  }
-  if (String(password).length < 6) {
-    return res.status(400).json({ error: 'Password must be at least 6 characters.' });
-  }
+  const name = personName(body.name);
+  const email = readEmail(body.email);
+  const { password } = body;
+  if (typeof password !== 'string') return res.status(400).json({ error: 'Password must be text.' });
+  const weak = passwordError(password, { email, name });
+  if (weak) return res.status(400).json({ error: weak });
   if (findUserByEmail(email)) {
     return res.status(409).json({ error: 'An account with that email already exists.' });
   }
 
-  const user = createUser({ name, email, password: String(password), role: 'customer' });
+  const user = createUser({ name, email, password, role: 'customer' });
 
   // A new signup gets a linked customer profile immediately (self-service).
   customers.push({
@@ -57,10 +56,14 @@ router.post('/register', (req, res) => {
 
 /** POST /api/auth/login — authenticate any role and return a JWT. */
 router.post('/login', (req, res) => {
+  // No password policy here: existing accounts (and the demo ones) keep signing in.
   const { email, password } = req.body || {};
+  if (typeof email !== 'string' || typeof password !== 'string' || email.length > EMAIL_MAX || password.length > PASSWORD_MAX) {
+    return res.status(400).json({ error: 'Email and password are required.' });
+  }
   const user = findUserByEmail(email);
 
-  if (!user || !bcrypt.compareSync(String(password || ''), user.passwordHash)) {
+  if (!user || !bcrypt.compareSync(password, user.passwordHash)) {
     return res.status(401).json({ error: 'Invalid email or password.' });
   }
   if (!user.active) {
@@ -83,27 +86,24 @@ function profileChanges(user, body) {
   const changes = {};
   if (body.name !== undefined) {
     if (typeof body.name !== 'string' || !body.name.trim()) return { status: 400, error: 'Name is required.' };
-    changes.name = body.name.trim();
+    changes.name = personName(body.name);
   }
   if (body.email !== undefined) {
-    const email = typeof body.email === 'string' ? body.email.toLowerCase().trim() : '';
-    if (!EMAIL_RE.test(email)) return { status: 400, error: 'Please enter a valid email address.' };
+    const email = readEmail(body.email);
     const owner = findUserByEmail(email);
     if (owner && owner.id !== user.id) return { status: 409, error: 'An account with that email already exists.' };
     if (email !== user.email) changes.email = email;
   }
   if (body.phone !== undefined) {
-    const phone = typeof body.phone === 'string' ? body.phone.trim() : null;
-    if (phone === null || phone.length > 30 || !/^[0-9+()\-.\s]*$/.test(phone)) {
-      return { status: 400, error: 'Please enter a valid phone number.' };
-    }
-    changes.phone = phone;
+    if (typeof body.phone !== 'string') return { status: 400, error: 'Please enter a valid phone number.' };
+    changes.phone = readPhone(body.phone);
   }
   return { changes };
 }
 
 // Wrong-password answers are 400, not 401: a 401 means "your session ended" to the client.
-const passwordMatches = (user, password) => bcrypt.compareSync(String(password || ''), user.passwordHash);
+const passwordMatches = (user, password) =>
+  typeof password === 'string' && password.length <= PASSWORD_MAX && bcrypt.compareSync(password, user.passwordHash);
 
 /** PATCH /api/auth/me — staff edit their own name, email and phone. Changing the email (the login) needs the current password. */
 router.patch('/me', authenticate, requireRole('waiter', 'chef', 'manager', 'admin'), (req, res) => {
@@ -127,12 +127,14 @@ router.post('/me/password', authenticate, (req, res) => {
   if (req.user.role !== 'admin' && !passwordMatches(req.user, currentPassword)) {
     return res.status(400).json({ error: 'Your current password is incorrect.' });
   }
-  if (typeof newPassword !== 'string' || newPassword.length < 6) {
-    return res.status(400).json({ error: 'New password must be at least 6 characters.' });
+  if (typeof newPassword !== 'string' || !newPassword) {
+    return res.status(400).json({ error: 'Enter a new password.' });
   }
   if (passwordMatches(req.user, newPassword)) {
     return res.status(400).json({ error: 'Choose a password different from your current one.' });
   }
+  const weak = passwordError(newPassword, req.user);
+  if (weak) return res.status(400).json({ error: weak });
   req.user.passwordHash = bcrypt.hashSync(newPassword, 10);
   req.user.mustChangePassword = false;
   req.user.tokenVersion = (req.user.tokenVersion ?? 0) + 1;
@@ -172,7 +174,7 @@ router.patch('/users/:id/profile', authenticate, requireRole('manager', 'admin')
 router.post('/users/:id/reset-password', authenticate, requireRole('manager', 'admin'), (req, res) => {
   const target = managedTarget(req, res);
   if (!target) return undefined;
-  const tempPassword = crypto.randomBytes(6).toString('base64url');
+  const tempPassword = generateTempPassword();
   target.passwordHash = bcrypt.hashSync(tempPassword, 10);
   target.mustChangePassword = true;
   target.tokenVersion = (target.tokenVersion ?? 0) + 1;
@@ -187,9 +189,11 @@ router.post('/users/:id/password', authenticate, requireRole('admin'), (req, res
   const target = managedTarget(req, res);
   if (!target) return undefined;
   const { newPassword } = req.body || {};
-  if (typeof newPassword !== 'string' || newPassword.length < 6) {
-    return res.status(400).json({ error: 'New password must be at least 6 characters.' });
+  if (typeof newPassword !== 'string' || !newPassword) {
+    return res.status(400).json({ error: 'Enter a new password.' });
   }
+  const weak = passwordError(newPassword, target);
+  if (weak) return res.status(400).json({ error: weak });
   target.passwordHash = bcrypt.hashSync(newPassword, 10);
   target.mustChangePassword = false;
   target.tokenVersion = (target.tokenVersion ?? 0) + 1;
@@ -211,19 +215,20 @@ router.patch('/users/:id', requireAdmin, (req, res) => {
   const user = findUserById(req.params.id);
   if (!user) return res.status(404).json({ error: 'User not found.' });
 
-  const { role, active } = req.body || {};
+  const body = req.body || {};
+  const role = oneOf(body.role, 'Role', ROLES, { message: 'Invalid role.' });
+  const active = bool(body.active, 'active');
   const isSelf = user.id === req.user.id;
   // Admins manage the staff accounts below them (not other admins) and customer accounts.
   if (!isSelf && user.role !== 'customer' && !canManage(req.user, user)) return res.status(403).json({ error: BELOW_RANK_ERROR });
 
   if (role !== undefined) {
-    if (!ROLES.includes(role)) return res.status(400).json({ error: 'Invalid role.' });
     if (isSelf && role !== user.role) return res.status(400).json({ error: 'You cannot change your own role.' });
     user.role = role;
   }
   if (active !== undefined) {
     if (isSelf && !active) return res.status(400).json({ error: 'You cannot suspend your own account.' });
-    user.active = Boolean(active);
+    user.active = active;
   }
 
   return res.json({ user: sanitizeUser(user) });

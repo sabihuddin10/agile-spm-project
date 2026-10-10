@@ -73,7 +73,7 @@ export function RecipesPanel({
       {loading && items.length === 0 ? (
         <Spinner label="Loading recipes…" />
       ) : shown.length === 0 ? (
-        <p className="py-12 text-center text-sm text-stone-400">No dishes match.</p>
+        <p className="py-12 text-center text-sm text-stone-500">No dishes match.</p>
       ) : (
         <div className="grid gap-3 p-4 md:grid-cols-2 2xl:grid-cols-3">
           {shown.map((dish) => {
@@ -84,13 +84,13 @@ export function RecipesPanel({
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="font-semibold text-stone-800">{dish.name}</p>
-                    <p className="text-xs text-stone-400">
+                    <p className="text-xs text-stone-500">
                       {dish.category} · {money(dish.price)}
                       {!dish.available ? <span className="text-red-600"> · out of stock</span> : null}
                     </p>
                   </div>
                   {canEdit ? (
-                    <button className="btn-secondary shrink-0 !px-2.5 !py-1 text-xs" onClick={() => onEdit(dish)}>
+                    <button className="btn-sm btn-secondary shrink-0" onClick={() => onEdit(dish)}>
                       Edit recipe
                     </button>
                   ) : null}
@@ -110,7 +110,7 @@ export function RecipesPanel({
                             <span className="min-w-0 truncate text-stone-700">
                               {line.name ?? ing?.name ?? 'Unknown'}
                               {ing && ing.health !== 'ok' ? (
-                                <Badge tone={HEALTH[ing.health].tone} className="ml-1.5 !px-1.5 !py-0 text-[10px]">
+                                <Badge tone={HEALTH[ing.health].tone} className="ml-1.5 !px-1.5 !py-0 text-xs">
                                   {ing.health}
                                 </Badge>
                               ) : null}
@@ -124,9 +124,9 @@ export function RecipesPanel({
                     </ul>
                     <p className="mt-auto flex justify-between border-t border-stone-100 pt-2 text-xs text-stone-500">
                       <span>Food cost / portion</span>
-                      <span className="font-medium text-stone-700">
+                      <span className="font-medium tabular-nums text-stone-700">
                         {money(cost)}
-                        {dish.price > 0 ? <span className="font-normal text-stone-400"> · {percent(cost / dish.price)}</span> : null}
+                        {dish.price > 0 ? <span className="font-normal text-stone-500"> · {percent(cost / dish.price)}</span> : null}
                       </span>
                     </p>
                   </>

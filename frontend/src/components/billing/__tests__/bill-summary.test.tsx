@@ -19,12 +19,13 @@ describe('BillSummary', () => {
     expect(screen.getByText('2')).toBeInTheDocument();
   });
 
-  it('falls back to zeros when there is no summary yet', () => {
+  it('shows a loading skeleton instead of fake zeros while there is no summary yet', () => {
     // Arrange / Act
     render(<BillSummary summary={null} readyCount={0} />);
 
     // Assert
-    expect(screen.getByText('0 open bills')).toBeInTheDocument();
-    expect(screen.getAllByText('$0.00').length).toBeGreaterThan(0);
+    expect(screen.getByRole('status', { name: 'Loading billing totals' })).toBeInTheDocument();
+    expect(screen.queryByText('$0.00')).not.toBeInTheDocument();
+    expect(screen.queryByText('0 open bills')).not.toBeInTheDocument();
   });
 });

@@ -271,7 +271,7 @@ describe('TableTile', () => {
     expect(screen.getByText('6 seats')).toBeInTheDocument();
     expect(screen.getByText('Marco')).toBeInTheDocument();
     const first = screen.getByText('#42').closest('a') as HTMLElement;
-    expect(first).toHaveAttribute('href', '/staff/orders');
+    expect(first).toHaveAttribute('href', '/staff/orders#order-42');
     expect(first).toHaveTextContent('#42 · Preparing$37.50');
     expect(screen.getByText('#43').closest('a')).toHaveTextContent('#43 · Served$12.00');
   });

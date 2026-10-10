@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Spinner } from '@/components/ui/spinner';
 import { useToast } from '@/components/ui/toast';
 import { Receipt } from '@/components/billing/receipt';
+import { XMarkIcon } from '@/components/ui/icons';
 import { billWhere, isOpen, isReadyToBill } from './bill-utils';
 import { TipControl } from './tip-control';
 import { SplitDialog } from './split-dialog';
@@ -134,7 +135,7 @@ export function BillPanel({
         <div className="min-w-0">
           <p className="text-lg font-bold">
             Bill <span className="font-mono">#{invoice.number}</span>
-            <span className="font-normal text-stone-400"> · </span>
+            <span className="font-normal text-stone-500"> · </span>
             <span>{billWhere(invoice)}</span>
           </p>
           <p className="text-xs text-stone-500">
@@ -148,8 +149,8 @@ export function BillPanel({
           </div>
         </div>
         {showHeaderClose ? (
-          <button type="button" onClick={onClose} className="btn-ghost !px-2 !py-1" aria-label="Close bill details">
-            ✕
+          <button type="button" onClick={onClose} className="btn-sm btn-ghost !px-2" aria-label="Close bill details">
+            <XMarkIcon className="h-5 w-5" />
           </button>
         ) : null}
       </header>

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -105,6 +106,16 @@ describe('Spinner', () => {
     // Assert
     expect(screen.getByText('Saving…')).toBeInTheDocument();
   });
+
+  it('exposes a status role with loading text for screen readers', () => {
+    // Arrange / Act
+    render(<Spinner label="Saving…" />);
+
+    // Assert
+    const status = screen.getByRole('status');
+    expect(status).toHaveTextContent('Loading…');
+    expect(screen.getByText('Loading…')).toHaveClass('sr-only');
+  });
 });
 
 describe('Modal', () => {
@@ -176,6 +187,98 @@ describe('Modal', () => {
     // Assert
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it('is labelled by its heading and focuses the first control in the body on open', () => {
+    // Arrange / Act
+    render(
+      <Modal title="Edit dish" onClose={vi.fn()}>
+        <input aria-label="Dish name" />
+        <button>Save</button>
+      </Modal>,
+    );
+
+    // Assert
+    const dialog = screen.getByRole('dialog', { name: 'Edit dish' });
+    expect(dialog).toHaveAttribute('aria-labelledby', screen.getByRole('heading', { name: 'Edit dish' }).id);
+    expect(screen.getByRole('textbox', { name: 'Dish name' })).toHaveFocus();
+  });
+
+  it('traps Tab and Shift+Tab inside the dialog', async () => {
+    // Arrange
+    const user = userEvent.setup({ delay: null });
+    render(
+      <>
+        <button>Outside</button>
+        <Modal title="Edit dish" onClose={vi.fn()}>
+          <input aria-label="Dish name" />
+          <button>Save</button>
+        </Modal>
+      </>,
+    );
+
+    // Act: Tab from the last control wraps to the first (the header close button)
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await user.tab();
+
+    // Assert
+    expect(screen.getByRole('button', { name: 'Close' })).toHaveFocus();
+
+    // Act: Shift+Tab from the first control wraps to the last
+    await user.tab({ shift: true });
+
+    // Assert
+    expect(screen.getByRole('button', { name: 'Save' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Outside' })).not.toHaveFocus();
+  });
+
+  it('restores focus to the previously focused element when it closes', async () => {
+    // Arrange
+    const user = userEvent.setup({ delay: null });
+    function Harness() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <button onClick={() => setOpen(true)}>Open dialog</button>
+          {open ? (
+            <Modal title="Details" onClose={() => setOpen(false)}>
+              <p>Body</p>
+            </Modal>
+          ) : null}
+        </>
+      );
+    }
+    render(<Harness />);
+    await user.click(screen.getByRole('button', { name: 'Open dialog' }));
+    expect(screen.getByRole('button', { name: 'Close' })).toHaveFocus();
+
+    // Act
+    await user.keyboard('{Escape}');
+
+    // Assert
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open dialog' })).toHaveFocus();
+  });
+
+  it('only closes the topmost modal on Escape when modals are nested', async () => {
+    // Arrange
+    const outerClose = vi.fn();
+    const innerClose = vi.fn();
+    const user = userEvent.setup({ delay: null });
+    render(
+      <Modal title="Outer" onClose={outerClose}>
+        <Modal title="Inner" onClose={innerClose}>
+          <p>Nested</p>
+        </Modal>
+      </Modal>,
+    );
+
+    // Act
+    await user.keyboard('{Escape}');
+
+    // Assert
+    expect(innerClose).toHaveBeenCalledTimes(1);
+    expect(outerClose).not.toHaveBeenCalled();
+  });
 });
 
 function ToastDemo() {
@@ -227,6 +330,26 @@ describe('ToastProvider / useToast', () => {
     // Assert
     expect(screen.getByText('Saved successfully').closest('div')).toHaveClass('border-emerald-200');
     expect(screen.getByText('Something failed').closest('div')).toHaveClass('border-red-200');
+  });
+
+  it('announces toasts through a polite live region and errors as alerts', async () => {
+    // Arrange
+    const user = userEvent.setup({ delay: null });
+    render(
+      <ToastProvider>
+        <ToastDemo />
+      </ToastProvider>,
+    );
+
+    // Act
+    await user.click(screen.getByRole('button', { name: 'Fire success' }));
+    await user.click(screen.getByRole('button', { name: 'Fire error' }));
+
+    // Assert
+    const region = screen.getByRole('status');
+    expect(region).toHaveAttribute('aria-live', 'polite');
+    expect(region).toHaveTextContent('Saved successfully');
+    expect(screen.getByRole('alert')).toHaveTextContent('Something failed');
   });
 
   it('throws when useToast is called outside a ToastProvider', () => {

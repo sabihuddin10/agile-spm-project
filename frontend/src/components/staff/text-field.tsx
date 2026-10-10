@@ -1,7 +1,8 @@
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import { isValidEmail as isValidEmailAddress } from '@/lib/validation/fields';
 
+/** Kept for existing callers; the rule itself lives in lib/validation/fields. */
 export function isValidEmail(value: string): boolean {
-  return EMAIL_RE.test(value.trim());
+  return isValidEmailAddress(value);
 }
 
 /**
@@ -13,23 +14,28 @@ export function TextField({
   label,
   value,
   onChange,
+  onBlur,
   type = 'text',
   autoComplete,
   error,
   hint,
   optional = false,
   disabled = false,
+  maxLength,
 }: {
   id: string;
   label: string;
   value: string;
   onChange: (value: string) => void;
+  /** Called when the field loses focus (used to start live validation). */
+  onBlur?: () => void;
   type?: string;
   autoComplete?: string;
   error?: string;
   hint?: string;
   optional?: boolean;
   disabled?: boolean;
+  maxLength?: number;
 }) {
   const note = error ?? hint;
   const noteId = error ? `${id}-error` : `${id}-hint`;
@@ -45,8 +51,10 @@ export function TextField({
         className={`input ${error ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : ''}`}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onBlur={onBlur}
         autoComplete={autoComplete}
         disabled={disabled}
+        maxLength={maxLength}
         aria-invalid={error ? true : undefined}
         aria-describedby={note ? noteId : undefined}
       />

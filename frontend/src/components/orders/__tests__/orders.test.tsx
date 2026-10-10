@@ -392,11 +392,10 @@ describe('EditItemsModal', () => {
     expect(onSaved).not.toHaveBeenCalled();
   });
 
-  it('asks before discarding unsaved changes', async () => {
+  it('asks before discarding unsaved changes, and keeps editing when told to', async () => {
     // Arrange
     const user = userEvent.setup({ delay: null });
     const onClose = vi.fn();
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
     render(<EditItemsModal order={makeOrder()} onClose={onClose} onSaved={vi.fn()} />);
     await user.click(await screen.findByRole('button', { name: 'Increase quantity of Margherita' }));
 
@@ -404,9 +403,46 @@ describe('EditItemsModal', () => {
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
 
     // Assert
-    expect(confirm).toHaveBeenCalledWith('Discard your changes to this order?');
+    const dialog = screen.getByRole('dialog', { name: 'Discard changes?' });
+    expect(dialog).toHaveTextContent("Your changes to order #42 haven't been saved.");
     expect(onClose).not.toHaveBeenCalled();
-    confirm.mockRestore();
+
+    // Act
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+
+    // Assert
+    expect(screen.queryByRole('dialog', { name: 'Discard changes?' })).not.toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('closes after the discard is confirmed', async () => {
+    // Arrange
+    const user = userEvent.setup({ delay: null });
+    const onClose = vi.fn();
+    render(<EditItemsModal order={makeOrder()} onClose={onClose} onSaved={vi.fn()} />);
+    await user.click(await screen.findByRole('button', { name: 'Increase quantity of Margherita' }));
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    // Act
+    await user.click(screen.getByRole('button', { name: 'Discard changes' }));
+
+    // Assert
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes straight away when nothing was changed', async () => {
+    // Arrange
+    const user = userEvent.setup({ delay: null });
+    const onClose = vi.fn();
+    render(<EditItemsModal order={makeOrder()} onClose={onClose} onSaved={vi.fn()} />);
+    await screen.findByRole('button', { name: 'Increase quantity of Margherita' });
+
+    // Act
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    // Assert
+    expect(screen.queryByRole('dialog', { name: 'Discard changes?' })).not.toBeInTheDocument();
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('shows the placement and the guest allergies above the editor', async () => {
@@ -662,6 +698,27 @@ describe('NewOrderModal', () => {
     expect(toastMock).toHaveBeenCalledWith('Order #8 held as placed — confirm it to send it to the kitchen.', 'success');
   });
 
+  it('confirms in a dialog before discarding an order with items', async () => {
+    // Arrange
+    const user = userEvent.setup({ delay: null });
+    const onClose = vi.fn();
+    render(<NewOrderModal onClose={onClose} onCreated={vi.fn()} />);
+    await user.click(await screen.findByRole('button', { name: /^Lemonade/ }));
+
+    // Act
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    // Assert
+    expect(screen.getByRole('dialog', { name: 'Discard this order?' })).toHaveTextContent('1 item will be lost.');
+    expect(onClose).not.toHaveBeenCalled();
+
+    // Act
+    await user.click(screen.getByRole('button', { name: 'Discard order' }));
+
+    // Assert
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it('cannot be submitted empty and never offers unavailable dishes', async () => {
     // Arrange / Act
     render(<NewOrderModal onClose={vi.fn()} onCreated={vi.fn()} />);
@@ -900,7 +957,7 @@ describe('OrderCard', () => {
     expect(screen.getByText('Delivery')).toBeInTheDocument();
     expect(screen.getByText('Self-order')).toBeInTheDocument();
     expect(screen.getByText('1 High St')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Take payment' })).toHaveAttribute('href', '/staff/billing');
+    expect(screen.getByRole('link', { name: 'Take payment' })).toHaveAttribute('href', '/staff/billing?bill=ord_1');
   });
 
   it('gives a chef no floor actions', () => {

@@ -182,3 +182,47 @@ test('a category sort order must be a number; a rejected edit changes nothing', 
   assert.equal(after.name, 'Sort Check', 'the rename in a rejected request was not applied');
   assert.equal(after.sort, 7);
 });
+
+test('menu item fields are type-checked: finite prices, real booleans, short text, lists of text', async () => {
+  // Arrange
+  const token = await api.login('manager');
+  const categoryId = (await api.call('GET', '/menu/categories')).body.categories[0].id;
+  const base = { name: 'Type Check', categoryId, price: 5 };
+  const create = (extra) => api.call('POST', '/menu/items', { token, body: { ...base, ...extra } });
+
+  // Act
+  const infinite = await create({ price: 'Infinity' });
+  const enormous = await create({ price: 1e12 });
+  const boolPrice = await create({ price: true });
+  const stringFalse = await create({ available: 'false' });
+  const longName = await create({ name: 'x'.repeat(81) });
+  const longDescription = await create({ description: 'x'.repeat(501) });
+  const objectTags = await create({ dietaryTags: [{ evil: true }] });
+  const ok = await create({ price: '7.5', dietaryTags: [' vegan '], available: false });
+
+  // Assert
+  for (const res of [infinite, enormous, boolPrice, stringFalse, longName, longDescription, objectTags]) assert.equal(res.status, 400);
+  assert.equal(ok.status, 201);
+  assert.equal(ok.body.item.price, 7.5);
+  assert.deepEqual(ok.body.item.dietaryTags, ['vegan']);
+  assert.equal(ok.body.item.available, false);
+});
+
+test('a rejected menu item edit changes nothing, and id / recipe cannot be overwritten through the body', async () => {
+  // Arrange
+  const token = await api.login('manager');
+  const fries = await menuItem(api.call, 'Fries');
+
+  // Act
+  const rejected = await api.call('PATCH', `/menu/items/${fries.id}`, { token, body: { name: 'Renamed', price: 'Infinity' } });
+  const sneaky = await api.call('PATCH', `/menu/items/${fries.id}`, { token, body: { id: 'mi_hijack', recipe: [{ inventoryId: 'x', qty: 1 }], createdAt: 'yesterday' } });
+  const after = await menuItem(api.call, 'Fries');
+
+  // Assert
+  assert.equal(rejected.status, 400);
+  assert.equal(after.name, 'Fries');
+  assert.equal(after.price, fries.price);
+  assert.equal(sneaky.status, 200);
+  assert.equal(sneaky.body.item.id, fries.id);
+  assert.equal(sneaky.body.item.createdAt, fries.createdAt);
+});

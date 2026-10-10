@@ -327,6 +327,10 @@ describe('ReservationCard', () => {
     expect(handlers.onCancel).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('button', { name: 'No-show' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'No-show' })).toHaveAttribute('title', 'Available after the grace period');
+    expect(screen.getByText('No-show becomes available after the grace period.')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'No-show' })).toHaveAccessibleDescription(
+      'No-show becomes available after the grace period.',
+    );
   });
 
   it('flags a late booking and allows marking it a no-show', async () => {
@@ -339,6 +343,7 @@ describe('ReservationCard', () => {
 
     // Assert
     expect(screen.getByText('Late — past grace period')).toBeInTheDocument();
+    expect(screen.queryByText('No-show becomes available after the grace period.')).not.toBeInTheDocument();
     expect(handlers.onNoShow).toHaveBeenCalledTimes(1);
   });
 

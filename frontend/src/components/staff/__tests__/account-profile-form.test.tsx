@@ -131,7 +131,7 @@ describe('AccountProfileForm', () => {
 
     // Assert
     expect(screen.getByLabelText('Name')).toHaveAccessibleDescription('Enter your name.');
-    expect(screen.getByLabelText('Email')).toHaveAccessibleDescription('Enter a valid email address.');
+    expect(screen.getByLabelText('Email')).toHaveAccessibleDescription('Enter an email address like name@example.com.');
     expect(authApi.updateMe).not.toHaveBeenCalled();
   });
 
@@ -140,7 +140,7 @@ describe('AccountProfileForm', () => {
     vi.mocked(authApi.updateMe).mockReturnValue(new Promise(() => undefined));
     const user = userEvent.setup({ delay: null });
     render(<AccountProfileForm user={makeUser()} />);
-    await user.type(screen.getByLabelText('Phone (optional)'), '1');
+    await user.type(screen.getByLabelText('Phone (optional)'), '555-0101');
 
     // Act
     await user.click(screen.getByRole('button', { name: 'Save profile' }));
@@ -156,5 +156,33 @@ describe('AccountProfileForm', () => {
 
     // Assert
     expect(screen.getByRole('button', { name: 'Save profile' })).toBeDisabled();
+  });
+});
+
+describe('AccountProfileForm — live validation', () => {
+  it('checks the phone when you leave the field, then live as you fix it', async () => {
+    // Arrange
+    const user = userEvent.setup({ delay: null });
+    render(<AccountProfileForm user={makeUser()} />);
+    const phone = screen.getByLabelText('Phone (optional)');
+
+    // Act — typing alone shows no error yet
+    await user.type(phone, '12');
+
+    // Assert
+    expect(phone).not.toHaveAttribute('aria-invalid');
+
+    // Act — leaving the field reveals it
+    await user.tab();
+
+    // Assert
+    expect(phone).toHaveAttribute('aria-invalid', 'true');
+    expect(phone).toHaveAccessibleDescription('Phone numbers have 7 to 20 digits.');
+
+    // Act — fixing it clears the error without another blur
+    await user.type(phone, '3-4567');
+
+    // Assert
+    expect(phone).not.toHaveAttribute('aria-invalid');
   });
 });

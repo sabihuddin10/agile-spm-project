@@ -21,6 +21,7 @@ import { PROBE_HEADER } from './lib/health-probe.js';
 import { authenticate, optionalAuth } from './middleware/auth.js';
 import { rateLimit, limitPost } from './middleware/rate-limit.js';
 import { persistState } from './data/persist.js';
+import { hasUnsafeKeys, isPlainObject } from './lib/validate.js';
 
 /**
  * `persistence` keeps the store in Postgres (on by default when DATABASE_URL is set);
@@ -33,7 +34,9 @@ export function createApp({ logging = true, persistence = Boolean(process.env.DA
   if (process.env.VERCEL) app.set('trust proxy', 1);
 
   app.use(cors());
-  app.use(express.json({ limit: '1mb' }));
+  // The largest real body (a recipe or reorder form) is a few KB; 100 KB is generous.
+  app.use(express.json({ limit: '100kb' }));
+  app.use(guardInput);
   // The status page's own probes are not worth a log line each.
   if (logging) app.use(morgan('dev', { skip: (req) => req.headers[PROBE_HEADER] === '1' }));
 
@@ -80,9 +83,29 @@ export function createApp({ logging = true, persistence = Boolean(process.env.DA
   // eslint-disable-next-line no-unused-vars
   app.use((err, req, res, next) => {
     if (err.type === 'entity.parse.failed') return res.status(400).json({ error: 'Malformed JSON body.' });
+    if (err.type === 'entity.too.large') return res.status(413).json({ error: 'Request body is too large.' });
+    // Validation errors thrown by lib/validate.js, and body-parser's other 4xx (bad charset, encoding).
+    if (err.expose && err.status >= 400 && err.status < 500) return res.status(err.status).json({ error: err.message });
     console.error(err);
     return res.status(500).json({ error: 'Internal server error' });
   });
 
   return app;
+}
+
+/**
+ * Reject input shapes no route expects before any handler sees them: a JSON
+ * body must be an object (not an array or a bare value), no key anywhere in it
+ * may be __proto__ / constructor / prototype, and each query parameter must be
+ * a single string (no ?a[]=1 arrays or ?a[b]=1 objects).
+ */
+function guardInput(req, res, next) {
+  for (const [key, value] of Object.entries(req.query ?? {})) {
+    if (typeof value !== 'string') return res.status(400).json({ error: `Query parameter "${key}" must be a single value.` });
+  }
+  const { body } = req;
+  if (body === undefined || (isPlainObject(body) && Object.keys(body).length === 0)) return next();
+  if (!isPlainObject(body)) return res.status(400).json({ error: 'Request body must be a JSON object.' });
+  if (hasUnsafeKeys(body)) return res.status(400).json({ error: 'Request body contains a reserved key.' });
+  return next();
 }

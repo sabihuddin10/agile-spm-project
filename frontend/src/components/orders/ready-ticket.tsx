@@ -68,7 +68,7 @@ export function ReadyTicket({
           Floor staff notified{order.waiterName ? ` · ${order.waiterName}` : ''}
         </p>
         {can.serveOrders(role) ? (
-          <button type="button" className="btn-secondary !px-2.5 !py-1 text-xs" disabled={busy} onClick={serve}>
+          <button type="button" className="btn-sm btn-secondary" disabled={busy} onClick={serve}>
             {busy ? 'Saving…' : 'Mark served'}
           </button>
         ) : null}

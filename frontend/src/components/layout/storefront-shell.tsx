@@ -117,7 +117,7 @@ export function StorefrontShell({ children }: { children: React.ReactNode }) {
               <p className="font-display text-lg font-semibold leading-tight tracking-tight text-bone">
                 Plate &amp; Flame
               </p>
-              <p className="text-[11px] leading-tight text-bone-faint">Wood-fired bistro</p>
+              <p className="text-xs leading-tight text-bone-faint">Wood-fired bistro</p>
             </div>
           </Link>
 

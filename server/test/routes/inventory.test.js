@@ -141,3 +141,24 @@ test('/inventory/purchase-orders is manager-only and lists the newest order firs
   const top = list.body.purchaseOrders[0];
   assert.deepEqual([top.status, top.total, top.notes, top.lines[0].name], ['sent', 30, 'Rush', 'Thai Basil']);
 });
+
+test('ingredient amounts must be finite numbers and text fields short strings', async () => {
+  // Arrange
+  const token = await api.login('manager');
+  const { body } = await api.call('GET', '/inventory', { token });
+  const item = body.inventory[0];
+
+  // Act
+  const infiniteStock = await api.call('POST', '/inventory', { token, body: { name: 'Infinite Flour', stock: 'Infinity' } });
+  const hugeCost = await api.call('POST', '/inventory', { token, body: { name: 'Gold Leaf', costPerUnit: 1e12 } });
+  const objectName = await api.call('POST', '/inventory', { token, body: { name: { $gt: '' } } });
+  const longSupplier = await api.call('PATCH', `/inventory/${item.id}`, { token, body: { supplier: 's'.repeat(121) } });
+  const infiniteDelta = await api.call('PATCH', `/inventory/${item.id}`, { token, body: { delta: '1e400' } });
+  const longNotes = await api.call('POST', '/inventory/purchase-orders', { token, body: { lines: [{ inventoryId: item.id, qty: 1 }], notes: 'n'.repeat(1001) } });
+  const after = (await api.call('GET', '/inventory', { token })).body.inventory.find((i) => i.id === item.id);
+
+  // Assert
+  for (const res of [infiniteStock, hugeCost, objectName, longSupplier, infiniteDelta, longNotes]) assert.equal(res.status, 400);
+  assert.equal(after.stock, item.stock);
+  assert.equal(after.supplier, item.supplier);
+});

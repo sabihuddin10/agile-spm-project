@@ -153,17 +153,17 @@
         "name": {
           "type": "string",
           "required": true,
-          "note": ""
+          "note": "1–80 characters"
         },
         "email": {
           "type": "string",
           "required": true,
-          "note": "Valid email, unique"
+          "note": "Valid email, unique, max 254"
         },
         "password": {
           "type": "string",
           "required": true,
-          "note": "At least 6 characters"
+          "note": "Password policy: 8–128 characters with a lowercase and an uppercase letter, a number and a special character; not your email/name or a very common password"
         }
       },
       "response": {
@@ -183,7 +183,7 @@
         }
       },
       "errors": [
-        "400 missing/invalid fields",
+        "400 missing/invalid fields, or \"Password needs: …\" listing the unmet rules (any role in the body is ignored)",
         "409 email already registered"
       ],
       "probe": {
@@ -213,7 +213,7 @@
         "password": {
           "type": "string",
           "required": true,
-          "note": ""
+          "note": "Not checked against the password policy, so older passwords still work"
         }
       },
       "response": {
@@ -233,6 +233,7 @@
         }
       },
       "errors": [
+        "400 email or password missing / not text",
         "401 wrong email or password",
         "403 account suspended"
       ],
@@ -297,7 +298,7 @@
         "name": {
           "type": "string",
           "required": false,
-          "note": ""
+          "note": "1–80 characters"
         },
         "email": {
           "type": "string",
@@ -307,7 +308,7 @@
         "phone": {
           "type": "string",
           "required": false,
-          "note": "digits, spaces, + ( ) - .; max 30"
+          "note": "digits, spaces, + ( ) - .; 7–20 digits; max 30"
         },
         "currentPassword": {
           "type": "string",
@@ -361,7 +362,7 @@
         "newPassword": {
           "type": "string",
           "required": true,
-          "note": "At least 6 characters, different from the current one"
+          "note": "Meets the password policy, different from the current one"
         }
       },
       "response": {
@@ -381,7 +382,7 @@
         }
       },
       "errors": [
-        "400 wrong current password / too short / unchanged"
+        "400 wrong current password / unchanged / \"Password needs: …\" listing the unmet rules"
       ],
       "probe": {
         "enabled": false,
@@ -481,7 +482,7 @@
             "mustChangePassword": true,
             "createdAt": "2026-01-04T10:00:00.000Z"
           },
-          "tempPassword": "<generated>"
+          "tempPassword": "<generated, 12 characters, meets the password policy>"
         }
       },
       "errors": [
@@ -514,7 +515,7 @@
         "newPassword": {
           "type": "string",
           "required": true,
-          "note": "At least 6 characters"
+          "note": "Meets the password policy"
         }
       },
       "response": {
@@ -533,7 +534,7 @@
         }
       },
       "errors": [
-        "400 password too short",
+        "400 \"Password needs: …\" listing the unmet rules",
         "403 another admin",
         "404 user not found"
       ],
@@ -3722,12 +3723,12 @@
         "email": {
           "type": "string",
           "required": true,
-          "note": "Defaults to the signed-in customer"
+          "note": "Valid email; defaults to the signed-in customer"
         },
         "phone": {
           "type": "string",
           "required": false,
-          "note": ""
+          "note": "7–20 digits"
         },
         "partySize": {
           "type": "integer",
@@ -3747,7 +3748,7 @@
         "specialRequests": {
           "type": "string",
           "required": false,
-          "note": ""
+          "note": "max 500 characters"
         }
       },
       "response": {
@@ -4472,7 +4473,7 @@
         "name": {
           "type": "string",
           "required": true,
-          "note": ""
+          "note": "1–80 characters"
         },
         "email": {
           "type": "string",
@@ -4482,7 +4483,7 @@
         "phone": {
           "type": "string",
           "required": false,
-          "note": ""
+          "note": "7–20 digits"
         },
         "desiredRole": {
           "type": "string",
@@ -4492,7 +4493,7 @@
         "experience": {
           "type": "string",
           "required": false,
-          "note": ""
+          "note": "max 1000 characters"
         }
       },
       "response": {
@@ -4514,6 +4515,7 @@
         }
       },
       "errors": [
+        "400 missing/invalid fields",
         "409 account exists / application pending",
         "429 more than 3 applications an hour from one address"
       ],

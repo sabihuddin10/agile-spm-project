@@ -943,13 +943,52 @@ describe('AccountTable — admin sets a password', () => {
 
     // Act
     await user.click(screen.getByRole('button', { name: 'Set password for Will Waiter' }));
-    await user.type(screen.getByLabelText('New password'), 'fresh-pass');
-    await user.type(screen.getByLabelText('Confirm new password'), 'fresh-pass');
+    await user.type(screen.getByLabelText('New password'), 'Fresh-pass1');
+    await user.type(screen.getByLabelText('Confirm new password'), 'Fresh-pass1');
     await user.click(screen.getByRole('button', { name: 'Set password' }));
 
     // Assert
-    expect(authApi.setUserPassword).toHaveBeenCalledWith('usr_waiter', 'fresh-pass');
+    expect(authApi.setUserPassword).toHaveBeenCalledWith('usr_waiter', 'Fresh-pass1');
     expect(toastMock).toHaveBeenCalledWith(expect.stringContaining("Will Waiter's password was changed"), 'success');
     expect(onChanged).toHaveBeenCalled();
+  });
+});
+
+describe('AccountTable — set password policy', () => {
+  it('does not send a password that misses the policy, and marks the unmet rules', async () => {
+    // Arrange
+    auth.user = admin;
+    const user = userEvent.setup({ delay: null });
+    render(<AccountTable users={[admin, waiter]} onChanged={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: 'Set password for Will Waiter' }));
+
+    // Act
+    await user.type(screen.getByLabelText('New password'), 'freshpass');
+    await user.type(screen.getByLabelText('Confirm new password'), 'freshpass');
+    await user.click(screen.getByRole('button', { name: 'Set password' }));
+
+    // Assert
+    expect(authApi.setUserPassword).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('New password')).toHaveAccessibleDescription(/does not meet all the requirements yet/);
+    expect(screen.getByRole('status')).toHaveTextContent('2 of 5 requirements met');
+  });
+});
+
+describe('CareersForm — live field checks', () => {
+  it('shows field errors under each field and does not send an invalid application', async () => {
+    // Arrange
+    const user = userEvent.setup({ delay: null });
+    render(<CareersForm />);
+
+    // Act
+    await user.type(screen.getByLabelText('Email'), 'jo@');
+    await user.type(screen.getByLabelText(/phone/i), '12');
+    await user.click(screen.getByRole('button', { name: 'Send application' }));
+
+    // Assert
+    expect(screen.getByLabelText('Full name')).toHaveAccessibleDescription('Please enter your name.');
+    expect(screen.getByLabelText('Email')).toHaveAccessibleDescription('Enter an email address like name@example.com.');
+    expect(screen.getByLabelText(/phone/i)).toHaveAccessibleDescription('Phone numbers have 7 to 20 digits.');
+    expect(staffApi.apply).not.toHaveBeenCalled();
   });
 });

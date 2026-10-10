@@ -150,3 +150,22 @@ test('only active floor staff can be assigned to look after a table', async () =
   assert.equal(otherWaiter.status, 200);
   assert.equal(otherWaiter.body.table.waiterId, 'usr_waiter2');
 });
+
+test('table fields are type-checked: whole-number table numbers, finite seats, short zones, real booleans', async () => {
+  // Arrange
+  const token = await api.login('manager');
+  const table = await tableByNumber(api.call, token, 2);
+
+  // Act
+  const boolNumber = await api.call('POST', '/tables', { token, body: { number: true, seats: 2 } });
+  const infiniteSeats = await api.call('POST', '/tables', { token, body: { number: 901, seats: 'Infinity' } });
+  const longZone = await api.call('POST', '/tables', { token, body: { number: 902, seats: 2, zone: 'z'.repeat(41) } });
+  const objectZone = await api.call('POST', '/tables', { token, body: { number: 903, seats: 2, zone: { name: 'Patio' } } });
+  const stringHeld = await api.call('PATCH', `/tables/${table.id}`, { token, body: { held: 'false', seats: 3 } });
+  const after = await tableByNumber(api.call, token, 2);
+
+  // Assert
+  for (const res of [boolNumber, infiniteSeats, longZone, objectZone, stringHeld]) assert.equal(res.status, 400);
+  assert.equal(after.seats, table.seats, 'the rejected edit changed nothing');
+  assert.equal(after.held, table.held);
+});

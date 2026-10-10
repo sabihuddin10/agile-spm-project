@@ -6,14 +6,22 @@ import { authApi } from '@/lib/api';
 import { errorMessage } from '@/lib/format';
 import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toast';
-import { TextField } from '@/components/staff/text-field';
-import { MIN_PASSWORD_LENGTH } from '@/components/staff/change-password-form';
+import { confirmError, passwordError } from '@/lib/validation/password';
+import { useFormValidation, type Rules } from '@/lib/validation/use-form-validation';
+import { FieldError, describedBy } from '@/components/forms/field-error';
+import { PasswordInput } from '@/components/forms/password-input';
+import { PasswordMatch } from '@/components/forms/password-match';
+import { PasswordRequirements } from '@/components/forms/password-requirements';
 
-type Field = 'next' | 'confirm';
+interface Draft {
+  next: string;
+  confirm: string;
+}
 
 /**
  * An admin typing a new password for an account below them. No old password is
- * needed; the account is signed out everywhere and uses the new one from now on.
+ * needed; the new one is checked live against the password policy, and the
+ * account is signed out everywhere and uses the new one from now on.
  */
 export function SetPasswordModal({
   user,
@@ -25,25 +33,26 @@ export function SetPasswordModal({
   onSaved: (user: User) => unknown;
 }) {
   const toast = useToast();
-  const [draft, setDraft] = useState<Record<Field, string>>({ next: '', confirm: '' });
-  const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
+  const [draft, setDraft] = useState<Draft>({ next: '', confirm: '' });
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const account = { email: user.email, name: user.name };
 
-  function set(key: Field, value: string) {
+  const rules: Rules<Draft> = {
+    next: (v) => passwordError(v, account),
+    confirm: (v, d) => confirmError(d.next, v),
+  };
+  const v = useFormValidation(draft, rules);
+
+  function set(key: keyof Draft, value: string) {
     setDraft((d) => ({ ...d, [key]: value }));
-    setErrors((e) => ({ ...e, [key]: undefined }));
     setFormError(null);
   }
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    const found: Partial<Record<Field, string>> = {};
-    if (draft.next.length < MIN_PASSWORD_LENGTH) found.next = `Use at least ${MIN_PASSWORD_LENGTH} characters.`;
-    else if (draft.confirm !== draft.next) found.confirm = 'Passwords do not match.';
-    setErrors(found);
     setFormError(null);
-    if (Object.keys(found).length > 0) return;
+    if (!v.touchAll()) return;
 
     setSaving(true);
     try {
@@ -63,25 +72,36 @@ export function SetPasswordModal({
           Type the new password and tell {user.name} what it is. Their old password stops working and they are signed out on every device.
         </p>
         <fieldset disabled={saving} className="space-y-4">
-          <TextField
-            id="set-password-new"
-            label="New password"
-            type="password"
-            value={draft.next}
-            onChange={(v) => set('next', v)}
-            autoComplete="new-password"
-            error={errors.next}
-            hint={`At least ${MIN_PASSWORD_LENGTH} characters.`}
-          />
-          <TextField
-            id="set-password-confirm"
-            label="Confirm new password"
-            type="password"
-            value={draft.confirm}
-            onChange={(v) => set('confirm', v)}
-            autoComplete="new-password"
-            error={errors.confirm}
-          />
+          <div>
+            <label htmlFor="set-password-new" className="label">
+              New password
+            </label>
+            <PasswordInput
+              id="set-password-new"
+              value={draft.next}
+              onChange={(value) => set('next', value)}
+              onBlur={() => v.blur('next')}
+              invalid={Boolean(v.errors.next)}
+              describedBy={describedBy('set-password-rules', v.errors.next && 'set-password-new-error')}
+            />
+            <FieldError id="set-password-new-error" message={v.errors.next} />
+            <PasswordRequirements id="set-password-rules" value={draft.next} {...account} showUnmet={v.submitted} />
+          </div>
+          <div>
+            <label htmlFor="set-password-confirm" className="label">
+              Confirm new password
+            </label>
+            <PasswordInput
+              id="set-password-confirm"
+              value={draft.confirm}
+              onChange={(value) => set('confirm', value)}
+              onBlur={() => v.blur('confirm')}
+              invalid={Boolean(v.errors.confirm)}
+              describedBy={describedBy('set-password-match', v.errors.confirm && !draft.confirm && 'set-password-confirm-error')}
+            />
+            {draft.confirm ? null : <FieldError id="set-password-confirm-error" message={v.errors.confirm} />}
+            <PasswordMatch id="set-password-match" password={draft.next} confirm={draft.confirm} />
+          </div>
         </fieldset>
 
         {formError ? (

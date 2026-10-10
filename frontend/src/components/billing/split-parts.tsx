@@ -4,6 +4,7 @@ import type { Invoice } from '@/types';
 import { billingApi } from '@/lib/api';
 import { formatTime, money } from '@/lib/format';
 import { Badge } from '@/components/ui/badge';
+import { CheckIcon, XMarkIcon } from '@/components/ui/icons';
 import { fromCents, toCents } from './bill-utils';
 import { useBillAction } from './use-bill-action';
 
@@ -67,7 +68,7 @@ export function SplitParts({
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-sm font-medium">
-                  {p.label} <span className="font-semibold">{money(p.amount)}</span>
+                  {p.label} <span className="font-semibold tabular-nums">{money(p.amount)}</span>
                 </p>
                 {split.mode === 'items' && p.itemIds.length ? (
                   <p className="text-xs text-stone-500">{p.itemIds.map(lineName).join(', ')}</p>
@@ -84,21 +85,21 @@ export function SplitParts({
                 <div className="flex shrink-0 gap-1.5">
                   <button
                     type="button"
-                    className="btn-primary !px-3 !py-1.5 text-xs"
+                    className="btn-sm btn-primary"
                     onClick={() => pay(i, 'card')}
                     disabled={pending !== null}
                     aria-label={`${p.label}: pay ${money(p.amount)} by card`}
                   >
-                    {pending === `part-${i}-card` ? '…' : 'Pay card'}
+                    {pending === `part-${i}-card` ? 'Paying…' : 'Pay card'}
                   </button>
                   <button
                     type="button"
-                    className="btn-secondary !px-3 !py-1.5 text-xs"
+                    className="btn-sm btn-secondary"
                     onClick={() => pay(i, 'cash')}
                     disabled={pending !== null}
                     aria-label={`${p.label}: pay ${money(p.amount)} in cash`}
                   >
-                    {pending === `part-${i}-cash` ? '…' : 'Pay cash'}
+                    {pending === `part-${i}-cash` ? 'Paying…' : 'Pay cash'}
                   </button>
                 </div>
               )}
@@ -107,13 +108,17 @@ export function SplitParts({
         ))}
       </ul>
 
-      <p className={`mt-2 text-xs font-medium ${adds ? 'text-emerald-700' : 'text-red-600'}`}>
-        Shares total {money(fromCents(sumC))} {adds ? '=' : '≠'} bill total {money(invoice.total)} {adds ? '✓' : '✗'}
+      <p className={`mt-2 flex items-center gap-1 text-xs font-medium tabular-nums ${adds ? 'text-emerald-700' : 'text-red-600'}`}>
+        {adds ? <CheckIcon className="h-3.5 w-3.5 shrink-0" /> : <XMarkIcon className="h-3.5 w-3.5 shrink-0" />}
+        <span>
+          Shares total {money(fromCents(sumC))} {adds ? '=' : '≠'} bill total {money(invoice.total)} ·{' '}
+          {adds ? 'Adds up' : 'Does not add up'}
+        </span>
       </p>
 
       {!settled ? (
         paidCount === 0 ? (
-          <button type="button" className="btn-ghost mt-2 !px-2 text-xs" onClick={undo} disabled={pending !== null}>
+          <button type="button" className="btn-sm btn-ghost mt-2" onClick={undo} disabled={pending !== null}>
             {pending === 'undo' ? 'Undoing…' : 'Undo split'}
           </button>
         ) : (

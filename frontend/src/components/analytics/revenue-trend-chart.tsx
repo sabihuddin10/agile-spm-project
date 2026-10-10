@@ -68,7 +68,7 @@ export function RevenueTrendChart({ data }: { data: AnalyticsDashboard }) {
       legend: {
         position: 'top',
         align: 'end',
-        labels: { usePointStyle: true, pointStyle: 'rectRounded', boxWidth: 8, boxHeight: 8, color: '#44403c' },
+        labels: { usePointStyle: true, pointStyle: 'rectRounded', boxWidth: 8, boxHeight: 8, color: CHART_COLORS.label },
       },
       tooltip: {
         ...(TOOLTIP_STYLE as object),
@@ -91,7 +91,7 @@ export function RevenueTrendChart({ data }: { data: AnalyticsDashboard }) {
         grid: { color: CHART_COLORS.grid },
         border: { display: false },
         ticks: { callback: (v) => compactCurrency(Number(v)), maxTicksLimit: 6 },
-        title: { display: true, text: 'Revenue ($)', color: '#78716c' },
+        title: { display: true, text: 'Revenue ($)', color: CHART_COLORS.axisTitle },
       },
       y1: {
         position: 'right',
@@ -99,7 +99,7 @@ export function RevenueTrendChart({ data }: { data: AnalyticsDashboard }) {
         grid: { drawOnChartArea: false },
         border: { display: false },
         ticks: { precision: 0, maxTicksLimit: 6 },
-        title: { display: true, text: 'Orders', color: '#78716c' },
+        title: { display: true, text: 'Orders', color: CHART_COLORS.axisTitle },
       },
     },
   };

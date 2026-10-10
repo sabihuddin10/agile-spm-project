@@ -6,9 +6,14 @@ import { errorMessage } from '@/lib/format';
 import { useAuth } from '@/context/auth-context';
 import { Card, CardHeader } from '@/components/ui/card';
 import { useToast } from '@/components/ui/toast';
-import { TextField } from '@/components/staff/text-field';
+import { PASSWORD_MIN, confirmError, passwordError } from '@/lib/validation/password';
+import { useFormValidation, type Rules } from '@/lib/validation/use-form-validation';
+import { FieldError, describedBy } from '@/components/forms/field-error';
+import { PasswordInput } from '@/components/forms/password-input';
+import { PasswordMatch } from '@/components/forms/password-match';
+import { PasswordRequirements } from '@/components/forms/password-requirements';
 
-export const MIN_PASSWORD_LENGTH = 6;
+export const MIN_PASSWORD_LENGTH = PASSWORD_MIN;
 
 interface Fields {
   current: string;
@@ -19,50 +24,58 @@ interface Fields {
 const EMPTY: Fields = { current: '', next: '', confirm: '' };
 
 /**
- * Change your own password. The server revokes every other session and returns
- * a fresh token, which is stored through the auth context so this tab stays
- * signed in. Admins set a new password without entering the current one.
+ * Change your own password. The new one is checked live against the password
+ * policy; the server revokes every other session and returns a fresh token,
+ * which is stored through the auth context so this tab stays signed in.
+ * Admins set a new password without entering the current one.
  */
 export function ChangePasswordForm({ id }: { id?: string }) {
   const { user: me, updateSession } = useAuth();
   const needsCurrent = me?.role !== 'admin';
   const toast = useToast();
   const [fields, setFields] = useState<Fields>(EMPTY);
-  const [errors, setErrors] = useState<Partial<Fields>>({});
+  const [serverErrors, setServerErrors] = useState<Partial<Fields>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const account = { email: me?.email, name: me?.name };
+
+  const rules: Rules<Fields> = {
+    current: (v) => (needsCurrent && !v ? 'Enter your current password.' : undefined),
+    next: (v, f) => {
+      if (needsCurrent && v && v === f.current) return 'Choose a password different from your current one.';
+      return passwordError(v, account);
+    },
+    confirm: (v, f) => confirmError(f.next, v),
+  };
+  const v = useFormValidation(fields, rules);
+  const errors: Partial<Fields> = {
+    current: serverErrors.current ?? v.errors.current,
+    next: serverErrors.next ?? v.errors.next,
+    confirm: v.errors.confirm,
+  };
 
   function set(key: keyof Fields, value: string) {
     setFields((f) => ({ ...f, [key]: value }));
-    setErrors((e) => ({ ...e, [key]: undefined }));
+    setServerErrors((e) => ({ ...e, [key]: undefined }));
     setFormError(null);
-  }
-
-  function validate(): Partial<Fields> {
-    const found: Partial<Fields> = {};
-    if (needsCurrent && !fields.current) found.current = 'Enter your current password.';
-    if (fields.next.length < MIN_PASSWORD_LENGTH) found.next = `Use at least ${MIN_PASSWORD_LENGTH} characters.`;
-    else if (needsCurrent && fields.next === fields.current) found.next = 'Choose a password different from your current one.';
-    if (!found.next && fields.confirm !== fields.next) found.confirm = 'Passwords do not match.';
-    return found;
   }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    const found = validate();
-    setErrors(found);
     setFormError(null);
-    if (Object.keys(found).length > 0) return;
+    if (!v.touchAll()) return;
 
     setSaving(true);
     try {
       const { user, token } = await authApi.changePassword(needsCurrent ? fields.current : undefined, fields.next);
       updateSession(user, token);
       setFields(EMPTY);
+      v.reset();
       toast('Password changed. Other sessions were signed out.', 'success');
     } catch (err) {
       const message = errorMessage(err, 'Your password could not be changed.');
-      if (err instanceof ApiError && err.status === 400 && /current/i.test(message)) setErrors({ current: message });
+      if (err instanceof ApiError && err.status === 400 && /current/i.test(message)) setServerErrors({ current: message });
+      else if (err instanceof ApiError && err.status === 400 && /^Password needs/i.test(message)) setServerErrors({ next: message });
       else setFormError(message);
     } finally {
       setSaving(false);
@@ -85,37 +98,52 @@ export function ChangePasswordForm({ id }: { id?: string }) {
         <fieldset disabled={saving} className="space-y-4">
           {needsCurrent ? (
             <div className="sm:w-1/2 sm:pr-2">
-              <TextField
+              <label htmlFor="password-current" className="label">
+                Current password
+              </label>
+              <PasswordInput
                 id="password-current"
-                label="Current password"
-                type="password"
-                value={fields.current}
-                onChange={(v) => set('current', v)}
                 autoComplete="current-password"
-                error={errors.current}
+                value={fields.current}
+                onChange={(value) => set('current', value)}
+                onBlur={() => v.blur('current')}
+                invalid={Boolean(errors.current)}
+                describedBy={describedBy(errors.current && 'password-current-error')}
               />
+              <FieldError id="password-current-error" message={errors.current} />
             </div>
           ) : null}
           <div className="grid gap-4 sm:grid-cols-2">
-            <TextField
-              id="password-new"
-              label="New password"
-              type="password"
-              value={fields.next}
-              onChange={(v) => set('next', v)}
-              autoComplete="new-password"
-              error={errors.next}
-              hint={`At least ${MIN_PASSWORD_LENGTH} characters.`}
-            />
-            <TextField
-              id="password-confirm"
-              label="Confirm new password"
-              type="password"
-              value={fields.confirm}
-              onChange={(v) => set('confirm', v)}
-              autoComplete="new-password"
-              error={errors.confirm}
-            />
+            <div>
+              <label htmlFor="password-new" className="label">
+                New password
+              </label>
+              <PasswordInput
+                id="password-new"
+                value={fields.next}
+                onChange={(value) => set('next', value)}
+                onBlur={() => v.blur('next')}
+                invalid={Boolean(errors.next)}
+                describedBy={describedBy('password-new-rules', errors.next && 'password-new-error')}
+              />
+              <FieldError id="password-new-error" message={errors.next} />
+              <PasswordRequirements id="password-new-rules" value={fields.next} {...account} showUnmet={v.submitted} />
+            </div>
+            <div>
+              <label htmlFor="password-confirm" className="label">
+                Confirm new password
+              </label>
+              <PasswordInput
+                id="password-confirm"
+                value={fields.confirm}
+                onChange={(value) => set('confirm', value)}
+                onBlur={() => v.blur('confirm')}
+                invalid={Boolean(errors.confirm)}
+                describedBy={describedBy('password-confirm-match', errors.confirm && !fields.confirm && 'password-confirm-error')}
+              />
+              {fields.confirm ? null : <FieldError id="password-confirm-error" message={errors.confirm} />}
+              <PasswordMatch id="password-confirm-match" password={fields.next} confirm={fields.confirm} />
+            </div>
           </div>
         </fieldset>
 

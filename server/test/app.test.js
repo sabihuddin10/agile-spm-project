@@ -148,3 +148,85 @@ test('persistence defaults to off when DATABASE_URL is unset', async () => {
   assert.equal(res.status, 200);
   assert.deepEqual(db.statements, []);
 });
+
+/* ------------------------------------------------------ input guards */
+
+/** Send a raw body (string) with a content type to a fresh app; returns { status, body }. */
+async function sendRaw(method, path, rawBody, { contentType = 'application/json' } = {}) {
+  const server = createApp({ logging: false, persistence: false, rateLimits: false }).listen(0);
+  servers.push(server);
+  await new Promise((resolve) => server.once('listening', resolve));
+  const res = await fetch(`http://127.0.0.1:${server.address().port}/api${path}`, {
+    method,
+    headers: { 'Content-Type': contentType },
+    body: rawBody,
+    signal: AbortSignal.timeout(5000),
+  });
+  const text = await res.text();
+  return { status: res.status, body: text ? JSON.parse(text) : null };
+}
+
+test('a JSON body larger than 100 KB is answered 413, not 500', async () => {
+  // Arrange
+  const huge = JSON.stringify({ name: 'x'.repeat(150 * 1024), email: 'big@example.com', password: 'Big-body-1' });
+
+  // Act
+  const res = await sendRaw('POST', '/auth/register', huge);
+
+  // Assert
+  assert.equal(res.status, 413);
+  assert.match(res.body.error, /too large/);
+});
+
+test('malformed JSON, a top-level array and a bare value are rejected with 400', async () => {
+  // Act
+  const malformed = await sendRaw('POST', '/auth/login', '{"email": ');
+  const array = await sendRaw('POST', '/auth/login', '[{"email":"admin@rest.test","password":"password"}]');
+  const bare = await sendRaw('POST', '/auth/login', '"admin@rest.test"');
+
+  // Assert
+  assert.equal(malformed.status, 400);
+  assert.equal(array.status, 400);
+  assert.match(array.body.error, /JSON object/);
+  assert.equal(bare.status, 400);
+});
+
+test('a non-JSON body is not parsed, so it cannot smuggle fields in', async () => {
+  // Act
+  const res = await sendRaw('POST', '/auth/login', 'email=admin@rest.test&password=password', { contentType: 'application/x-www-form-urlencoded' });
+
+  // Assert
+  assert.equal(res.status, 400);
+});
+
+test('a __proto__ / constructor key anywhere in the body is refused and pollutes nothing', async () => {
+  // Arrange
+  const payloads = [
+    '{"name":"P","email":"p1@example.com","password":"Proto-pass1","__proto__":{"role":"admin","polluted":true}}',
+    '{"name":"P","email":"p2@example.com","password":"Proto-pass1","constructor":{"prototype":{"polluted":true}}}',
+    '{"name":"P","email":"p3@example.com","password":"Proto-pass1","preferences":{"__proto__":{"polluted":true}}}',
+  ];
+
+  for (const payload of payloads) {
+    // Act
+    const res = await sendRaw('POST', '/auth/register', payload);
+
+    // Assert
+    assert.equal(res.status, 400, payload);
+    assert.match(res.body.error, /reserved key/);
+  }
+  assert.equal({}.polluted, undefined);
+  assert.equal({}.role, undefined);
+});
+
+test('query parameters must be single strings (no arrays or nested objects)', async () => {
+  // Act
+  const array = await sendRaw('GET', '/reservations/availability?date[]=2030-01-01');
+  const nested = await sendRaw('GET', '/reservations/availability?date[a]=b');
+  const plain = await sendRaw('GET', '/reservations/availability?date=2030-01-01');
+
+  // Assert
+  assert.equal(array.status, 400);
+  assert.equal(nested.status, 400);
+  assert.equal(plain.status, 200);
+});

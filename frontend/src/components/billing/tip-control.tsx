@@ -61,7 +61,7 @@ export function TipControl({
         <h3 id="tip-heading" className="text-sm font-semibold text-stone-800">
           Tip
         </h3>
-        <span className="text-sm font-semibold">{money(invoice.tip)}</span>
+        <span className="text-sm font-semibold tabular-nums">{money(invoice.tip)}</span>
       </div>
       <p className="mt-0.5 text-xs text-stone-500">Percentages are of the subtotal ({money(invoice.subtotal)}).</p>
 
@@ -127,7 +127,7 @@ export function TipControl({
           This bill is split — changing the tip changes the total and clears the split, so you&apos;ll need to split again.
         </p>
       ) : (
-        <p className="mt-2 text-xs text-stone-400">Changing the tip clears any split on the bill.</p>
+        <p className="mt-2 text-xs text-stone-500">Changing the tip clears any split on the bill.</p>
       )}
     </section>
   );

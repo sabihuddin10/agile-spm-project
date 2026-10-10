@@ -18,7 +18,7 @@ export function EmptyState({
         />
       </svg>
       <p className="font-medium text-stone-600">{title}</p>
-      {hint ? <p className="max-w-sm text-sm text-stone-400">{hint}</p> : null}
+      {hint ? <p className="max-w-sm text-sm text-stone-500">{hint}</p> : null}
       {action ? <div className="mt-2">{action}</div> : null}
     </div>
   );

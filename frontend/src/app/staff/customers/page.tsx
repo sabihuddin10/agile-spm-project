@@ -12,6 +12,7 @@ import { Card } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Modal } from '@/components/ui/modal';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useToast } from '@/components/ui/toast';
 import {
   CustomerTable,
@@ -42,6 +43,7 @@ export default function CustomersPage() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const requestId = useRef(0);
   const detailRef = useRef<HTMLDivElement>(null);
 
@@ -110,15 +112,16 @@ export default function CustomersPage() {
 
   async function remove() {
     if (!selected) return;
-    if (!window.confirm(`Delete ${selected.name}? The profile cannot be restored. Customers with order history can't be deleted.`)) return;
     setDeleting(true);
     try {
       await customerApi.remove(selected.id);
       toast('Customer deleted.', 'success');
+      setConfirmDelete(false);
       setSelected(null);
       await load();
     } catch (err) {
       toast(errorMessage(err, 'Failed to delete customer.'), 'error');
+      setConfirmDelete(false);
     } finally {
       setDeleting(false);
     }
@@ -174,7 +177,7 @@ export default function CustomersPage() {
               <CustomerDetail
                 customer={selected}
                 onEdit={openEdit}
-                onDelete={canDelete ? remove : undefined}
+                onDelete={canDelete ? () => setConfirmDelete(true) : undefined}
                 onClose={() => setSelected(null)}
                 deleting={deleting}
               />
@@ -193,6 +196,18 @@ export default function CustomersPage() {
             error={formError}
           />
         </Modal>
+      ) : null}
+
+      {confirmDelete && selected ? (
+        <ConfirmDialog
+          title={`Delete ${selected.name}?`}
+          confirmLabel="Delete customer"
+          busy={deleting}
+          onConfirm={remove}
+          onCancel={() => setConfirmDelete(false)}
+        >
+          <p>The profile cannot be restored. Customers with order history can&apos;t be deleted.</p>
+        </ConfirmDialog>
       ) : null}
     </StaffLayout>
   );
