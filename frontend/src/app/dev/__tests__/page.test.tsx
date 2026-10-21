@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import ScrumBoardPage from '@/app/dev/page';
 import { useAuth } from '@/context/auth-context';
-import { SPRINTS, TEAM_ROSTER } from '@/data/backlog';
+import { BACKLOG_SUMMARY, SPRINTS, TEAM_ROSTER } from '@/data/backlog';
 import type { User } from '@/types';
 
 vi.mock('@/context/auth-context', () => ({ useAuth: vi.fn() }));
@@ -46,5 +46,21 @@ describe('ScrumBoardPage', () => {
     for (const member of TEAM_ROSTER) {
       expect(screen.getByText(member.id)).toBeInTheDocument();
     }
+  });
+
+  it('derives the subtitle and burn-up scale from the backlog, so no bar passes 100%', () => {
+    // Arrange
+    vi.mocked(useAuth).mockReturnValue({ user: makeUser(), loading: false } as unknown as ReturnType<typeof useAuth>);
+
+    // Act
+    const { container } = render(<ScrumBoardPage />);
+
+    // Assert
+    expect(
+      screen.getByText(`Product Backlog · ${SPRINTS.length} sprints · ${BACKLOG_SUMMARY.totalStories} stories · ${BACKLOG_SUMMARY.totalPoints} story points. Source: Product_Backlog.docx & Sprint_Backlogs.docx`),
+    ).toBeInTheDocument();
+    const widths = Array.from(container.querySelectorAll<HTMLElement>('[style*="width"]')).map((el) => parseFloat(el.style.width));
+    expect(widths.length).toBeGreaterThan(0);
+    expect(Math.max(...widths)).toBeLessThanOrEqual(100);
   });
 });

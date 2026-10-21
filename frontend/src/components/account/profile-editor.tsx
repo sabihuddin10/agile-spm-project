@@ -57,7 +57,7 @@ export function ProfileEditor({ customer, onSaved }: { customer: Customer; onSav
   const [draft, setDraft] = useState<Draft>(saved);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const v = useFormValidation(draft, RULES, { labels: LABELS });
+  const v = useFormValidation(draft, { ...RULES, phone: (p) => validatePhone(p, { original: saved.phone }) }, { labels: LABELS });
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
 

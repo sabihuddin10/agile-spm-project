@@ -96,7 +96,7 @@ function profileChanges(user, body) {
   }
   if (body.phone !== undefined) {
     if (typeof body.phone !== 'string') return { status: 400, error: 'Please enter a valid phone number.' };
-    changes.phone = readPhone(body.phone);
+    changes.phone = readPhone(body.phone, 'Phone', { current: user.phone });
   }
   return { changes };
 }
