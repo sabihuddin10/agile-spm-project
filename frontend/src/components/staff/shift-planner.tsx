@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Role, Shift, User } from '@/types';
 import { staffApi } from '@/lib/api';
-import { SHIFT_STATUS, addDaysISO, errorMessage, formatDate, localDateISO } from '@/lib/format';
+import { SHIFT_STATUS, addDaysISO, errorMessage, formatDate, formatClock, localDateISO } from '@/lib/format';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
@@ -34,12 +34,12 @@ function ShiftChip({ shift, onClick, showName = false }: { shift: Shift; onClick
       type="button"
       onClick={onClick}
       title={shift.notes || undefined}
-      aria-label={`Edit ${shift.userName}'s shift ${shift.start} to ${shift.end}, ${status.label}`}
+      aria-label={`Edit ${shift.userName}'s shift ${formatClock(shift.start)} to ${formatClock(shift.end)}, ${status.label}`}
       className="block w-full rounded-full text-left focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-1"
     >
       <Badge tone={status.tone} className="w-full justify-center whitespace-nowrap">
         {showName ? `${shift.userName} · ` : ''}
-        {shift.start}–{shift.end}
+        {formatClock(shift.start)}–{formatClock(shift.end)}
         {shift.notes ? <span aria-hidden="true">•</span> : null}
       </Badge>
     </button>

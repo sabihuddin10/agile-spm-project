@@ -692,12 +692,12 @@ describe('MySchedule', () => {
     expect(within(upcoming).getByText(formatDate('2026-10-07'))).toBeInTheDocument();
     expect(within(upcoming).getByText('Today')).toBeInTheDocument();
     expect(within(upcoming).getByText('Tomorrow')).toBeInTheDocument();
-    expect(within(upcoming).getByText('17:00–23:00')).toBeInTheDocument();
+    expect(within(upcoming).getByText('5:00 PM–11:00 PM')).toBeInTheDocument();
     expect(within(upcoming).getByText('Private party')).toBeInTheDocument();
     const recent = screen.getByRole('region', { name: 'Recent shifts' });
-    expect(within(recent).getByText('09:00–15:00')).toBeInTheDocument();
+    expect(within(recent).getByText('9:00 AM–3:00 PM')).toBeInTheDocument();
     expect(within(recent).getByText('Completed')).toBeInTheDocument();
-    expect(within(upcoming).queryByText('09:00–15:00')).not.toBeInTheDocument();
+    expect(within(upcoming).queryByText('9:00 AM–3:00 PM')).not.toBeInTheDocument();
     expect(screen.getByText('3 shifts scheduled, Mon–Sun')).toBeInTheDocument();
     expect(screen.getByText('18 h')).toBeInTheDocument();
   });
@@ -893,7 +893,7 @@ describe('ShiftPlanner', () => {
     const willRow = within(table).getByText('Will Waiter').closest('tr')!;
     const cells = within(willRow).getAllByRole('cell');
     // cells: [name, Mon 5, Tue 6, Wed 7, Thu 8, ...]
-    expect(within(cells[4]).getByRole('button', { name: /edit will waiter's shift 12:00 to 18:00/i })).toBeInTheDocument();
+    expect(within(cells[4]).getByRole('button', { name: /edit will waiter's shift 12:00 PM to 6:00 PM/i })).toBeInTheDocument();
     // Suspended staff with no shifts this week get no row
     expect(within(table).queryByText('Gina Gone')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'This week' })).toBeDisabled();

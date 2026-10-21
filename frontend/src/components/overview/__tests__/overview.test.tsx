@@ -166,7 +166,7 @@ describe('NextShiftCard', () => {
     render(<NextShiftCard shifts={[shift]} loading={false} now={now} />);
 
     // Assert
-    expect(screen.getByText('09:00–17:00')).toBeInTheDocument();
+    expect(screen.getByText('9:00 AM–5:00 PM')).toBeInTheDocument();
   });
 
   it('flags a shift happening today as "On shift now"', () => {
