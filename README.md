@@ -13,6 +13,7 @@ All **16 sprints / 80 user stories / 347 story points** of the Product Backlog a
 │   ├── src/app.js          app factory (routes + middleware)
 │   ├── src/data/           store.js (data model + live seed), seed-history.js (60 days of history),
 │   │                       snapshot.js + persist.js + db.js (Neon persistence)
+│   ├── schema/             001_schema.sql (relational DDL), 002_seed.sql (demo data)
 │   ├── src/lib/            order-math (money/splits), orders (lifecycle), reservations (capacity/holds), notify
 │   ├── src/routes/         auth, customers, menu, orders, tables, reservations, billing,
 │   │                       inventory, staff, analytics, notifications, settings
@@ -36,7 +37,7 @@ All **16 sprints / 80 user stories / 347 story points** of the Product Backlog a
 | Charts     | Chart.js via react-chartjs-2 (analytics dashboard)                    |
 | Backend    | Express 4 (REST, ES modules)                                           |
 | Auth/RBAC  | JWT (bcrypt-hashed passwords), role guards on every API route, matching UI guards |
-| Storage    | In-memory store, persisted to Neon Postgres when `DATABASE_URL` is set |
+| Storage    | PostgreSQL (local dev / Neon in prod), relational schema              |
 | Hosting    | Vercel: API and web as two projects (see *Deployment*)                |
 | Tests / CI | `node:test` (server), Vitest + React Testing Library (web), ESLint, GitHub Actions |
 
@@ -49,17 +50,35 @@ pnpm install          # installs server + frontend workspaces
 pnpm dev              # API on :4000, web on :3000
 ```
 
+### Database setup
+
+The app uses a relational PostgreSQL schema (local dev or Neon in production).
+
+1. Install PostgreSQL locally (or use a Neon project)
+2. Create a database: `psql -U postgres -c "CREATE DATABASE agspm"`
+3. Copy `server/.env.example` to `server/.env` and set `DATABASE_URL`
+4. Initialize the schema and seed data:
+   ```bash
+   pnpm --dir server db:init
+   ```
+5. To start fresh (drops all tables):
+   ```bash
+   pnpm --dir server db:init:fresh
+   ```
+
 Open http://localhost:3000. The API base is http://localhost:4000/api (Next proxies `/api/*` to it).
 
-| Command                     | What it does                                   |
-|-----------------------------|------------------------------------------------|
-| `pnpm --dir server test`    | Server route, lib and data tests, in memory (400+ tests) |
-| `pnpm --dir frontend test`  | Frontend unit and component tests, Vitest (950+ tests) |
-| `pnpm --dir server test:db` | Persistence tests against Neon (needs `DATABASE_URL`) |
-| `pnpm --dir server db:reset`| Reseed the persisted demo data in Neon          |
-| `pnpm --dir server lint`    | Syntax-check every server file                 |
-| `pnpm --dir frontend lint`  | ESLint for the web app                         |
-| `pnpm build`                | Production build of the web app (includes type check) |
+| Command                           | What it does                                     |
+|---------------------------------|------------------------------------------------|
+| `pnpm --dir server test`          | Server route, lib and data tests, in memory (400+ tests) |
+| `pnpm --dir frontend test`        | Frontend unit and component tests, Vitest (950+ tests) |
+| `pnpm --dir server test:db`       | Persistence tests against Neon (needs `DATABASE_URL`) |
+| `pnpm --dir server db:reset`      | Reseed the persisted demo data in Neon           |
+| `pnpm --dir server db:init`       | Create schema + seed demo data (local or Neon)   |
+| `pnpm --dir server db:init:fresh` | Drop all tables, recreate schema, reseed         |
+| `pnpm --dir server lint`          | Syntax-check every server file                   |
+| `pnpm --dir frontend lint`        | ESLint for the web app                           |
+| `pnpm build`                      | Production build of the web app (includes type check) |
 
 ### Demo accounts (password: `password`)
 
@@ -119,6 +138,8 @@ cd frontend && vercel deploy --prod    # web
 
 ### Databases: local PostgreSQL in dev, Neon in production
 
+The app stores its data in a relational PostgreSQL schema (28 tables with foreign keys, constraints and indexes), defined in `server/schema/001_schema.sql` and seeded by `server/schema/002_seed.sql`. The same DDL runs in both environments, so the local database and the Neon production database have an identical shape. The full plan is in [DB_PLAN.md](DB_PLAN.md).
+
 The server picks its Postgres driver from `DATABASE_URL` (`server/src/data/db.js`): a `*.neon.tech` host uses Neon's serverless driver (WebSockets), any other host uses the standard `pg` driver (TCP). So each environment only sets its own URL:
 
 | Where | `DATABASE_URL` |
@@ -127,9 +148,9 @@ The server picks its Postgres driver from `DATABASE_URL` (`server/src/data/db.js
 | Production (`main`, Vercel) | Vercel API project env: the Neon pooled URL |
 | CI and `pnpm test` | not set: in memory |
 
-Local setup, once: install PostgreSQL for Windows (no Docker needed: `winget install PostgreSQL.PostgreSQL.17` or the EDB installer), create the database (`psql -U postgres -c "CREATE DATABASE agspm"` or in pgAdmin), copy `server/.env.example` to `server/.env` and set the URL. The app creates its `app_state` table on the first request. `pnpm --dir server test:db` runs the persistence tests against whichever database `DATABASE_URL` points at.
+Local setup, once: install PostgreSQL for Windows (no Docker needed: `winget install PostgreSQL.PostgreSQL.17` or the EDB installer), create the database (`psql -U postgres -c "CREATE DATABASE agspm"` or in pgAdmin), copy `server/.env.example` to `server/.env` and set the URL, then run `pnpm --dir server db:init` to create the schema and load the demo data. On Neon run the same command with the extra `--yes-really` guard: `pnpm --dir server db:init -- --yes-really`. `pnpm --dir server test:db` runs the persistence tests against whichever database `DATABASE_URL` points at.
 
-`server/.env` is gitignored and `.vercelignore` keeps it out of uploads. Optional `STATE_KEY` picks the `app_state` row (default `main`).
+`server/.env` is gitignored and `.vercelignore` keeps it out of uploads. The legacy `app_state` blob table is kept for backward compatibility during the transition and is deprecated.
 
 ## API reference and status page (`/api/health`)
 
@@ -164,7 +185,7 @@ The catalogue is read from the Express routers at runtime, so a new route shows 
 
 ## Design decisions
 
-- **In-memory store, persisted as one snapshot in Neon Postgres.** The proposal planned Firebase/Firestore. The team kept a seeded in-memory store so the app runs anywhere with no cloud credentials. Seed data is generated relative to the day it is first written: 60 days of history, live orders in progress, tonight's bookings and this week's rota. When `DATABASE_URL` is set, each API request locks the `app_state` row, reloads the store if another serverless instance saved a newer version, and saves the gzip-compressed snapshot (about 90 KB) before responding. Writes are therefore serialised and each one rewrites the whole snapshot: fine for a course demo, not for real traffic. Without `DATABASE_URL` the API stays purely in memory and resets on restart. Design: `docs/specs/2026-10-07-neon-persistence-design.md`.
+- **Relational PostgreSQL schema.** The app uses a proper relational schema (28 tables, proper FKs, indexes) that runs identically on local PostgreSQL and Neon. The schema is defined in `server/schema/001_schema.sql` and seeded by `002_seed.sql`. The init script (`pnpm --dir server db:init`) handles both environments. The legacy `app_state` blob table is retained for backward compatibility but deprecated.
 - **The server is the source of truth for money.** Prices, modifier deltas, tax, service charge, points and splits are all computed server-side in integer cents. Clients only send menu item IDs and selected options.
 - **One permissions map.** `frontend/src/lib/permissions.ts` mirrors the API's `requireRole` guards, so the UI never offers an action the API would refuse.
 - **Live updates via polling** every 5–10 s for orders, the KDS, the floor plan, billing and notifications. This meets "within a few seconds" without a websocket server.
