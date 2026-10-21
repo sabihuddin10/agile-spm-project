@@ -29,14 +29,24 @@ export function formatDate(date: string): string {
   return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
+/** 'HH:MM' (24-hour, from the server) → 'h:MM AM/PM'. */
+export function formatClock(hhmm: string | null | undefined): string {
+  if (!hhmm) return '—';
+  const [h, m] = hhmm.split(':').map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return hhmm;
+  const period = h >= 12 ? 'PM' : 'AM';
+  const hour12 = h % 12 || 12;
+  return `${hour12}:${pad(m)} ${period}`;
+}
+
 export function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return '—';
-  return new Date(iso).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return new Date(iso).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
 export function formatTime(iso: string | null | undefined): string {
   if (!iso) return '—';
-  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
 export function minutesSince(iso: string | null | undefined, now: number = Date.now()): number {

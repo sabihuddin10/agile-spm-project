@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Reservation, ReservationStatus, Table } from '@/types';
 import { reservationApi, tableApi } from '@/lib/api';
-import { RESERVATION_STATUS, addDaysISO, errorMessage, formatDate, localDateISO } from '@/lib/format';
+import { RESERVATION_STATUS, addDaysISO, errorMessage, formatDate, localDateISO, formatClock } from '@/lib/format';
 import { usePolling } from '@/hooks/use-polling';
 import { StaffLayout } from '@/components/layout/staff-layout';
 import { PageHeader } from '@/components/ui/page-header';
@@ -266,8 +266,8 @@ function ReservationBook() {
         >
           <p>
             {pending.kind === 'cancel'
-              ? `${pending.reservation.customerName}'s booking for ${pending.reservation.partySize} at ${pending.reservation.time} on ${formatDate(pending.reservation.date)} will be cancelled.`
-              : `${pending.reservation.customerName} didn't arrive for ${pending.reservation.time} on ${formatDate(pending.reservation.date)}.`}
+              ? `${pending.reservation.customerName}'s booking for ${pending.reservation.partySize} at ${formatClock(pending.reservation.time)} on ${formatDate(pending.reservation.date)} will be cancelled.`
+              : `${pending.reservation.customerName} didn't arrive for ${formatClock(pending.reservation.time)} on ${formatDate(pending.reservation.date)}.`}
             {pending.reservation.tableNumber ? ` Table ${pending.reservation.tableNumber} will be released.` : ''}
           </p>
         </ConfirmDialog>

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { AttendanceSession, WorkShift } from '@/types';
-import { formatDate } from '@/lib/format';
+import { formatClock, formatDate } from '@/lib/format';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { clockTime, hoursText, missedMinutes, shiftMinutes } from '@/components/workforce/workforce-format';
@@ -106,7 +106,7 @@ export function SessionsTable({
                     <tr key={r.key} className="bg-red-50/40">
                       <td className="whitespace-nowrap font-medium text-stone-800">{formatDate(r.date)}</td>
                       <td className="whitespace-nowrap">
-                        {r.shift.start}–{r.shift.end}
+                        {formatClock(r.shift.start)}–{formatClock(r.shift.end)}
                       </td>
                       <td colSpan={3}>
                         <Badge tone="red">Missed</Badge>
@@ -117,7 +117,7 @@ export function SessionsTable({
                   ) : (
                     <tr key={r.key}>
                       <td className="whitespace-nowrap font-medium text-stone-800">{formatDate(r.date)}</td>
-                      <td className="whitespace-nowrap">{r.shift ? `${r.shift.start}–${r.shift.end}` : <span className="text-stone-500">Unscheduled</span>}</td>
+                      <td className="whitespace-nowrap">{r.shift ? `${formatClock(r.shift.start)}–${formatClock(r.shift.end)}` : <span className="text-stone-500">Unscheduled</span>}</td>
                       <td className="whitespace-nowrap">
                         {clockTime(r.session.clockIn)} – {r.session.clockOut ? clockTime(r.session.clockOut) : <Badge tone="emerald">Open</Badge>}
                       </td>
@@ -147,7 +147,7 @@ export function SessionsTable({
                   <p className="shrink-0 font-semibold tabular-nums">{r.kind === 'missed' ? '0 h' : hoursText(r.session.paidMinutes)}</p>
                 </div>
                 <p className="text-xs tabular-nums text-stone-600">
-                  Shift {r.shift ? `${r.shift.start}–${r.shift.end}` : 'unscheduled'}
+                  Shift {r.shift ? `${formatClock(r.shift.start)}–${formatClock(r.shift.end)}` : 'unscheduled'}
                   {r.kind === 'session'
                     ? ` · ${clockTime(r.session.clockIn)} – ${r.session.clockOut ? clockTime(r.session.clockOut) : 'open'}`
                     : ''}

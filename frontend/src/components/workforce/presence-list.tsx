@@ -1,4 +1,5 @@
 import type { AttendanceState, PresenceEntry } from '@/types';
+import { formatClock } from '@/lib/format';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ROLE_META } from '@/components/staff/role-meta';
@@ -28,7 +29,7 @@ function Person({ p, isSelf }: { p: PresenceEntry; isSelf: boolean }) {
           {sinceText(p) ? <span> · {sinceText(p)}</span> : null}
         </p>
         <p className="text-xs tabular-nums text-stone-500">
-          {p.todayShift ? `Shift today ${p.todayShift.start}–${p.todayShift.end}` : 'No shift today'}
+          {p.todayShift ? `Shift today ${formatClock(p.todayShift.start)}–${formatClock(p.todayShift.end)}` : 'No shift today'}
         </p>
       </div>
     </li>
