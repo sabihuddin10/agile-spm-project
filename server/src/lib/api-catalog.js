@@ -837,7 +837,7 @@ export function buildCatalog(app) {
     .map(({ e }) => e);
 }
 
-/** Path to request when probing an entry: params filled with a placeholder, docs' query appended. */
+/** Path to request when probing an entry: params filled with placeholder, docs' query appended. */
 export function probeUrl(entry) {
   const path = entry.path.replace(/:(\w+)/g, '__probe__');
   const queryFn = ROUTE_DOCS[entry.id]?.probe?.query;

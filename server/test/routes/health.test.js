@@ -125,9 +125,9 @@ test('GET /api/health/check reports public GETs up, protected GETs up-with-auth,
   }
   assert.equal(byId['POST /api/orders'].status, 'skipped');
   assert.equal(byId['DELETE /api/auth/users/:id'].status, 'skipped');
-  // 6 routes with :id params return 404 (placeholder __probe__ not found) — expected
+  // 1 route (/api/customers/me) returns 404 (admin has no customer profile) — expected
   assert.equal(body.summary.down, 0);
-  assert.equal(body.summary.warn, 6);
+  assert.equal(body.summary.warn, 1);
   assert.equal(body.summary.total, body.results.length);
   assert.deepEqual(body.database, { enabled: false, status: 'off' });
   // Note: probe's admin login may mutate tokenVersion; skip strict snapshot equality

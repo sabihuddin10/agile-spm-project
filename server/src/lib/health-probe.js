@@ -50,11 +50,74 @@ async function getAdminToken(origin, timeoutMs) {
   }
 }
 
-async function probeOne(origin, entry, timeoutMs, authToken) {
+/** Fetch real IDs from list endpoints for detail probes. */
+async function fetchProbeIds(origin, authToken, timeoutMs) {
+  const ids = {};
+  try {
+    // Get customer ID
+    const custRes = await fetch(origin + '/api/customers', {
+      headers: { accept: 'application/json', authorization: `Bearer ${authToken}` },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (custRes.ok) {
+      const data = await custRes.json();
+      if (data.customers?.length) ids.customer = data.customers[0].id;
+    }
+  } catch {}
+
+  try {
+    // Get order ID
+    const ordRes = await fetch(origin + '/api/orders', {
+      headers: { accept: 'application/json', authorization: `Bearer ${authToken}` },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (ordRes.ok) {
+      const data = await ordRes.json();
+      if (data.orders?.length) ids.order = data.orders[0].id;
+    }
+  } catch {}
+
+  try {
+    // Get workforce user ID (admin)
+    const workRes = await fetch(origin + '/api/workforce/overview', {
+      headers: { accept: 'application/json', authorization: `Bearer ${authToken}` },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (workRes.ok) {
+      const data = await workRes.json();
+      // workforce/overview returns { month, rows: [{ user: { id, name, role, active }, ... }] }
+      if (data.rows?.length) ids.workforceUser = data.rows[0].user.id;
+    }
+  } catch {}
+
+  return ids;
+}
+
+async function probeOne(origin, entry, timeoutMs, authToken, probeIds = {}) {
   if (MUTATING_METHODS.includes(entry.method) || entry.method !== 'GET') {
     return { id: entry.id, status: 'skipped', reason: 'Not probed (mutating)' };
   }
-  const url = probeUrl(entry);
+  // Use dynamic IDs for routes that need real IDs
+  let url = entry.path;
+  if (authToken) {
+    if (entry.path.startsWith('/api/customers/') && probeIds.customer) {
+      url = entry.path.replace(':id', probeIds.customer);
+    } else if (entry.path.startsWith('/api/orders/') && probeIds.order) {
+      url = entry.path.replace(':id', probeIds.order);
+    } else if (entry.path.startsWith('/api/billing/') && probeIds.order) {
+      url = entry.path.replace(':id', probeIds.order);
+    } else if (entry.path.startsWith('/api/workforce/users/') && probeIds.workforceUser) {
+      url = entry.path.replace(':id', probeIds.workforceUser);
+    }
+  } else {
+    // Fallback to placeholder for unauthenticated probes
+    url = url.replace(/:(\w+)/g, '__probe__');
+  }
+  // Handle query params from docs
+  const queryFn = (await import('./api-catalog.js')).ROUTE_DOCS?.[entry.id]?.probe?.query;
+  const query = typeof queryFn === 'function' ? queryFn() : null;
+  if (query) url += `?${new URLSearchParams(query)}`;
+
   const started = performance.now();
   const headers = { accept: 'application/json', [PROBE_HEADER]: '1' };
   if (authToken && entry.auth === 'required') {
@@ -109,15 +172,20 @@ async function runChecks(app, { timeoutMs = TIMEOUT_MS } = {}) {
 
   let server;
   let authToken = null;
+  let probeIds = {};
   try {
     server = await listen(app);
     const origin = `http://127.0.0.1:${server.address().port}`;
     // Get admin token for protected routes
     authToken = await getAdminToken(origin, timeoutMs);
+    // Fetch real IDs for detail endpoints
+    if (authToken) {
+      probeIds = await fetchProbeIds(origin, authToken, timeoutMs);
+    }
     const queue = [...targets];
     const worker = async () => {
       for (let entry = queue.shift(); entry; entry = queue.shift()) {
-        results.set(entry.id, await probeOne(origin, entry, timeoutMs, authToken));
+        results.set(entry.id, await probeOne(origin, entry, timeoutMs, authToken, probeIds));
       }
     };
     await Promise.all(Array.from({ length: CONCURRENCY }, worker));
