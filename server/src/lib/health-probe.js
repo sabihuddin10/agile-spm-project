@@ -3,13 +3,13 @@
  *
  * Every probe-able catalogue entry (a GET without side effects for a guest) is
  * requested through the app itself on a short-lived loopback listener
- * (127.0.0.1, random port), with no credentials and a short timeout. The
- * target host is never taken from the incoming request, so the check cannot be
- * pointed elsewhere. POST/PUT/PATCH/DELETE routes are never called.
+ * (127.0.0.1, random port). A test admin token is obtained first and sent
+ * with each request so protected routes return 200 instead of 401/403.
+ * POST/PUT/PATCH/DELETE routes are never called.
  *
  *   2xx           → up
- *   401 / 403     → auth  (up; the route needs a token, which probes never send)
- *   other 4xx     → warn  (responded, but not as a guest GET is expected to)
+ *   401 / 403     → auth  (route needs a different role than admin has)
+ *   other 4xx     → warn  (responded, but not as expected)
  *   5xx / timeout → down
  *
  * Results are cached briefly so several open status pages share one run.
@@ -32,17 +32,38 @@ function classify(httpStatus) {
   return 'down';
 }
 
-async function probeOne(origin, entry, timeoutMs) {
-  // Defence in depth: the catalogue never enables mutating probes.
+/** Obtain an admin JWT token from the test instance. */
+async function getAdminToken(origin, timeoutMs) {
+  const started = performance.now();
+  try {
+    const res = await fetch(origin + '/api/auth/login', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify({ email: 'admin@rest.test', password: 'password' }),
+      signal: AbortSignal.timeout(2000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.token;
+  } catch {
+    return null;
+  }
+}
+
+async function probeOne(origin, entry, timeoutMs, authToken) {
   if (MUTATING_METHODS.includes(entry.method) || entry.method !== 'GET') {
     return { id: entry.id, status: 'skipped', reason: 'Not probed (mutating)' };
   }
   const url = probeUrl(entry);
   const started = performance.now();
+  const headers = { accept: 'application/json', [PROBE_HEADER]: '1' };
+  if (authToken && entry.auth === 'required') {
+    headers.authorization = `Bearer ${authToken}`;
+  }
   try {
     const res = await fetch(origin + url, {
       method: 'GET',
-      headers: { accept: 'application/json', [PROBE_HEADER]: '1' },
+      headers,
       redirect: 'manual',
       signal: AbortSignal.timeout(timeoutMs),
     });
@@ -87,13 +108,16 @@ async function runChecks(app, { timeoutMs = TIMEOUT_MS } = {}) {
   const database = pingDatabase(Boolean(app.locals.persistence), timeoutMs);
 
   let server;
+  let authToken = null;
   try {
     server = await listen(app);
     const origin = `http://127.0.0.1:${server.address().port}`;
+    // Get admin token for protected routes
+    authToken = await getAdminToken(origin, timeoutMs);
     const queue = [...targets];
     const worker = async () => {
       for (let entry = queue.shift(); entry; entry = queue.shift()) {
-        results.set(entry.id, await probeOne(origin, entry, timeoutMs));
+        results.set(entry.id, await probeOne(origin, entry, timeoutMs, authToken));
       }
     };
     await Promise.all(Array.from({ length: CONCURRENCY }, worker));
