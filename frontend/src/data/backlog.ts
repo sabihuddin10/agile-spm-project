@@ -762,6 +762,88 @@ export const SPRINTS: SprintBacklog[] = [
       },
     ],
   },
+  {
+    sprint: 15,
+    module: 'Admin UI Polish & Input Safety',
+    goal: 'Make every admin screen accessible and phone-first, and type-check every API input on the server.',
+    priority: 'Should',
+    lead: '#6',
+    status: 'done',
+    stakeholders: ['Waiter', 'Chef', 'Manager', 'Admin'],
+    stories: [
+      {
+        id: 'US15.1', points: 5,
+        text: 'As a staff member, I want accessible dialogs, menus and tabs that work by keyboard and on a phone, so that every admin screen is usable on any device.',
+        acceptanceCriteria: [
+          'Given any dialog, when it opens, then focus moves into it, Tab stays inside it, Escape closes only the top dialog and focus returns afterwards.',
+          'Given a destructive action, when chosen, then a confirm dialog (not window.confirm) asks first.',
+        ],
+        evidence: { screen: 'Any staff dialog, e.g. Inventory → Delete ingredient', test: 'frontend/src/components/ui/__tests__/ui.test.tsx' },
+      },
+      {
+        id: 'US15.2', points: 5,
+        text: 'As an Admin, I want every password to meet a strength policy, so that staff and customer accounts are hard to guess.',
+        acceptanceCriteria: ['Given a new password, when it is shorter than 8 characters, lacks mixed case, a number or a symbol, is common, or contains the name or email, then the server refuses it and the form lists what is missing.'],
+        evidence: { screen: 'Register / My account → Change password', test: 'lib/password-policy.test.js' },
+      },
+      {
+        id: 'US15.3', points: 5,
+        text: 'As the System, I want every API input type-checked and limited, so that bad or malicious requests are refused safely.',
+        acceptanceCriteria: [
+          'Given a body field of the wrong type, out of range, too long, or a __proto__ key, a query array or a body over 100 KB, then the API answers 4xx and stores nothing.',
+          'Given any stored value, then every SQL statement is parameterised and the value round-trips as plain data.',
+        ],
+        evidence: { screen: 'README → Validation & security', test: 'lib/validate.test.js · data/sql-safety.test.js' },
+      },
+      {
+        id: 'US15.4', points: 2,
+        text: 'As a Waiter, I want last night\'s late bookings to stay on the upcoming list after midnight, so that I can still seat them or mark a no-show.',
+        acceptanceCriteria: ['Given a confirmed booking from yesterday evening that is still open after midnight, then it is listed under Upcoming with its Late flag.'],
+        evidence: { screen: 'Staff → Reservations after midnight', test: 'routes/reservations.test.js' },
+      },
+    ],
+  },
+  {
+    sprint: 16,
+    module: 'Form Validation, Phone Format & Responsive Sizing',
+    goal: 'Give every form live validation that matches the server, one phone format, and compact sizes on phones.',
+    priority: 'Should',
+    lead: '#6',
+    status: 'done',
+    stakeholders: ['Customer', 'Waiter', 'Chef', 'Manager', 'Admin'],
+    stories: [
+      {
+        id: 'US16.1', points: 5,
+        text: 'As a user, I want forms to show errors as I type and keep Save disabled until they are valid, so that I fix mistakes before submitting.',
+        acceptanceCriteria: [
+          'Given an untouched form, then no error shows; given a field I have edited or left, then its error updates live.',
+          'Given an invalid form, then the submit button is disabled with a note naming the fields still missing.',
+        ],
+        evidence: { screen: 'Register, booking, customer and account forms', test: 'frontend/src/lib/validation/__tests__/use-form-validation.test.tsx' },
+      },
+      {
+        id: 'US16.2', points: 3,
+        text: 'As a staff member, I want staff forms to check the same limits as the server, so that a save never fails for a reason the form could have caught.',
+        acceptanceCriteria: ['Given a staff form (booking, customer, account, menu, inventory, billing, tables, shift), when a value breaks a server limit, then the form flags it before submit; an order cannot exceed 50 lines.'],
+        evidence: { screen: 'Staff → Menu / Inventory / Shifts forms', test: 'frontend/src/components/staff/__tests__/shift-form.test.tsx' },
+      },
+      {
+        id: 'US16.3', points: 3,
+        text: 'As a user, I want phone numbers to accept digits only and always become one format, so that every stored phone looks the same.',
+        acceptanceCriteria: [
+          'Given 0300…, 92300…, 0092… or 300… typed, then it formats as "+92 300 1234567"; anything that is not a Pakistani mobile is refused by the form and the server.',
+          'Given a record saved before this format, when its phone is left unchanged, then the form still saves.',
+        ],
+        evidence: { screen: 'Any phone field, e.g. My account → Profile', test: 'lib/validate.test.js' },
+      },
+      {
+        id: 'US16.4', points: 5,
+        text: 'As a phone user, I want compact buttons, inputs, cards and stat pills, so that screens fit at 360px without zooming.',
+        acceptanceCriteria: ['Given a 360px-wide screen, then every storefront and staff page fits with no horizontal scroll, inputs keep 16px text and stat tiles become pills.'],
+        evidence: { screen: 'Any page on a phone', test: 'Manual browser check at 360px (jsdom cannot test layout)' },
+      },
+    ],
+  },
 ];
 
 export const BACKLOG_SUMMARY: BacklogSummary = (() => {

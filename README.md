@@ -2,7 +2,7 @@
 
 A full-stack restaurant operations platform built as a 10-sprint Agile/Scrum project. It covers the whole flow from **customer orders** through **waiter confirms**, **kitchen prepares** and **waiter serves**, to **bill settled**, and from there **inventory deducts** and **analytics update**. Five stakeholder roles each get their own permissions and screens.
 
-All **10 modules / 49 user stories / 217 story points** of the Product Backlog are implemented. Each story's acceptance criteria are checked by an automated test (`server/test/`, one file per sprint). Each story also has a demo path, listed on the in-app **Scrum board** (`/dev`).
+All **16 sprints / 80 user stories / 347 story points** of the Product Backlog are implemented: the original 10 modules plus accounts, attendance, payroll, UI polish and validation. Stories are verified by module-wise tests (`server/test/` and `frontend/src/**/__tests__/`). Each story's demo path and test are listed on the in-app **Scrum board** (`/dev`).
 
 ## Monorepo layout
 
@@ -16,7 +16,7 @@ All **10 modules / 49 user stories / 217 story points** of the Product Backlog a
 │   ├── src/lib/            order-math (money/splits), orders (lifecycle), reservations (capacity/holds), notify
 │   ├── src/routes/         auth, customers, menu, orders, tables, reservations, billing,
 │   │                       inventory, staff, analytics, notifications, settings
-│   ├── test/               acceptance tests per sprint (node:test, in memory)
+│   ├── test/               tests mirroring src/: routes/, lib/, data/, middleware/ (node:test, in memory)
 │   └── test-db/            persistence tests against a real Neon database
 ├── frontend/               Next.js 14 (App Router) + React 18 + TypeScript + Tailwind
 │   └── src/
@@ -38,7 +38,7 @@ All **10 modules / 49 user stories / 217 story points** of the Product Backlog a
 | Auth/RBAC  | JWT (bcrypt-hashed passwords), role guards on every API route, matching UI guards |
 | Storage    | In-memory store, persisted to Neon Postgres when `DATABASE_URL` is set |
 | Hosting    | Vercel: API and web as two projects (see *Deployment*)                |
-| Tests / CI | `node:test` acceptance tests, ESLint (next/core-web-vitals), GitHub Actions |
+| Tests / CI | `node:test` (server), Vitest + React Testing Library (web), ESLint, GitHub Actions |
 
 ## Getting started
 
@@ -53,7 +53,8 @@ Open http://localhost:3000. The API base is http://localhost:4000/api (Next prox
 
 | Command                     | What it does                                   |
 |-----------------------------|------------------------------------------------|
-| `pnpm test`                 | API acceptance + unit tests, in memory (53 tests, US1.1–US10.6) |
+| `pnpm --dir server test`    | Server route, lib and data tests, in memory (400+ tests) |
+| `pnpm --dir frontend test`  | Frontend unit and component tests, Vitest (950+ tests) |
 | `pnpm --dir server test:db` | Persistence tests against Neon (needs `DATABASE_URL`) |
 | `pnpm --dir server db:reset`| Reseed the persisted demo data in Neon          |
 | `pnpm --dir server lint`    | Syntax-check every server file                 |

@@ -54,7 +54,11 @@ export function AccountProfileForm({ user }: { user: User }) {
 
   const emailChanged = draft.email.trim().toLowerCase() !== saved.email.toLowerCase();
   const dirty = draft.name !== saved.name || draft.email !== saved.email || draft.phone !== saved.phone;
-  const v = useFormValidation<Values>({ ...draft, currentPassword, emailChanged }, RULES, { labels: LABELS });
+  const v = useFormValidation<Values>(
+    { ...draft, currentPassword, emailChanged },
+    { ...RULES, phone: (p) => validatePhone(p, { original: saved.phone }) },
+    { labels: LABELS },
+  );
   const errors: Errors = {
     name: serverErrors.name ?? v.errors.name,
     email: serverErrors.email ?? v.errors.email,

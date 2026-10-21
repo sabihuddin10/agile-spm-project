@@ -69,7 +69,7 @@ function readCustomerFields(body, current, { nameRequired }) {
     fields: {
       name: personName(body.name, 'Name', { required: false }),
       email: readEmail(body.email, { required: false }),
-      phone: readPhone(body.phone),
+      phone: readPhone(body.phone, 'Phone', { current: current?.phone }),
       notes: text(body.notes, 'Notes', { max: NOTES_MAX, multiline: true }),
       preferences: readPreferences(body.preferences, current?.preferences ?? { dietary: [], allergies: [] }),
     },
