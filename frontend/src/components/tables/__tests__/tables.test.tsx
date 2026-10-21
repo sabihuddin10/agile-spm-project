@@ -310,7 +310,7 @@ describe('TableTile', () => {
     expect(screen.getByText('No active orders')).toBeInTheDocument();
     expect(screen.getByText('No waiter assigned')).toBeInTheDocument();
     expect(screen.getByText('Next booking today')).toBeInTheDocument();
-    expect(screen.getByText(/Ana Silva/)).toHaveTextContent('19:30 · Ana Silva · 1 guest');
+    expect(screen.getByText(/Ana Silva/)).toHaveTextContent('7:30 PM · Ana Silva · 1 guest');
     expect(screen.getByText('Late')).toBeInTheDocument();
   });
 

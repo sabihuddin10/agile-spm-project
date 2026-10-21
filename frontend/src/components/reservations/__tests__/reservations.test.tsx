@@ -105,14 +105,14 @@ describe('NewBookingForm', () => {
     expect(screen.getByLabelText('Date')).toHaveValue('2026-10-08');
     expect(screen.getByLabelText('Date')).toHaveAttribute('min', '2026-10-08');
     expect(screen.getByLabelText('Party size')).toHaveValue('2');
-    expect(await screen.findByRole('button', { name: '19:00' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: '7:00 PM' })).toBeInTheDocument();
     expect(reservationApi.availability).toHaveBeenCalledWith('2026-10-08', 2);
   });
 
   it('keeps "Create booking" disabled and says what is missing while the form is incomplete', async () => {
     // Arrange / Act
     renderForm();
-    await screen.findByRole('button', { name: '19:00' });
+    await screen.findByRole('button', { name: '7:00 PM' });
 
     // Assert — a pristine form shows no field errors, only the hint by the button
     const submit = screen.getByRole('button', { name: 'Create booking' });
@@ -125,7 +125,7 @@ describe('NewBookingForm', () => {
     // Arrange
     const user = userEvent.setup({ delay: null });
     renderForm();
-    await screen.findByRole('button', { name: '19:00' });
+    await screen.findByRole('button', { name: '7:00 PM' });
 
     // Act
     await user.type(screen.getByLabelText('Guest name'), 'Ana Silva{Enter}');
@@ -138,7 +138,7 @@ describe('NewBookingForm', () => {
     // Arrange
     const user = userEvent.setup({ delay: null });
     renderForm();
-    await screen.findByRole('button', { name: '19:00' });
+    await screen.findByRole('button', { name: '7:00 PM' });
     const name = screen.getByLabelText('Guest name');
 
     // Act
@@ -174,7 +174,7 @@ describe('NewBookingForm', () => {
     renderForm();
     await user.type(screen.getByLabelText('Guest name'), 'Sara    Khan');
     await user.type(screen.getByLabelText('Email'), 'sara@example.com');
-    await user.click(await screen.findByRole('button', { name: '19:00' }));
+    await user.click(await screen.findByRole('button', { name: '7:00 PM' }));
     await user.click(screen.getByRole('checkbox', { name: /confirm now/i }));
 
     // Act
@@ -194,11 +194,11 @@ describe('NewBookingForm', () => {
     }));
     renderForm();
     await fillGuest(user);
-    await user.click(await screen.findByRole('button', { name: '19:00' }));
+    await user.click(await screen.findByRole('button', { name: '7:00 PM' }));
 
     // Act
     await user.selectOptions(screen.getByLabelText('Party size'), '6');
-    await screen.findByRole('button', { name: '19:00, full' });
+    await screen.findByRole('button', { name: '7:00 PM, full' });
 
     // Assert
     expect(reservationApi.availability).toHaveBeenLastCalledWith('2026-10-08', 6);
@@ -209,7 +209,7 @@ describe('NewBookingForm', () => {
   it('loads availability for a newly picked date', async () => {
     // Arrange
     renderForm();
-    await screen.findByRole('button', { name: '19:00' });
+    await screen.findByRole('button', { name: '7:00 PM' });
 
     // Act
     fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2026-10-10' } });
@@ -228,7 +228,7 @@ describe('NewBookingForm', () => {
     const { onCreated } = renderForm();
     await fillGuest(user);
     await user.selectOptions(screen.getByLabelText('Party size'), '4');
-    await user.click(await screen.findByRole('button', { name: '19:00' }));
+    await user.click(await screen.findByRole('button', { name: '7:00 PM' }));
     await user.type(screen.getByLabelText(/special requests/i), ' Window seat ');
 
     // Act
@@ -256,7 +256,7 @@ describe('NewBookingForm', () => {
     vi.mocked(reservationApi.create).mockResolvedValue({ reservation: requested });
     const { onCreated } = renderForm();
     await fillGuest(user);
-    await user.click(await screen.findByRole('button', { name: '12:00' }));
+    await user.click(await screen.findByRole('button', { name: '12:00 PM' }));
     await user.click(screen.getByRole('checkbox', { name: /confirm now/i }));
 
     // Act
@@ -279,7 +279,7 @@ describe('NewBookingForm', () => {
     );
     renderForm();
     await fillGuest(user);
-    await user.click(await screen.findByRole('button', { name: '19:00' }));
+    await user.click(await screen.findByRole('button', { name: '7:00 PM' }));
 
     // Act
     await user.click(screen.getByRole('button', { name: 'Create booking' }));
@@ -289,7 +289,7 @@ describe('NewBookingForm', () => {
     expect(alert).toHaveTextContent('That time is fully booked.');
 
     // Act
-    await user.click(screen.getByRole('button', { name: 'Tomorrow · 20:00' }));
+    await user.click(screen.getByRole('button', { name: 'Tomorrow · 8:00 PM' }));
 
     // Assert
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -303,7 +303,7 @@ describe('NewBookingForm', () => {
     vi.mocked(reservationApi.create).mockRejectedValueOnce(new Error('Server down'));
     const { onCreated } = renderForm();
     await fillGuest(user);
-    await user.click(await screen.findByRole('button', { name: '19:00' }));
+    await user.click(await screen.findByRole('button', { name: '7:00 PM' }));
 
     // Act
     await user.click(screen.getByRole('button', { name: 'Create booking' }));
@@ -347,7 +347,7 @@ describe('ReservationCard', () => {
     renderCard(r);
 
     // Assert
-    expect(screen.getByText('19:00')).toBeInTheDocument();
+    expect(screen.getByText('7:00 PM')).toBeInTheDocument();
     expect(screen.getByText('4 guests')).toBeInTheDocument();
     expect(screen.getByText('Ana Silva')).toBeInTheDocument();
     expect(screen.getByText('Confirmed')).toBeInTheDocument();

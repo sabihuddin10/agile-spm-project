@@ -137,7 +137,7 @@ describe('TimeClock', () => {
     // Assert
     expect(onAction).toHaveBeenCalledWith('break-start');
     const live = document.querySelector('[aria-live="polite"]');
-    expect(live).toHaveTextContent('Checked in since 14:05');
+    expect(live).toHaveTextContent('Checked in since 2:05 PM');
     expect(screen.getByText(/Breaks are unpaid/)).toBeInTheDocument();
   });
 
@@ -295,7 +295,7 @@ describe('SessionsTable', () => {
     expect(rows[1]).toHaveTextContent('Missed');
     expect(rows[1]).toHaveTextContent('6 h not worked (unpaid)');
     expect(rows[2]).toHaveTextContent('12 min late');
-    expect(rows[2]).toHaveTextContent('13:00–13:30 (30 min)');
+    expect(rows[2]).toHaveTextContent('1:00 PM–1:30 PM (30 min)');
     expect(screen.getByText(/6 h missed \(unpaid\)/)).toBeInTheDocument();
   });
 
@@ -328,9 +328,9 @@ describe('PresenceList', () => {
     // Assert
     const items = screen.getAllByRole('listitem');
     expect(items[0]).toHaveTextContent('Wendy Server');
-    expect(items[0]).toHaveTextContent('Working · since 14:05');
-    expect(items[0]).toHaveTextContent('Shift today 14:00–20:00');
-    expect(items[1]).toHaveTextContent('On break · since 15:30');
+    expect(items[0]).toHaveTextContent('Working · since 2:05 PM');
+    expect(items[0]).toHaveTextContent('Shift today 2:00 PM–8:00 PM');
+    expect(items[1]).toHaveTextContent('On break · since 3:30 PM');
     expect(items[1]).toHaveTextContent('No shift today');
     expect(items[2]).toHaveTextContent('Will Waiter(you)');
     expect(screen.getByText('1 working · 1 on break · 1 off')).toBeInTheDocument();

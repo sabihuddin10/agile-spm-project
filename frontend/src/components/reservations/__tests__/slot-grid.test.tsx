@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SlotGrid } from '@/components/reservations/slot-grid';
-import { localDateISO } from '@/lib/format';
+import { formatClock, localDateISO } from '@/lib/format';
 
 // Far in the future, so no slot is ever 'past' whatever time the suite runs.
 const FUTURE_DATE = '2099-06-15';
@@ -45,7 +45,7 @@ describe('SlotGrid', () => {
     render(<SlotGrid date={FUTURE_DATE} slots={[{ time: '19:00', available: false }]} value="" onChange={vi.fn()} loading={false} />);
 
     // Assert
-    const button = screen.getByRole('button', { name: /19:00, full/i });
+    const button = screen.getByRole('button', { name: /7:00 PM, full/i });
     expect(button).toBeDisabled();
   });
 
@@ -56,7 +56,7 @@ describe('SlotGrid', () => {
     render(<SlotGrid date={FUTURE_DATE} slots={[{ time: '19:00', available: true }]} value="" onChange={onChange} loading={false} />);
 
     // Act
-    await user.click(screen.getByRole('button', { name: '19:00' }));
+    await user.click(screen.getByRole('button', { name: '7:00 PM' }));
 
     // Assert
     expect(onChange).toHaveBeenCalledWith('19:00');
@@ -83,6 +83,6 @@ describe('SlotGrid', () => {
     render(<SlotGrid date={today} slots={[{ time: pastTime, available: false }]} value="" onChange={vi.fn()} loading={false} />);
 
     // Assert
-    expect(screen.getByRole('button', { name: new RegExp(`${pastTime}, past`, 'i') })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: `${formatClock(pastTime)}, past` })).toBeInTheDocument();
   });
 });

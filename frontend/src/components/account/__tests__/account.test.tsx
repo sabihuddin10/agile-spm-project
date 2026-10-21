@@ -392,11 +392,11 @@ describe('MyReservations', () => {
     const items = await screen.findAllByRole('listitem');
     expect(reservationApi.mine).toHaveBeenCalledTimes(1);
     expect(items).toHaveLength(3);
-    expect(items[0]).toHaveTextContent(`${formatDate('2026-10-10')} at 19:00`);
+    expect(items[0]).toHaveTextContent(`${formatDate('2026-10-10')} at 7:00 PM`);
     expect(items[0]).toHaveTextContent('2 guests · Table assigned on confirmation');
     expect(items[0]).toHaveTextContent('“High chair”');
     expect(within(items[0]).getByText('Requested')).toBeInTheDocument();
-    expect(items[1]).toHaveTextContent(`${formatDate('2026-10-12')} at 20:30`);
+    expect(items[1]).toHaveTextContent(`${formatDate('2026-10-12')} at 8:30 PM`);
     expect(items[1]).toHaveTextContent('1 guest · Table 4');
     expect(within(items[1]).getByText('Confirmed')).toBeInTheDocument();
     expect(within(items[2]).getByText('Seated')).toBeInTheDocument();
@@ -461,7 +461,7 @@ describe('MyReservations', () => {
     await user.click(await screen.findByRole('button', { name: 'Cancel' }));
 
     // Assert
-    expect(confirm).toHaveBeenCalledWith(`Cancel your booking for 4 on ${formatDate('2026-10-10')} at 19:00?`);
+    expect(confirm).toHaveBeenCalledWith(`Cancel your booking for 4 on ${formatDate('2026-10-10')} at 7:00 PM?`);
     expect(reservationApi.cancel).toHaveBeenCalledWith('r1');
     expect(await screen.findByText('Cancelled')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
