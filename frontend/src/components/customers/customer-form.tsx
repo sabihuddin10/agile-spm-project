@@ -70,7 +70,7 @@ export function CustomerForm({
   const [draft, setDraft] = useState<Draft>(() => toDraft(initial));
   const v = useFormValidation<Values>(
     { name: draft.name, email: draft.email, phone: draft.phone, notes: draft.notes, contact: `${draft.email}\n${draft.phone}` },
-    RULES,
+    { ...RULES, phone: (p) => validatePhone(p, { original: initial?.phone }) },
     { labels: LABELS },
   );
   const errors = v.errors;

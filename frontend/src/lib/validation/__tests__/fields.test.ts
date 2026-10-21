@@ -47,6 +47,16 @@ describe('field validators', () => {
     expect(isValidEmail('nope')).toBe(false);
   });
 
+  it('validatePhone: an unchanged saved phone in the old format stays valid; an edited one must match +92', () => {
+    // Arrange
+    const original = '+1 555-0101';
+
+    // Act / Assert
+    expect(validatePhone('+1 555-0101', { original })).toBeUndefined();
+    expect(validatePhone('+1 555-0199', { original })).toBe('Enter a mobile number like 0300 1234567.');
+    expect(validatePhone('+1 555-0101')).toBe('Enter a mobile number like 0300 1234567.');
+  });
+
   it('validatePhone: optional, and only a full Pakistani mobile in "+92 3XX XXXXXXX" form', () => {
     // Act / Assert
     expect(validatePhone('')).toBeUndefined();

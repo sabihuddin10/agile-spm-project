@@ -97,3 +97,17 @@ test('hasUnsafeKeys finds prototype-polluting keys at any depth', () => {
   assert.equal(isPlainObject([]), false);
   assert.equal(isPlainObject({}), true);
 });
+
+test('phone keeps an unchanged pre-+92 number but validates an edited one', () => {
+  // Arrange
+  const legacy = '+1 555-0101';
+
+  // Act
+  const kept = phone(` ${legacy} `, 'Phone', { current: legacy });
+
+  // Assert
+  assert.equal(kept, legacy);
+  assert.throws(() => phone('+1 555-0199', 'Phone', { current: legacy }), BadRequest);
+  assert.equal(phone('0300 1234567', 'Phone', { current: legacy }), '+92 300 1234567');
+  assert.throws(() => phone(legacy), BadRequest, 'a new record still needs the +92 format');
+});
