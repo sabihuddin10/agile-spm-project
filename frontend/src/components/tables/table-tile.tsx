@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import type { Table, TableStatus } from '@/types';
 import { Badge } from '@/components/ui/badge';
-import { ORDER_STATUS, TABLE_STATUS, money } from '@/lib/format';
+import { ORDER_STATUS, TABLE_STATUS, money, formatClock } from '@/lib/format';
 import { tileClass } from './status-style';
 
 /** Order in which status buttons appear; 'reserved' is normally set by bookings. */
@@ -112,7 +112,7 @@ export function TableTile({
             {booking.late ? <Badge tone="red">Late</Badge> : null}
           </div>
           <p className="mt-0.5 truncate text-stone-700">
-            <span className="font-semibold tabular-nums">{booking.time}</span> · {booking.customerName} ·{' '}
+            <span className="font-semibold tabular-nums">{formatClock(booking.time)}</span> · {booking.customerName} ·{' '}
             {booking.partySize} {booking.partySize === 1 ? 'guest' : 'guests'}
           </p>
         </div>

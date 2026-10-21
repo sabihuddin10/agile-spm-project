@@ -1,7 +1,7 @@
 'use client';
 
 import type { TimeSlot } from '@/types';
-import { localDateISO } from '@/lib/format';
+import { localDateISO, formatClock } from '@/lib/format';
 
 type Variant = 'staff' | 'storefront';
 
@@ -78,13 +78,13 @@ export function SlotGrid({
                   type="button"
                   disabled={!slot.available}
                   aria-pressed={selected}
-                  aria-label={hint ? `${slot.time}, ${hint.toLowerCase()}` : slot.time}
+                  aria-label={hint ? `${formatClock(slot.time)}, ${hint.toLowerCase()}` : formatClock(slot.time)}
                   onClick={() => onChange(slot.time)}
                   className={`flex flex-col items-center rounded-lg border px-2 py-1.5 text-sm font-semibold tabular-nums transition ${
                     selected ? s.selected : slot.available ? s.idle : s.off
                   }`}
                 >
-                  <span className={hint ? 'line-through decoration-1' : ''}>{slot.time}</span>
+                  <span className={hint ? 'line-through decoration-1' : ''}>{formatClock(slot.time)}</span>
                   {hint ? <span className="text-xs font-medium no-underline">{hint}</span> : null}
                 </button>
               );

@@ -1,6 +1,7 @@
 'use client';
 
 import type { AttendanceSettings, MyStatus } from '@/types';
+import { formatClock } from '@/lib/format';
 import { DEFAULT_ATTENDANCE_SETTINGS } from '@/lib/workforce-mock';
 import { useNow } from '@/hooks/use-polling';
 import { Badge } from '@/components/ui/badge';
@@ -71,7 +72,7 @@ export function TimeClock({
           <p className="mt-0.5 text-sm text-stone-500">
             {shift ? (
               <>
-                Today&apos;s shift <span className="font-medium tabular-nums text-stone-700">{shift.start}–{shift.end}</span>
+                Today&apos;s shift <span className="font-medium tabular-nums text-stone-700">{formatClock(shift.start)}–{formatClock(shift.end)}</span>
               </>
             ) : (
               'No shift scheduled today'
@@ -122,7 +123,7 @@ export function TimeClock({
 
       {wouldBeLate ? (
         <p role="alert" className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          Your shift started at {shift?.start}. Checking in now will be marked late ({minutesPastStart} min) and a late
+          Your shift started at {formatClock(shift?.start)}. Checking in now will be marked late ({minutesPastStart} min) and a late
           deduction applies.
         </p>
       ) : null}
