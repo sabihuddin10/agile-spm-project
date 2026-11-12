@@ -118,7 +118,7 @@ test('a write survives a cold start on another instance', async () => {
   const token = await first.login('manager');
 
   // Act
-  const created = await first.call('POST', '/customers', { token, body: { name: 'Persisted Pat' } });
+  const created = await first.call('POST', '/customers', { token, body: { name: 'Persisted Pat', phone: '+92 300 5550199' } });
   await first.close();
   const second = await spawnServer();
   const token2 = await second.login('manager');
@@ -137,7 +137,7 @@ test('concurrent writes on two instances are all kept', async () => {
 
   // Act
   const results = await Promise.all(names.map((name, i) =>
-    (i % 2 ? b : a).call('POST', '/customers', { token: i % 2 ? tokenB : tokenA, body: { name } })));
+    (i % 2 ? b : a).call('POST', '/customers', { token: i % 2 ? tokenB : tokenA, body: { name, phone: '+92 300 55502' + String(i).padStart(2, '0') } })));
 
   // Assert
   assert.deepEqual(results.map((r) => r.status), names.map(() => 201));
