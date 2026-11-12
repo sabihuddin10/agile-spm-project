@@ -23,7 +23,6 @@ const TABLES = [
   'stock_movements', 'purchase_orders', 'purchase_order_lines', 'notifications', 'notification_reads',
   'staff_applications', 'shifts', 'attendance_sessions', 'attendance_breaks', 'pay_adjustments', 'loyalty_ledger', 'settings',
 ];
-const NO_ID = new Set(['customer_preferences', 'split_part_items', 'notification_reads']);
 const ORDER_BY = { customer_preferences: 'customer_id', split_part_items: 'split_part_id', notification_reads: 'notification_id' };
 
 export async function saveStore(db, s) {
@@ -54,5 +53,3 @@ export async function loadStore(db) {
   };
   return Object.assign({}, ...AREAS.map((a) => a.load(rows, exts)));
 }
-
-export { NO_ID };

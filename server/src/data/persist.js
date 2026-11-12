@@ -1,18 +1,19 @@
 /**
- * Per-request persistence of the in-memory store in Postgres.
+ * Per-request persistence of the in-memory store in the relational tables.
  *
- * Each request runs inside a transaction that locks the `app_state` row, so
- * requests are serialised across every instance. The store is reloaded only
+ * Each request runs inside a transaction that takes a Postgres advisory lock,
+ * so requests are serialised across every instance. The store version lives in
+ * `sequences` ('state_version'); the store is reloaded from the tables only
  * when another instance has saved a newer version, and a changed store is
- * saved and committed before the response is sent. 5xx responses roll back.
- * The snapshot is stored gzip-compressed (~90 KB instead of ~1.3 MB of JSON).
+ * written to the tables and committed before the response is sent. 5xx
+ * responses roll back.
  */
-import { gzipSync, gunzipSync } from 'node:zlib';
-import { getPool, ensureTable } from './db.js';
+import { getPool, ensureSchema } from './db.js';
 import { snapshot, restore } from './snapshot.js';
+import { saveStore, loadStore } from './relational/index.js';
 
-export const pack = (json) => gzipSync(json);
-const unpack = (bytes) => JSON.parse(gunzipSync(bytes));
+/** Arbitrary constant shared by every instance for pg_advisory_xact_lock. */
+const LOCK_KEY = 727274;
 
 let loadedVersion = null;
 let queue = Promise.resolve();
@@ -24,29 +25,25 @@ function serial(task) {
   return run;
 }
 
-export function persistState({ key = process.env.STATE_KEY || 'main' } = {}) {
+export function persistState() {
   return (req, res, next) => {
-    serial(() => handle(key, res, next)).catch(next);
+    serial(() => handle(res, next)).catch(next);
   };
 }
 
-/** Lock the state row (creating it from the current store if missing). */
-async function lockRow(client, key) {
-  const select = () => client.query('SELECT version FROM app_state WHERE key = $1 FOR UPDATE', [key]);
-  let { rows } = await select();
-  if (!rows.length) {
-    const inserted = await client.query(
-      'INSERT INTO app_state (key, data, version) VALUES ($1, $2, 1) ON CONFLICT (key) DO NOTHING',
-      [key, pack(JSON.stringify(snapshot()))],
-    );
-    ({ rows } = await select());
-    if (inserted.rowCount === 1) loadedVersion = rows[0].version;
-  }
-  return rows[0].version;
+/** Take the global lock and read the store version (seeding empty tables from the current store). */
+async function lock(client) {
+  await client.query('SELECT pg_advisory_xact_lock($1)', [LOCK_KEY]);
+  const { rows } = await client.query("SELECT last_value::int AS version FROM sequences WHERE name = 'state_version'");
+  if (rows.length) return rows[0].version;
+  await saveStore(client, snapshot());
+  await client.query("INSERT INTO sequences (name, last_value) VALUES ('state_version', 1)");
+  loadedVersion = 1;
+  return 1;
 }
 
-async function handle(key, res, next) {
-  await ensureTable();
+async function handle(res, next) {
+  await ensureSchema();
   const client = await getPool().connect();
   // A connection that drops mid-request fails the pending query; keep the
   // process alive and discard the broken connection on release.
@@ -60,10 +57,9 @@ async function handle(key, res, next) {
   let before;
   try {
     await client.query('BEGIN');
-    const version = await lockRow(client, key);
+    const version = await lock(client);
     if (version !== loadedVersion) {
-      const { rows } = await client.query('SELECT data FROM app_state WHERE key = $1', [key]);
-      restore(unpack(rows[0].data));
+      restore(await loadStore(client));
       loadedVersion = version;
     }
     before = JSON.stringify(snapshot());
@@ -79,9 +75,9 @@ async function handle(key, res, next) {
       const after = JSON.stringify(snapshot());
       let version = loadedVersion;
       if (keep && after !== before) {
+        await saveStore(client, JSON.parse(after));
         const { rows } = await client.query(
-          'UPDATE app_state SET data = $2, version = version + 1, updated_at = now() WHERE key = $1 RETURNING version',
-          [key, pack(after)],
+          "UPDATE sequences SET last_value = last_value + 1 WHERE name = 'state_version' RETURNING last_value::int AS version",
         );
         version = rows[0].version;
       } else if (after !== before) {
