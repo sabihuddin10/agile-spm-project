@@ -527,7 +527,7 @@ grow in real use.
 | 27 | `settings` | Singleton row with the restaurant policy (tax, service charge, point value, hours, grace, penalties) | 1 | settings edits |
 | 28 | `sequences` | Named counters that allocate human-facing numbers (`order_seq`, `po_seq`) | 2 | every order and purchase order |
 
-Legacy table (transition only): `app_state` — the old single-row snapshot. See
+Legacy table (no longer used): `app_state` — the old single-row snapshot. See
 §8 *Migration from `app_state`*.
 
 ---
@@ -703,36 +703,52 @@ half-applied schema.
 
 ## 8. Migration from `app_state`
 
-### The blob data is demo data — there is nothing to migrate
+### The app now reads and writes the relational tables
 
-The current `app_state` payload is **not production data**. It is the seed the in-memory
-store generates at first write: 7 staff accounts, 6 customers, 12 dishes, 8 tables, 60 days
-of closed order history, 90 days of shifts and attendance, tonight's bookings and this
-week's rota — all generated **relative to the day the seed first ran**. It is regenerated
-from scratch on every fresh start, so there is no user data worth preserving.
+`app_state` is **no longer used**. The server keeps its in-memory store for the route
+handlers, and `server/src/data/persist.js` syncs that store with the relational tables on
+every request:
 
-The relational schema is therefore a **fresh start**, not a conversion:
+- **Request start:** `BEGIN`, `pg_advisory_xact_lock(727274)` (serialises requests across
+  every instance), then read `sequences.state_version`. If it differs from the version this
+  instance last loaded, every table is read back into the store (`loadStore`).
+- **Request end:** if the request changed the store, every table is rewritten from it
+  (`saveStore`: `TRUNCATE … RESTART IDENTITY CASCADE`, then one
+  `INSERT … SELECT FROM jsonb_to_recordset($1)` per table), `state_version` is bumped and the
+  transaction commits. A 5xx response or a failed save rolls back both the database and
+  the store.
+- **First request on empty tables** (no `state_version` row): the tables are filled from the
+  store's own seed (`server/src/data/store.js` + seed-history/attendance), not from
+  `002_seed.sql`, because the API tests and the demo depend on the store seed's ids. Running
+  `db:init` first is optional; its rows are replaced on that first request.
+- `pnpm --dir server db:reset` rewrites the tables from a fresh seed and bumps the version.
 
-- `002_seed.sql` produces the same dataset as today, with the same demo accounts
-  (`admin@rest.test`, `manager@rest.test`, `chef@rest.test`, `waiter@rest.test`,
-  `customer@rest.test`, password `password`), the same menu, the same floor plan and the
-  same shape of history — so every screen still has something to show on day one.
-- The legacy string ids are carried across in `ext_id`, so ids referenced in screenshots,
-  seeded links and the frontend stay resolvable.
+The mapping lives in `server/src/data/relational/` (one module per area: `people`, `menu`,
+`floor`, `orders`, `stock`, `alerts`, `workforce`, `config`). Store string ids are kept in
+`ext_id`; bigint ids are the record's array position + 1, so foreign keys resolve without
+lookups. Values the schema treats as derived (`subtotal`, `serviceCharge`, `tax`, `total`)
+are recomputed with `computeTotals()` on load.
 
-### `app_state` is kept, then removed
+Store fields that needed schema support:
 
-The `app_state` table stays in the database during the transition so that the old snapshot
-code path keeps working while the new relational path is being switched on. It is
-**deprecated**: once every route reads and writes the relational tables, the table and the
-`STATE_KEY` mechanism are dropped.
+| Store | Table |
+|---|---|
+| `purchaseOrders[].number` (`PO-0001`) | `purchase_orders.number` integer, formatted back on load |
+| `purchaseOrders[].lines[].supplier` | `purchase_order_lines.supplier` — added by `server/schema/003_store_fields.sql` |
+| `counters` (next id per prefix), `orderSeq` | `sequences` rows `id:<prefix>`, `order_seq` |
+| store version | `sequences` row `state_version` |
 
-| Stage | What happens | `app_state` |
-|---|---|---|
-| 1. Schema | `001_schema.sql` + `002_seed.sql` create the relational tables alongside the legacy table | present, unused |
-| 2. Data layer | The store starts reading and writing the relational tables; the API contract (`ext_id`, routes, payloads) is unchanged | still written as a fallback |
-| 3. Cutover | The relational path becomes the only path | kept for one release, read-only |
-| 4. Cleanup | `DROP TABLE app_state`, remove `STATE_KEY` and the snapshot code | gone |
+`loyalty_ledger` is created but stays empty: the store keeps only the balance.
+
+The schema files (`001`, `003`) are applied by the server itself on its first database
+request (`ensureSchema` in `server/src/data/db.js`); every statement is idempotent.
+
+Timing (local Postgres 16, full demo store ≈ 850 orders, 1.4 MB of JSON): a save takes
+80–600 ms, a load 30–60 ms. Not yet measured on Neon. If saves on Neon turn out too slow,
+the next step is rewriting only the areas whose data changed.
+
+The old `app_state` table is left untouched in existing databases; it can be dropped by hand
+(`DROP TABLE app_state`) once the relational version is deployed.
 
 ### What does *not* change
 

@@ -1,5 +1,5 @@
 /**
- * Postgres connection and the single `app_state` table.
+ * Postgres connection and the relational schema (applied once per pool).
  *
  * The driver follows `DATABASE_URL`:
  * - a Neon host (`*.neon.tech`, production on Vercel) uses Neon's serverless
@@ -10,6 +10,7 @@
  * Both Pools share the same API, so nothing else changes.
  */
 import { Pool as NeonPool, neonConfig } from '@neondatabase/serverless';
+import { ensureSchema as applySchema } from './relational/schema.js';
 import pg from 'pg';
 import ws from 'ws';
 
@@ -33,7 +34,7 @@ export function createPool(url, options = {}) {
 }
 
 let pool;
-let tableReady;
+let schemaReady;
 
 export function getPool() {
   if (!pool) {
@@ -47,20 +48,14 @@ export function getPool() {
 /** Swap in another pool (the unit tests use an in-memory fake). */
 export function setPool(next) {
   pool = next;
-  tableReady = undefined;
+  schemaReady = undefined;
 }
 
-export function ensureTable() {
-  tableReady ??= getPool()
-    .query(`CREATE TABLE IF NOT EXISTS app_state (
-      key        text PRIMARY KEY,
-      data       bytea NOT NULL, -- gzip-compressed JSON snapshot
-      version    integer NOT NULL,
-      updated_at timestamptz NOT NULL DEFAULT now()
-    )`)
-    .catch((err) => {
-      tableReady = undefined;
-      throw err;
-    });
-  return tableReady;
+/** Apply the relational schema once per pool (retried after a failure). */
+export function ensureSchema() {
+  schemaReady ??= applySchema(getPool()).catch((err) => {
+    schemaReady = undefined;
+    throw err;
+  });
+  return schemaReady;
 }

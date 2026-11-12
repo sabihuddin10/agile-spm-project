@@ -11,8 +11,7 @@ import { setPool } from '../src/data/db.js';
 import { snapshot, restore } from '../src/data/snapshot.js';
 
 const initial = snapshot();
-const savedEnv = { DATABASE_URL: process.env.DATABASE_URL, STATE_KEY: process.env.STATE_KEY };
-let keySeq = 0;
+const savedEnv = { DATABASE_URL: process.env.DATABASE_URL };
 
 /** Fake pool that records the first word of every statement and answers persist.js's queries. */
 function fakeDb() {
@@ -67,8 +66,6 @@ beforeEach(() => {
   restore(initial);
   db = fakeDb();
   setPool(db.pool);
-  // persist.js remembers the last loaded version, so give each test its own state row.
-  process.env.STATE_KEY = `app_test_${++keySeq}`;
 });
 
 // Close servers here, not in the tests, so a failed assertion can't leave one open and hang the run.
@@ -79,7 +76,6 @@ afterEach(async () => {
   })));
   servers = [];
   setEnv('DATABASE_URL', savedEnv.DATABASE_URL);
-  setEnv('STATE_KEY', savedEnv.STATE_KEY);
 });
 
 test('with persistence on, an API request runs inside a database transaction', async () => {
