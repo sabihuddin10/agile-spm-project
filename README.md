@@ -18,7 +18,7 @@ All **16 sprints / 80 user stories / 347 story points** of the Product Backlog a
 │   ├── src/routes/         auth, customers, menu, orders, tables, reservations, billing,
 │   │                       inventory, staff, analytics, notifications, settings
 │   ├── test/               tests mirroring src/: routes/, lib/, data/, middleware/ (node:test, in memory)
-│   └── test-db/            persistence tests against a real Neon database
+│   └── test-db/            persistence tests against a real Postgres database (local, CI or Neon)
 ├── frontend/               Next.js 14 (App Router) + React 18 + TypeScript + Tailwind
 │   └── src/
 │       ├── app/            storefront (/, /menu, /book, /account, /careers), staff console (/staff/*), Scrum board (/dev)
@@ -72,8 +72,8 @@ Open http://localhost:3000. The API base is http://localhost:4000/api (Next prox
 |---------------------------------|------------------------------------------------|
 | `pnpm --dir server test`          | Server route, lib and data tests, in memory (400+ tests) |
 | `pnpm --dir frontend test`        | Frontend unit and component tests, Vitest (950+ tests) |
-| `pnpm --dir server test:db`       | Persistence tests against Neon (needs `DATABASE_URL`) |
-| `pnpm --dir server db:reset`      | Reseed the persisted demo data in Neon           |
+| `pnpm --dir server test:db`       | Persistence tests against Postgres (needs `DATABASE_URL`; wipes that database) |
+| `pnpm --dir server db:reset`      | Rewrite the tables with fresh demo data          |
 | `pnpm --dir server db:init`       | Create schema + seed demo data (local or Neon)   |
 | `pnpm --dir server db:init:fresh` | Drop all tables, recreate schema, reseed         |
 | `pnpm --dir server lint`          | Syntax-check every server file                   |
@@ -115,7 +115,7 @@ The server enforces this with `requireRole` guards, plus handler checks where a 
 - **Password policy.** Every new password (registration, changing your own, an admin setting one) must be 8–128 characters with a lowercase letter, an uppercase letter, a number and a special character, must not be your email or name, and must not be on a short list of very common passwords. The server rules live in `server/src/lib/password-policy.js` and answer `400 "Password needs: …"` listing what is missing; the web app mirrors them in `frontend/src/lib/validation/password.ts` and shows a live checklist, a strength meter, a show/hide toggle and a "Passwords match" check (`frontend/src/components/forms/`). Generated temporary passwords always meet the policy. Sign-in does not apply it, so the demo accounts keep using `password`.
 - **Live form validation.** Register, sign-in, job application, booking and both account profile forms check each field when you leave it and then live as you type: email format, phone (digits, spaces, `+ ( ) - .`, 7–20 digits), names (1–80 characters), party size, booking dates not in the past, and length limits. Errors appear under the field and are linked with `aria-invalid` / `aria-describedby`. The helpers are pure functions in `frontend/src/lib/validation/`.
 - **Server-side type checks.** The browser checks are a convenience; the API checks everything again (`server/src/lib/validate.js`). Each body field is type-checked (text, finite number, real boolean, list), trimmed and length-limited, and only known fields are read, so `role`, `id`, `passwordHash`, `tokenVersion` or `loyaltyPoints` in a body are ignored. JSON bodies over 100 KB get `413`; bodies must be JSON objects; any `__proto__`, `constructor` or `prototype` key is refused; query parameters must be single values.
-- **SQL.** Data is kept in memory and saved as one compressed snapshot in Postgres. Every statement is a fixed, parameterised query (`$1`, `$2`); no user input or key is ever put into the SQL text. `server/test/data/sql-safety.test.js` records every statement and checks this, and that a name like `Robert'); DROP TABLE app_state;--` is stored and restored as plain data.
+- **SQL.** Data is kept in memory and saved to the relational tables on every change. All values travel as one bound JSON parameter (`$1`) per table; no user input is ever put into the SQL text, and table/column names must be plain identifiers. `server/test/data/sql-safety.test.js` records every statement and checks this, and `server/test-db/sql-safety.test.js` checks that a name like `Robert'); DROP TABLE users;--` is stored and restored as plain data.
 - **Output.** React escapes all rendered text, there is no `dangerouslySetInnerHTML`, and the server-rendered status page escapes every value.
 
 ## Deployment
@@ -148,9 +148,9 @@ The server picks its Postgres driver from `DATABASE_URL` (`server/src/data/db.js
 | Production (`main`, Vercel) | Vercel API project env: the Neon pooled URL |
 | CI and `pnpm test` | not set: in memory |
 
-Local setup, once: install PostgreSQL for Windows (no Docker needed: `winget install PostgreSQL.PostgreSQL.17` or the EDB installer), create the database (`psql -U postgres -c "CREATE DATABASE agspm"` or in pgAdmin), copy `server/.env.example` to `server/.env` and set the URL, then run `pnpm --dir server db:init` to create the schema and load the demo data. On Neon run the same command with the extra `--yes-really` guard: `pnpm --dir server db:init -- --yes-really`. `pnpm --dir server test:db` runs the persistence tests against whichever database `DATABASE_URL` points at.
+Local setup, once: install PostgreSQL for Windows (no Docker needed: `winget install PostgreSQL.PostgreSQL.17` or the EDB installer), create the database (`psql -U postgres -c "CREATE DATABASE agspm"` or in pgAdmin), copy `server/.env.example` to `server/.env` and set the URL, then run `pnpm --dir server db:init` to create the schema and load the demo data. On Neon run the same command with the extra `--yes-really` guard: `pnpm --dir server db:init -- --yes-really`. `pnpm --dir server test:db` runs the persistence tests against whichever database `DATABASE_URL` points at — they drop and recreate its `public` schema, so point it at a throwaway database (e.g. `createdb restaurant_test`), never at Neon production.
 
-`server/.env` is gitignored and `.vercelignore` keeps it out of uploads. The legacy `app_state` blob table is kept for backward compatibility during the transition and is deprecated.
+`server/.env` is gitignored and `.vercelignore` keeps it out of uploads. The server reads and writes the relational tables on every request (see DB_PLAN.md §8); the old `app_state` blob table is no longer used.
 
 ## API reference and status page (`/api/health`)
 
@@ -185,7 +185,7 @@ The catalogue is read from the Express routers at runtime, so a new route shows 
 
 ## Design decisions
 
-- **Relational PostgreSQL schema.** The app uses a proper relational schema (28 tables, proper FKs, indexes) that runs identically on local PostgreSQL and Neon. The schema is defined in `server/schema/001_schema.sql` and seeded by `002_seed.sql`. The init script (`pnpm --dir server db:init`) handles both environments. The legacy `app_state` blob table is retained for backward compatibility but deprecated.
+- **Relational PostgreSQL schema.** The app uses a proper relational schema (28 tables, proper FKs, indexes) that runs identically on local PostgreSQL and Neon. The schema is defined in `server/schema/001_schema.sql` and seeded by `002_seed.sql`. The init script (`pnpm --dir server db:init`) handles both environments. Every API request reads and writes these tables; the old `app_state` blob is no longer used.
 - **The server is the source of truth for money.** Prices, modifier deltas, tax, service charge, points and splits are all computed server-side in integer cents. Clients only send menu item IDs and selected options.
 - **One permissions map.** `frontend/src/lib/permissions.ts` mirrors the API's `requireRole` guards, so the UI never offers an action the API would refuse.
 - **Live updates via polling** every 5–10 s for orders, the KDS, the floor plan, billing and notifications. This meets "within a few seconds" without a websocket server.
