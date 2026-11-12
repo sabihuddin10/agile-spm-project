@@ -1,5 +1,5 @@
 /**
- * DB helpers — data/db.js: `ensureTable` creates the `app_state` table once
+ * DB helpers — data/db.js: `ensureSchema` applies the relational schema once
  * and reuses that result, retries after a failure, and `setPool` resets it.
  * Runs against a fake pool installed with `setPool`, so it needs no database.
  */
@@ -7,14 +7,14 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import pg from 'pg';
 import { Pool as NeonPool } from '@neondatabase/serverless';
-import { setPool, getPool, ensureTable, isNeonUrl, createPool } from '../../src/data/db.js';
+import { setPool, getPool, ensureSchema, isNeonUrl, createPool } from '../../src/data/db.js';
 
-/** Fake pool counting CREATE TABLE queries; `failures` makes the first N of them reject. */
+/** Fake pool counting schema runs (the users table starts each run); `failures` makes the first N runs reject. */
 function fakePool({ failures = 0 } = {}) {
   const pool = {
     creates: 0,
     async query(sql) {
-      assert.match(sql.trim(), /^CREATE TABLE IF NOT EXISTS app_state/);
+      if (!sql.includes('CREATE TABLE IF NOT EXISTS users')) return { rows: [] };
       pool.creates += 1;
       await new Promise((resolve) => setImmediate(resolve));
       if (pool.creates <= failures) throw new Error('connection refused');
@@ -35,27 +35,27 @@ test('setPool installs the pool that getPool returns', () => {
   assert.equal(getPool(), pool);
 });
 
-test('ensureTable issues CREATE TABLE once across repeated calls', async () => {
+test('ensureSchema applies the schema once across repeated calls', async () => {
   // Arrange
   const pool = fakePool();
   setPool(pool);
 
   // Act
-  await ensureTable();
-  await ensureTable();
-  await ensureTable();
+  await ensureSchema();
+  await ensureSchema();
+  await ensureSchema();
 
   // Assert
   assert.equal(pool.creates, 1);
 });
 
-test('concurrent ensureTable calls share one CREATE TABLE', async () => {
+test('concurrent ensureSchema calls share one schema run', async () => {
   // Arrange
   const pool = fakePool();
   setPool(pool);
 
   // Act
-  const calls = [ensureTable(), ensureTable(), ensureTable()];
+  const calls = [ensureSchema(), ensureSchema(), ensureSchema()];
   await Promise.all(calls);
 
   // Assert
@@ -64,35 +64,35 @@ test('concurrent ensureTable calls share one CREATE TABLE', async () => {
   assert.equal(calls[1], calls[2]);
 });
 
-test('after a failed CREATE TABLE the next call retries and succeeds', async () => {
+test('after a failed schema run the next call retries and succeeds', async () => {
   // Arrange
   const pool = fakePool({ failures: 1 });
   setPool(pool);
 
   // Act
-  const first = ensureTable();
+  const first = ensureSchema();
 
   // Assert
   await assert.rejects(first, /connection refused/);
 
   // Act
-  await ensureTable();
-  await ensureTable();
+  await ensureSchema();
+  await ensureSchema();
 
   // Assert
   assert.equal(pool.creates, 2);
 });
 
-test('setPool resets the memo so the new pool creates the table again', async () => {
+test('setPool resets the memo so the new pool applies the schema again', async () => {
   // Arrange
   const oldPool = fakePool();
   setPool(oldPool);
-  await ensureTable();
+  await ensureSchema();
   const newPool = fakePool();
 
   // Act
   setPool(newPool);
-  await ensureTable();
+  await ensureSchema();
 
   // Assert
   assert.equal(oldPool.creates, 1);
