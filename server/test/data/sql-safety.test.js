@@ -100,7 +100,8 @@ test('table and column names must be plain identifiers', async () => {
 
 test('no source file builds SQL with string interpolation or concatenation', () => {
   // Arrange
-  const files = ['src/data/db.js', 'src/data/persist.js', 'scripts/db-reset.js'].map((f) => new URL(`../../${f}`, import.meta.url));
+  // db.js no longer sends SQL itself; data/relational/ builds statements from checked identifiers (tested above).
+  const files = ['src/data/persist.js', 'scripts/db-reset.js'].map((f) => new URL(`../../${f}`, import.meta.url));
 
   for (const file of files) {
     // Act
