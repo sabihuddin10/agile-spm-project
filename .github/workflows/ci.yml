@@ -11,6 +11,14 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
 
@@ -29,6 +37,11 @@ jobs:
 
       - name: API — acceptance tests (US1.1–US10.6)
         run: pnpm --dir server test
+
+      - name: API — database tests (relational tables on Postgres 16)
+        run: pnpm --dir server test:db
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
 
       - name: Web — lint
         run: pnpm --dir frontend run lint
