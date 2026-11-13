@@ -8,7 +8,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import WorkforcePage from '@/app/staff/workforce/page';
 import { useAuth } from '@/context/auth-context';
-import { storeAuth } from '@/lib/api';
+import { setWorkforceMockUser } from '@/lib/workforce-api';
 import { workforceApi, workforceMock } from '@/lib/workforce-api';
 import type { User } from '@/types';
 
@@ -69,7 +69,7 @@ const admin = { id: 'usr_admin', name: 'Alex Admin', email: 'admin@rest.test', r
 const manager = { id: 'usr_manager', name: 'Maya Manager', email: 'manager@rest.test', role: 'manager', active: true } as User;
 
 function signIn(user: User) {
-  storeAuth('token', user);
+  setWorkforceMockUser(user);
   vi.mocked(useAuth).mockReturnValue({ user } as unknown as ReturnType<typeof useAuth>);
 }
 

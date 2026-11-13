@@ -93,10 +93,10 @@ describe('ChangePasswordForm', () => {
     expect(screen.getByLabelText('Current password')).toHaveAccessibleDescription('Enter your current password.');
   });
 
-  it('stores the new token and user on success and confirms other sessions were signed out', async () => {
+  it('updates the signed-in user on success and confirms other sessions were signed out', async () => {
     // Arrange
     const updated = { ...chef, mustChangePassword: false };
-    vi.mocked(authApi.changePassword).mockResolvedValue({ user: updated, token: 'tok_fresh' });
+    vi.mocked(authApi.changePassword).mockResolvedValue({ user: updated });
     render(<ChangePasswordForm />);
 
     // Act
@@ -104,7 +104,7 @@ describe('ChangePasswordForm', () => {
 
     // Assert
     expect(authApi.changePassword).toHaveBeenCalledWith('oldpass', 'Newpass-12');
-    expect(updateSession).toHaveBeenCalledWith(updated, 'tok_fresh');
+    expect(updateSession).toHaveBeenCalledWith(updated);
     expect(toastMock).toHaveBeenCalledWith('Password changed. Other sessions were signed out.', 'success');
     expect(screen.getByLabelText('Current password')).toHaveValue('');
     expect(screen.getByLabelText('New password')).toHaveValue('');
@@ -150,19 +150,17 @@ describe('ChangePasswordForm', () => {
 });
 
 describe('ChangePasswordForm — admin', () => {
-  it('asks an admin only for the new password and sends no current password', async () => {
+  it('requires an admin to confirm their current password', async () => {
     // Arrange
     auth.user = { id: 'usr_admin', name: 'Ada Admin', email: 'ada@rest.test', role: 'admin', active: true };
-    vi.mocked(authApi.changePassword).mockResolvedValue({ user: auth.user, token: 'tok_admin' });
     render(<ChangePasswordForm />);
 
     // Act
     await fill('', 'Admin-new-1', 'Admin-new-1');
 
     // Assert
-    expect(screen.queryByLabelText('Current password')).not.toBeInTheDocument();
-    expect(authApi.changePassword).toHaveBeenCalledWith(undefined, 'Admin-new-1');
-    expect(updateSession).toHaveBeenCalledWith(auth.user, 'tok_admin');
+    expect(screen.getByLabelText('Current password')).toBeInTheDocument();
+    expect(authApi.changePassword).not.toHaveBeenCalled();
   });
 
   it('still asks a manager for their current password', () => {

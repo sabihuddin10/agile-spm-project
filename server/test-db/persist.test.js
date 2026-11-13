@@ -39,13 +39,14 @@ function startApi() {
   });
   app.post('/api/invalid', (req, res) => {
     customers.push({ ...customers[0], id: 'cus_invalid', name: null, userId: null, preferences: { dietary: [], allergies: [] } });
+    res.cookie('example', 'uncommitted');
     res.status(201).json({ ok: true });
   });
   const server = app.listen(0);
   servers.push(server);
   const call = async (method, path) => {
     const res = await fetch(`http://127.0.0.1:${server.address().port}/api${path}`, { method });
-    return { status: res.status, body: await res.json() };
+    return { status: res.status, body: await res.json(), headers: res.headers };
   };
   return { call };
 }
@@ -155,6 +156,7 @@ test('a failed save answers 500 and discards the change', async () => {
   // Assert
   assert.equal(res.status, 500);
   assert.equal(res.body.error, 'Could not save changes. Please try again.');
+  assert.equal(res.headers.get('set-cookie'), null);
   assert.equal(names().includes(null), false);
   assert.equal(await version(), 1);
 });

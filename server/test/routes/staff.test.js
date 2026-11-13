@@ -1,7 +1,7 @@
 /** Staff module — routes/staff.js (US9.1–US9.5). */
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { startServer, localDate } from '../helpers.js';
+import { issuedToken, startServer, localDate } from '../helpers.js';
 import { checkPassword } from '../../src/lib/password-policy.js';
 
 let api;
@@ -16,8 +16,11 @@ after(() => api.close());
 const inDays = (n) => localDate(new Date(Date.now() + n * 86400000));
 
 test('US9.1 an approved application creates a working staff account', async () => {
+  // Arrange
+  const email = 'rita@example.com';
+
   // Act
-  const applied = await api.call('POST', '/staff/applications', { body: { name: 'Rita Runner', email: 'rita@example.com', desiredRole: 'waiter' } });
+  const applied = await api.call('POST', '/staff/applications', { body: { name: 'Rita Runner', email, desiredRole: 'waiter' } });
   // Assert
   assert.equal(applied.status, 201);
   assert.equal((await api.call('POST', '/staff/applications', { body: { name: 'Rita', email: 'rita@example.com', desiredRole: 'waiter' } })).status, 409);
@@ -30,8 +33,18 @@ test('US9.1 an approved application creates a working staff account', async () =
   const approved = await api.call('POST', `/staff/applications/${applied.body.application.id}/approve`, { token: manager, body: { role: 'waiter' } });
   // Assert
   assert.equal(approved.body.user.role, 'waiter');
-  const token = await api.login('rita@example.com', approved.body.tempPassword);
-  assert.equal((await api.call('GET', '/orders', { token })).status, 200);
+
+  // Act
+  const currentPassword = approved.body.tempPassword;
+  const token = await api.login(email, currentPassword);
+  const beforeChange = await api.call('GET', '/orders', { token });
+  const changed = await api.call('POST', '/auth/me/password', { token, body: { currentPassword, newPassword: 'Rita-New-12!' } });
+  const afterChange = await api.call('GET', '/orders', { token: issuedToken(changed) });
+
+  // Assert
+  assert.equal(beforeChange.status, 403);
+  assert.equal(changed.status, 200);
+  assert.equal(afterChange.status, 200);
 });
 
 test('US9.2 a role change updates permitted actions immediately', async () => {
@@ -81,8 +94,13 @@ test('US9.4 suspended or removed staff lose access on their next request', async
 
   // Act — reactivate
   await api.call('PATCH', '/auth/users/usr_waiter2', { token: admin, body: { active: true } });
+  const oldSession = await api.call('GET', '/orders', { token: waiter2 });
+  const fresh = await api.login('waiter2');
+  const newSession = await api.call('GET', '/orders', { token: fresh });
+
   // Assert
-  assert.equal((await api.call('GET', '/orders', { token: waiter2 })).status, 200);
+  assert.equal(oldSession.status, 401);
+  assert.equal(newSession.status, 200);
 
   // Act / Assert — an admin cannot remove themselves, but can remove another staff member
   assert.equal((await api.call('DELETE', '/auth/users/usr_admin', { token: admin })).status, 400, 'cannot remove yourself');

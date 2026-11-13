@@ -10,8 +10,9 @@ import {
   nextId,
   ROLES,
 } from '../data/store.js';
-import { authenticate, requireRole, requireAdmin } from '../middleware/auth.js';
-import { signToken } from '../lib/jwt.js';
+import { authenticate, authenticateForAccountRecovery, revokeSession, requireRole, requireAdmin } from '../middleware/auth.js';
+import { clearSession, protectSessionIssuance, setSession } from '../lib/session-cookie.js';
+import { passwordMatches } from '../lib/passwords.js';
 import { canManage, BELOW_RANK_ERROR } from '../lib/hierarchy.js';
 import { passwordError, generateTempPassword, PASSWORD_MAX } from '../lib/password-policy.js';
 import { personName, email as readEmail, phone as readPhone, bool, oneOf, EMAIL_MAX } from '../lib/validate.js';
@@ -19,7 +20,7 @@ import { personName, email as readEmail, phone as readPhone, bool, oneOf, EMAIL_
 const router = Router();
 
 /** POST /api/auth/register — create a Customer account (public). */
-router.post('/register', (req, res) => {
+router.post('/register', protectSessionIssuance, (req, res) => {
   // Only these three fields are read: a "role" (or anything else) in the body is ignored.
   const body = req.body || {};
   if (!body.name || !body.email || !body.password) {
@@ -51,11 +52,12 @@ router.post('/register', (req, res) => {
     createdAt: new Date().toISOString(),
   });
 
-  return res.status(201).json({ user: sanitizeUser(user), token: signToken(user) });
+  setSession(res, user);
+  return res.status(201).json({ user: sanitizeUser(user) });
 });
 
-/** POST /api/auth/login — authenticate any role and return a JWT. */
-router.post('/login', (req, res) => {
+/** POST /api/auth/login — authenticate any role and set a session cookie. */
+router.post('/login', protectSessionIssuance, (req, res) => {
   // No password policy here: existing accounts (and the demo ones) keep signing in.
   const { email, password } = req.body || {};
   if (typeof email !== 'string' || typeof password !== 'string' || email.length > EMAIL_MAX || password.length > PASSWORD_MAX) {
@@ -63,18 +65,25 @@ router.post('/login', (req, res) => {
   }
   const user = findUserByEmail(email);
 
-  if (!user || !bcrypt.compareSync(password, user.passwordHash)) {
+  if (!passwordMatches(user, password) || !user) {
     return res.status(401).json({ error: 'Invalid email or password.' });
   }
   if (!user.active) {
     return res.status(403).json({ error: 'This account has been suspended. Please contact your manager.' });
   }
 
-  return res.json({ user: sanitizeUser(user), token: signToken(user) });
+  setSession(res, user);
+  return res.json({ user: sanitizeUser(user) });
+});
+
+/** POST /api/auth/logout — revoke all sessions and expire the browser cookie. */
+router.post('/logout', revokeSession, (req, res) => {
+  clearSession(res);
+  res.status(204).end();
 });
 
 /** GET /api/auth/me — current user (protected). */
-router.get('/me', authenticate, (req, res) => {
+router.get('/me', authenticateForAccountRecovery, (req, res) => {
   res.json({ user: sanitizeUser(req.user) });
 });
 
@@ -101,10 +110,6 @@ function profileChanges(user, body) {
   return { changes };
 }
 
-// Wrong-password answers are 400, not 401: a 401 means "your session ended" to the client.
-const passwordMatches = (user, password) =>
-  typeof password === 'string' && password.length <= PASSWORD_MAX && bcrypt.compareSync(password, user.passwordHash);
-
 /** PATCH /api/auth/me — staff edit their own name, email and phone. Changing the email (the login) needs the current password. */
 router.patch('/me', authenticate, requireRole('waiter', 'chef', 'manager', 'admin'), (req, res) => {
   const body = req.body || {};
@@ -119,12 +124,11 @@ router.patch('/me', authenticate, requireRole('waiter', 'chef', 'manager', 'admi
 
 /**
  * POST /api/auth/me/password — change your own password; other sessions are
- * signed out. Everyone confirms their current password except an admin, who
- * sets a new one directly.
+ * signed out. Everyone confirms their current password.
  */
-router.post('/me/password', authenticate, (req, res) => {
+router.post('/me/password', authenticateForAccountRecovery, (req, res) => {
   const { currentPassword, newPassword } = req.body || {};
-  if (req.user.role !== 'admin' && !passwordMatches(req.user, currentPassword)) {
+  if (!passwordMatches(req.user, currentPassword)) {
     return res.status(400).json({ error: 'Your current password is incorrect.' });
   }
   if (typeof newPassword !== 'string' || !newPassword) {
@@ -139,7 +143,8 @@ router.post('/me/password', authenticate, (req, res) => {
   req.user.mustChangePassword = false;
   req.user.tokenVersion = (req.user.tokenVersion ?? 0) + 1;
   // A fresh token keeps this session signed in while older ones stop working.
-  return res.json({ user: sanitizeUser(req.user), token: signToken(req.user) });
+  setSession(res, req.user);
+  return res.json({ user: sanitizeUser(req.user) });
 });
 
 /** Load the target account and check the caller outranks it; responds and returns null otherwise. */
@@ -228,6 +233,7 @@ router.patch('/users/:id', requireAdmin, (req, res) => {
   }
   if (active !== undefined) {
     if (isSelf && !active) return res.status(400).json({ error: 'You cannot suspend your own account.' });
+    if (user.active !== active) user.tokenVersion = (user.tokenVersion ?? 0) + 1;
     user.active = active;
   }
 

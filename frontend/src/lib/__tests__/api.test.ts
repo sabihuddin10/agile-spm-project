@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { api, ApiError, authApi, clearAuth, customerApi, getStoredToken, getStoredUser, storeAuth } from '@/lib/api';
+import { api, ApiError, authApi, clearLegacyAuth, customerApi } from '@/lib/api';
 
 function mockFetchOnce(status: number, body: unknown, ok = status >= 200 && status < 300) {
   const fetchMock = vi.fn().mockResolvedValue({
@@ -11,39 +11,20 @@ function mockFetchOnce(status: number, body: unknown, ok = status >= 200 && stat
   return fetchMock;
 }
 
-describe('token/user storage', () => {
+describe('legacy session cleanup', () => {
   beforeEach(() => localStorage.clear());
 
-  it('stores and retrieves a token and user together', () => {
+  it('removes the old token and cached user', () => {
     // Arrange
-    const user = { id: 'usr_1', name: 'Casey' };
+    localStorage.setItem('restaurant_ops_token', 'tok_123');
+    localStorage.setItem('restaurant_ops_user', '{"id":"usr_1"}');
 
     // Act
-    storeAuth('tok_123', user);
+    clearLegacyAuth();
 
     // Assert
-    expect(getStoredToken()).toBe('tok_123');
-    expect(getStoredUser()).toEqual(user);
-  });
-
-  it('clearAuth removes both the token and the user', () => {
-    // Arrange
-    storeAuth('tok_123', { id: 'usr_1' });
-
-    // Act
-    clearAuth();
-
-    // Assert
-    expect(getStoredToken()).toBe(null);
-    expect(getStoredUser()).toBe(null);
-  });
-
-  it('getStoredUser returns null for corrupted stored JSON', () => {
-    // Arrange
-    localStorage.setItem('restaurant_ops_user', '{not json');
-
-    // Act / Assert
-    expect(getStoredUser()).toBe(null);
+    expect(localStorage.getItem('restaurant_ops_token')).toBeNull();
+    expect(localStorage.getItem('restaurant_ops_user')).toBeNull();
   });
 });
 
@@ -51,9 +32,24 @@ describe('api()', () => {
   beforeEach(() => localStorage.clear());
   afterEach(() => vi.unstubAllGlobals());
 
-  it('attaches a Bearer token when one is stored, and omits it otherwise', async () => {
+  it('uses same-origin cookies and marks mutations without attaching a legacy token', async () => {
     // Arrange
-    storeAuth('tok_abc', { id: 'usr_1' });
+    localStorage.setItem('restaurant_ops_token', 'legacy-session');
+    const fetchMock = mockFetchOnce(200, { ok: true });
+
+    // Act
+    await api('/auth/logout', { method: 'POST' });
+
+    // Assert
+    const [, init] = fetchMock.mock.calls[0];
+    const headers = new Headers(init.headers);
+    expect(init.credentials).toBe('same-origin');
+    expect(headers.get('Authorization')).toBeNull();
+    expect(headers.get('X-Requested-With')).toBe('RestaurantOps');
+  });
+
+  it('omits the mutation header for reads', async () => {
+    // Arrange
     const fetchMock = mockFetchOnce(200, { ok: true });
 
     // Act
@@ -61,7 +57,7 @@ describe('api()', () => {
 
     // Assert
     const [, init] = fetchMock.mock.calls[0];
-    expect(init.headers.Authorization).toBe('Bearer tok_abc');
+    expect(init.headers.get('X-Requested-With')).toBeNull();
   });
 
   it('serializes the request body as JSON', async () => {
@@ -118,25 +114,17 @@ describe('api()', () => {
     expect(err).toBeInstanceOf(ApiError);
   });
 
-  it('clears the session and redirects on a 401 from a protected page', async () => {
+  it('notifies the provider of a 401 from a protected API endpoint', async () => {
     // Arrange
-    storeAuth('tok_abc', { id: 'usr_1' });
-    const assign = vi.fn();
-    Object.defineProperty(window, 'location', {
-      value: { ...window.location, pathname: '/staff/orders', assign },
-      writable: true,
-    });
-    const events: string[] = [];
-    window.addEventListener('auth:expired', () => events.push('auth:expired'));
+    const onExpired = vi.fn();
+    window.addEventListener('auth:expired', onExpired, { once: true });
     mockFetchOnce(401, { error: 'Invalid or expired token.' });
 
     // Act
     await api('/orders').catch(() => undefined);
 
     // Assert
-    expect(getStoredToken()).toBe(null);
-    expect(events).toContain('auth:expired');
-    expect(assign).toHaveBeenCalledWith('/login?expired=1');
+    expect(onExpired).toHaveBeenCalledOnce();
   });
 
   it('builds a query string from the given params, dropping empty ones', async () => {
@@ -179,13 +167,7 @@ describe('authApi account endpoints', () => {
       { phone: '+92 300 5550101' },
     ],
     ['resetPassword', () => authApi.resetPassword('usr_9'), '/api/auth/users/usr_9/reset-password', 'POST', undefined],
-    [
-      'changePassword (admin, no current password)',
-      () => authApi.changePassword(undefined, 'new-pass'),
-      '/api/auth/me/password',
-      'POST',
-      { newPassword: 'new-pass' },
-    ],
+    ['logout', () => authApi.logout(), '/api/auth/logout', 'POST', undefined],
     ['setUserPassword', () => authApi.setUserPassword('usr_9', 'new-pass'), '/api/auth/users/usr_9/password', 'POST', { newPassword: 'new-pass' }],
   ];
 
@@ -207,7 +189,8 @@ describe('authApi account endpoints', () => {
 
   it('surfaces a wrong current password (400) as an error without ending the session', async () => {
     // Arrange
-    storeAuth('tok_abc', { id: 'usr_1' });
+    const onExpired = vi.fn();
+    window.addEventListener('auth:expired', onExpired);
     mockFetchOnce(400, { error: 'Current password is incorrect.' });
 
     // Act
@@ -215,6 +198,7 @@ describe('authApi account endpoints', () => {
 
     // Assert
     expect(err).toMatchObject({ status: 400, message: 'Current password is incorrect.' });
-    expect(getStoredToken()).toBe('tok_abc');
+    expect(onExpired).not.toHaveBeenCalled();
+    window.removeEventListener('auth:expired', onExpired);
   });
 });

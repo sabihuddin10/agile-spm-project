@@ -8,29 +8,42 @@
  */
 import { STAFF_ROLES } from '../data/store.js';
 
-export function rateLimit({ limit, windowMs, message = 'Too many requests. Please try again later.', now = Date.now } = {}) {
+const MAX_KEYS = 5000;
+const clientAddress = (req) => req.ip || req.socket?.remoteAddress || 'unknown';
+
+export function rateLimit({
+  limit, windowMs, message = 'Too many requests. Please try again later.',
+  now = Date.now, keyFor = clientAddress, exemptStaff = true, failuresOnly = false,
+} = {}) {
   const hits = new Map();
 
   return function limiter(req, res, next) {
-    if (req.user && STAFF_ROLES.includes(req.user.role)) return next();
+    if (exemptStaff && req.user && STAFF_ROLES.includes(req.user.role)) return next();
 
     const time = now();
-    const key = req.ip || req.socket?.remoteAddress || 'unknown';
+    const key = keyFor(req);
+    if (!key) return next();
     let entry = hits.get(key);
     if (!entry || time >= entry.resetAt) {
+      if (hits.size >= MAX_KEYS) {
+        for (const [k, e] of hits) if (time >= e.resetAt) hits.delete(k);
+        if (hits.size >= MAX_KEYS) {
+          res.setHeader('Retry-After', String(Math.ceil(windowMs / 1000)));
+          return res.status(429).json({ error: message });
+        }
+      }
       entry = { count: 0, resetAt: time + windowMs };
       hits.set(key, entry);
     }
-    entry.count += 1;
-
-    // Drop expired windows now and then so the map can't grow without bound.
-    if (hits.size > 5000) {
-      for (const [k, e] of hits) if (time >= e.resetAt) hits.delete(k);
-    }
-
-    if (entry.count > limit) {
+    if (entry.count >= limit) {
       res.setHeader('Retry-After', String(Math.ceil((entry.resetAt - time) / 1000)));
       return res.status(429).json({ error: message });
+    }
+    entry.count += 1;
+    if (failuresOnly) {
+      res.once('finish', () => {
+        if (res.statusCode !== 401 && res.statusCode !== 403) entry.count -= 1;
+      });
     }
     return next();
   };
@@ -38,5 +51,8 @@ export function rateLimit({ limit, windowMs, message = 'Too many requests. Pleas
 
 /** Limit only `POST <mount>/<path>`; every other request on the mount passes straight through. */
 export function limitPost(path, limiter) {
-  return (req, res, next) => (req.method === 'POST' && req.path === path ? limiter(req, res, next) : next());
+  return (req, res, next) => {
+    const requestPath = req.path.toLowerCase().replace(/\/$/, '') || '/';
+    return req.method === 'POST' && requestPath === path ? limiter(req, res, next) : next();
+  };
 }

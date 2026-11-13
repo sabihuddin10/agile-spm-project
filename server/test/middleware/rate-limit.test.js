@@ -3,6 +3,7 @@ import { test, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { rateLimit, limitPost } from '../../src/middleware/rate-limit.js';
 import { createApp } from '../../src/app.js';
+import { issuedToken } from '../helpers.js';
 
 /** Run a middleware against a fake request; resolves with the status sent, or 'next'. */
 function run(mw, req) {
@@ -94,14 +95,14 @@ test('the app limits guest job applications to 3 an hour and waves signed-in sta
     body: JSON.stringify(body),
   });
   const application = (i) => ({ name: `Spam ${i}`, email: `spam${i}@example.com`, desiredRole: 'waiter' });
-  const login = await (await post('/auth/login', { email: 'waiter@rest.test', password: 'password' })).json();
+  const login = await post('/auth/login', { email: 'waiter@rest.test', password: 'password' });
 
   // Act
   const statuses = [];
   for (let i = 0; i < 4; i += 1) statuses.push((await post('/staff/applications', application(i))).status);
   const bookings = [];
   for (let i = 0; i < 7; i += 1) {
-    bookings.push((await post('/reservations', { customerName: `Walk-in ${i}`, partySize: 2, date: '2099-01-0' + (1 + (i % 7)), time: '19:00' }, login.token)).status);
+    bookings.push((await post('/reservations', { customerName: `Walk-in ${i}`, partySize: 2, date: '2099-01-0' + (1 + (i % 7)), time: '19:00' }, issuedToken(login))).status);
   }
 
   // Assert

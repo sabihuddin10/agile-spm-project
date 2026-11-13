@@ -79,7 +79,7 @@ function NavIcon({ name, className = 'h-[18px] w-[18px]' }: { name: string; clas
 }
 
 export function StaffShell({ children }: { children: React.ReactNode }) {
-  const { user, logout } = useAuth();
+  const { user, logout, signingOut } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -188,9 +188,9 @@ export function StaffShell({ children }: { children: React.ReactNode }) {
             <Badge tone={user.role === 'admin' ? 'brand' : user.role === 'manager' ? 'blue' : 'stone'}>{user.role}</Badge>
           </div>
           <button
-            onClick={() => {
-              logout();
-              router.push('/login');
+            disabled={signingOut}
+            onClick={async () => {
+              if (await logout()) router.push('/login');
             }}
             className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-stone-500 transition hover:bg-stone-100 hover:text-stone-800"
             title="Sign out"
