@@ -346,3 +346,22 @@ test('an admin types a new password for a staff member below them; nobody else c
   assert.equal(byManager.status, 403);
   assert.equal(onAdmin.status, 403);
 });
+
+test('DELETE /auth/users/:id removes a staff account and unassigns them from tables', async () => {
+  // Arrange
+  const admin = await api.login('admin');
+  const waiter = await hire('waiter');
+  const table = (await api.call('GET', '/tables/public')).body.tables[0];
+  await api.call('PATCH', `/tables/${table.id}`, { token: admin, body: { waiterId: waiter.id } });
+  const beforeDelete = (await api.call('GET', '/tables', { token: admin })).body.tables.find((t) => t.id === table.id);
+  assert.equal(beforeDelete.waiterId, waiter.id);
+
+  // Act
+  const res = await api.call('DELETE', `/auth/users/${waiter.id}`, { token: admin });
+
+  // Assert
+  assert.equal(res.status, 200);
+  assert.equal(res.body.deleted, true);
+  const afterDelete = (await api.call('GET', '/tables', { token: admin })).body.tables.find((t) => t.id === table.id);
+  assert.equal(afterDelete.waiterId, null, 'table waiter assignment was cleared');
+});
