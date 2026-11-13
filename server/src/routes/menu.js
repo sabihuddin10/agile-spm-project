@@ -247,7 +247,7 @@ router.post('/categories', manageMenu, (req, res) => {
   if (categories.some((c) => c.name.toLowerCase() === clean.toLowerCase())) {
     return res.status(409).json({ error: 'A category with that name already exists.' });
   }
-  const category = { id: nextId('cat'), name: clean, sort: sortValue || categories.length + 1, active: true };
+  const category = { id: nextId('cat'), name: clean, sort: sortValue !== undefined ? sortValue : categories.length + 1, active: true };
   categories.push(category);
   return res.status(201).json({ category: { ...category, itemCount: 0 } });
 });
