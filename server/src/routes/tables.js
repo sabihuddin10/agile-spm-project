@@ -15,7 +15,8 @@ const ZONE_MAX = 40;
 
 const readTableNumber = (value) =>
   number(value, 'Table number', { min: 1, max: 9999, integer: true, message: 'Table number must be a positive whole number.' });
-const readSeats = (value) => number(value, 'Seats', { min: 1, max: 20, message: 'Seats must be between 1 and 20.' });
+const readSeats = (value) =>
+  number(value, 'Seats', { min: 1, max: 20, integer: true, message: 'Seats must be between 1 and 20.' });
 const readZone = (value) => {
   if (value === undefined) return undefined;
   if (typeof value !== 'string' || !value.trim()) return text('', 'Zone', { required: true });
@@ -88,7 +89,15 @@ router.patch('/:id', floorRoles, (req, res) => {
   const zone = readZone(body.zone);
   const held = bool(body.held, 'held');
   if (status !== undefined && !tableStatuses.includes(status)) return res.status(400).json({ error: 'Invalid status.' });
-  if (waiterId !== undefined && waiterId !== null && typeof waiterId !== 'string') return res.status(400).json({ error: 'Unknown staff member.' });
+  if (waiterId !== undefined && waiterId !== null) {
+    if (typeof waiterId !== 'string') return res.status(400).json({ error: 'Unknown staff member.' });
+    if (waiterId && !users.some((u) => u.id === waiterId && u.role !== 'customer')) {
+      return res.status(400).json({ error: 'Unknown staff member.' });
+    }
+    if (waiterId && !users.some((u) => u.id === waiterId && FLOOR_STAFF.includes(u.role) && u.active)) {
+      return res.status(400).json({ error: 'Only active floor staff (waiters and managers) can look after a table.' });
+    }
+  }
   if (n !== undefined && tables.some((t) => t.id !== table.id && t.number === n)) {
     return res.status(409).json({ error: 'A table with that number already exists.' });
   }
@@ -102,12 +111,6 @@ router.patch('/:id', floorRoles, (req, res) => {
     if (status === 'free') table.waiterId = null;
   }
   if (waiterId !== undefined) {
-    if (waiterId && !users.some((u) => u.id === waiterId && u.role !== 'customer')) {
-      return res.status(400).json({ error: 'Unknown staff member.' });
-    }
-    if (waiterId && !users.some((u) => u.id === waiterId && FLOOR_STAFF.includes(u.role) && u.active)) {
-      return res.status(400).json({ error: 'Only active floor staff (waiters and managers) can look after a table.' });
-    }
     table.waiterId = waiterId || null;
   }
   if (held !== undefined) table.held = held;
@@ -121,6 +124,9 @@ router.delete('/:id', managerRoles, (req, res) => {
   if (idx === -1) return res.status(404).json({ error: 'Table not found.' });
   if (orders.some((o) => o.tableId === tables[idx].id && isActive(o))) {
     return res.status(409).json({ error: 'This table has active orders.' });
+  }
+  if (reservations.some((r) => r.tableId === tables[idx].id && ['requested', 'confirmed'].includes(r.status))) {
+    return res.status(409).json({ error: 'This table has active reservations.' });
   }
   const [removed] = tables.splice(idx, 1);
   return res.json({ deleted: true, id: removed.id });

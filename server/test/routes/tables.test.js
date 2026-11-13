@@ -114,6 +114,26 @@ test('DELETE /tables/:id is refused with 409 while the table has an active order
   assert.ok(await tableByNumber(api.call, manager, 32), 'the table is still on the floor plan');
 });
 
+test('DELETE /tables/:id is refused with 409 while the table has an active reservation', async () => {
+  // Arrange
+  const created = await api.call('POST', '/tables', { token: manager, body: { number: 35, seats: 4, zone: 'Patio' } });
+  const id = created.body.table.id;
+  const booking = await api.call('POST', '/reservations', {
+    body: { customerName: 'Reserved Guest', email: 'guest@example.com', phone: '0300 1234567', date: '2027-01-01', time: '19:00', partySize: 4 },
+  });
+  assert.equal(booking.status, 201);
+  const patchBooking = await api.call('PATCH', `/reservations/${booking.body.reservation.id}`, { token: manager, body: { tableId: id, status: 'confirmed' } });
+  assert.equal(patchBooking.status, 200);
+
+  // Act
+  const res = await api.call('DELETE', `/tables/${id}`, { token: manager });
+
+  // Assert
+  assert.equal(res.status, 409);
+  assert.equal(res.body.error, 'This table has active reservations.');
+  assert.ok(await tableByNumber(api.call, manager, 35), 'the table is still on the floor plan');
+});
+
 test('DELETE /tables/:id returns 404 for an unknown table', async () => {
   // Act
   const res = await api.call('DELETE', '/tables/tbl_does_not_exist', { token: manager });
@@ -161,11 +181,13 @@ test('table fields are type-checked: whole-number table numbers, finite seats, s
   const infiniteSeats = await api.call('POST', '/tables', { token, body: { number: 901, seats: 'Infinity' } });
   const longZone = await api.call('POST', '/tables', { token, body: { number: 902, seats: 2, zone: 'z'.repeat(41) } });
   const objectZone = await api.call('POST', '/tables', { token, body: { number: 903, seats: 2, zone: { name: 'Patio' } } });
+  const fractionalSeats = await api.call('POST', '/tables', { token, body: { number: 904, seats: 2.5 } });
   const stringHeld = await api.call('PATCH', `/tables/${table.id}`, { token, body: { held: 'false', seats: 3 } });
+  const badWaiter = await api.call('PATCH', `/tables/${table.id}`, { token, body: { seats: 15, waiterId: 'usr_chef' } });
   const after = await tableByNumber(api.call, token, 2);
 
   // Assert
-  for (const res of [boolNumber, infiniteSeats, longZone, objectZone, stringHeld]) assert.equal(res.status, 400);
+  for (const res of [boolNumber, infiniteSeats, fractionalSeats, longZone, objectZone, stringHeld, badWaiter]) assert.equal(res.status, 400);
   assert.equal(after.seats, table.seats, 'the rejected edit changed nothing');
   assert.equal(after.held, table.held);
 });
