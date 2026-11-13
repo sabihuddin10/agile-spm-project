@@ -335,3 +335,12 @@ test('a newly approved hire gets the default wage for their role', async () => {
   assert.equal(pay.hourlyWage, 15);
   assert.equal(pay.net, 0);
 });
+
+test('DELETE /workforce/users/:id/adjustments/:adjId on unknown staff returns 404', async () => {
+  // Act
+  const notFound = await api.call('DELETE', '/workforce/users/usr_unknown_staff/adjustments/adj_999', { token: tokens.admin });
+
+  // Assert
+  assert.equal(notFound.status, 404);
+  assert.equal(notFound.body.error, 'Staff member not found.');
+});
