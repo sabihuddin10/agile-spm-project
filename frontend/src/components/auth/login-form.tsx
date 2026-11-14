@@ -12,20 +12,12 @@ import { FieldError, SubmitHint, describedBy } from '@/components/forms/field-er
 import { PasswordInput } from '@/components/forms/password-input';
 
 // Sign-in only checks that something sensible was typed; the password policy
-// applies when a password is set, so older (and demo) passwords still work.
+// applies when a password is set, so older passwords still work.
 const RULES: Rules<{ email: string; password: string }> = {
   email: (v) => validateEmail(v),
   password: (v) => validateRequired(v, 'Please enter your password.'),
 };
 const LABELS = { email: 'Email', password: 'Password' };
-
-const DEMO_ACCOUNTS = [
-  { label: 'Admin', email: 'admin@rest.test' },
-  { label: 'Manager', email: 'manager@rest.test' },
-  { label: 'Chef', email: 'chef@rest.test' },
-  { label: 'Waiter', email: 'waiter@rest.test' },
-  { label: 'Customer', email: 'customer@rest.test' },
-];
 
 /**
  * Sign in for customers and staff (US1.1). Shows a notice when the previous
@@ -62,17 +54,11 @@ export function LoginForm() {
     }
   }
 
-  function quickLogin(quickEmail: string) {
-    setEmail(quickEmail);
-    setPassword('password');
-    setError(null);
-  }
-
   return (
     <div className="w-full max-w-md">
       <div className="card">
         <h1 className="font-display text-lg font-semibold tracking-tight text-bone sm:text-2xl">Sign in</h1>
-        <p className="mt-1 text-sm text-bone-dim">Use your account, or pick a demo account below.</p>
+        <p className="mt-1 text-sm text-bone-dim">Sign in with your email and password to access your account.</p>
 
         {expired ? (
           <p role="status" className="mt-4 rounded-xl border border-ember/40 bg-ember/10 px-3.5 py-2.5 text-sm text-ember-glow">
@@ -136,30 +122,6 @@ export function LoginForm() {
           </button>
           <SubmitHint id="login-submit-hint" fields={v.invalidLabels} tone="dark" className="text-center" />
         </form>
-
-        <div className="mt-5 border-t border-char-hairline pt-4 sm:mt-6">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-bone-faint">Quick demo login</p>
-          <div className="flex flex-wrap gap-2">
-            {DEMO_ACCOUNTS.map((acc) => (
-              <button
-                key={acc.email}
-                type="button"
-                onClick={() => quickLogin(acc.email)}
-                disabled={submitting}
-                className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-                  email === acc.email
-                    ? 'border-ember bg-ember/15 text-bone'
-                    : 'border-char-hairline text-bone-dim hover:border-ember/40 hover:text-bone'
-                }`}
-              >
-                {acc.label}
-              </button>
-            ))}
-          </div>
-          <p className="mt-2 text-xs text-bone-faint">
-            Any demo account password: <code className="font-mono text-bone-dim">password</code>
-          </p>
-        </div>
       </div>
 
       <p className="mt-4 text-center text-sm text-bone-dim">

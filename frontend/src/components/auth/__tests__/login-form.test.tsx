@@ -65,17 +65,14 @@ describe('LoginForm', () => {
     expect(push).not.toHaveBeenCalled();
   });
 
-  it('fills in a demo account\'s email and a default password', async () => {
+  it('does not render quick demo login buttons', () => {
     // Arrange
     vi.mocked(useAuth).mockReturnValue({ login: vi.fn() } as unknown as ReturnType<typeof useAuth>);
-    const user = userEvent.setup({ delay: null });
     render(<LoginForm />);
 
-    // Act
-    await user.click(screen.getByRole('button', { name: 'Chef' }));
-
     // Assert
-    expect(screen.getByLabelText('Email')).toHaveValue('chef@rest.test');
-    expect(screen.getByLabelText('Password')).toHaveValue('password');
+    expect(screen.queryByText(/Quick demo login/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Chef' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Admin' })).not.toBeInTheDocument();
   });
 });

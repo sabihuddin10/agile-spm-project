@@ -408,6 +408,8 @@ describe('AllAccountsPanel', () => {
     }
     expect(screen.getByRole('option', { name: 'All roles (5)' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Customers (1)' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Staff accounts/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Customer accounts/i })).toBeInTheDocument();
   });
 
   it('filters by role and by search text', async () => {
