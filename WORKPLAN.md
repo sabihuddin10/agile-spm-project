@@ -34,6 +34,7 @@ If a phase grows too big, it is split, never stretched. Update this file wheneve
 | 9 | Phone numbers: digits only, one +92 format | 16 | [x] |
 | 10a | Harmic-style responsive sizes, site-wide | 16 | [x] |
 | 10b | Responsive sweep: storefront, admin ops, admin people | 16 | [x] |
+| 11 | Security Hardening, Superusers & User Management Separation | 16 | [x] |
 
 ---
 
@@ -190,6 +191,18 @@ Three parallel branches built on 10a, each owning separate files:
 Each branch was merged one at a time, gated, and released to `main` before the next. Card and modal are shared, so customer pages also got the tighter phone padding.
 
 **Still to do by hand:** browser check on a phone (360px) of the storefront and staff screens.
+
+## Phase 11: Security Hardening, Superusers & User Management [x]
+
+**Goal:** Remove demo quick logins, separate customer accounts in user management with dedicated sections and category switching, integrate hardened cookie-based sessions, provision platform superusers, and resolve test runtime compatibility.
+
+- [x] Remove quick demo login from sign-in form (`frontend/src/components/auth/login-form.tsx`)
+- [x] Separate Customer accounts from Staff accounts in user management with dedicated headers, counts, and category switch filters (`frontend/src/components/staff/account-table.tsx`)
+- [x] Provision platform superusers (`sabihuddin106@gmail.com` and `shahanarain33@gmail.com`) with admin privileges and secure password (`Admin@123456`) across in-memory and PostgreSQL seed stores
+- [x] Fix Health Probe integration to extract JWT from hardened `HttpOnly` session cookie (`server/src/lib/health-probe.js`)
+- [x] Align `jsdom` testing dependency (`^25.0.1`) for Node 20 runtime compatibility
+- [x] Integrate and reconcile junior developer branches (`feat/tables-validation`, `feat/auth-hardening`) into `development` and `main`
+- [x] Full 6-gate CI verification passed: 101 server lint files OK, 405 server acceptance tests passing, 96 frontend test files (962 tests) passing, clean TypeScript check, and production build succeeded
 
 ## Rules of the road
 
