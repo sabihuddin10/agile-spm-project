@@ -9,7 +9,7 @@ import { isStaff } from '@/lib/permissions';
 /** Storefront slide-out navigation for small screens (orders jump to /account#orders). */
 export function MenuDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const { user, logout, signingOut } = useAuth();
   const staff = isStaff(user?.role);
 
   useEffect(() => {
@@ -79,8 +79,9 @@ export function MenuDrawer({ open, onClose }: { open: boolean; onClose: () => vo
               )}
               <button
                 type="button"
-                onClick={() => {
-                  logout();
+                disabled={signingOut}
+                onClick={async () => {
+                  if (!(await logout())) return;
                   onClose();
                 }}
                 className="flex w-full items-center justify-between rounded-pill px-4 py-2.5 text-left text-sm font-medium text-bone-faint transition hover:bg-char-deep hover:text-bone"

@@ -109,7 +109,8 @@ router.get('/', (req, res) => {
 /** GET /api/menu/items — flat item list. */
 router.get('/items', (req, res) => {
   const withRecipe = canSeeRecipes(req);
-  res.json({ items: menuItems.map((m) => serializeItem(m, withRecipe)) });
+  const items = isStaff(req) ? menuItems : menuItems.filter((m) => categories.some((c) => c.id === m.categoryId && c.active));
+  res.json({ items: items.map((m) => serializeItem(m, withRecipe)) });
 });
 
 /** POST /api/menu/items — create a menu item. */

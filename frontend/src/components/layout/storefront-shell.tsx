@@ -52,7 +52,7 @@ function Avatar({ name, className }: { name: string; className?: string }) {
  * for signed-in users and the account menu; cart drawer; mobile nav; footer.
  */
 export function StorefrontShell({ children }: { children: React.ReactNode }) {
-  const { user, logout } = useAuth();
+  const { user, logout, signingOut } = useAuth();
   const { count, setOpen } = useCart();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -226,8 +226,9 @@ export function StorefrontShell({ children }: { children: React.ReactNode }) {
                       )}
                       <button
                         type="button"
-                        onClick={() => {
-                          logout();
+                        disabled={signingOut}
+                        onClick={async () => {
+                          if (!(await logout())) return;
                           setProfileOpen(false);
                         }}
                         className="block w-full px-4 py-2.5 text-left text-sm text-bone-dim transition hover:bg-char-deep hover:text-ember"

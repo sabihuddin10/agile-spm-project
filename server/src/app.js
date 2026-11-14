@@ -21,19 +21,23 @@ import { PROBE_HEADER } from './lib/health-probe.js';
 import { authenticate, optionalAuth } from './middleware/auth.js';
 import { rateLimit, limitPost } from './middleware/rate-limit.js';
 import { persistState } from './data/persist.js';
-import { hasUnsafeKeys, isPlainObject } from './lib/validate.js';
+import { EMAIL_MAX, hasUnsafeKeys, isPlainObject } from './lib/validate.js';
+import { signingSecret } from './lib/jwt.js';
+import { protectCookieWrites } from './lib/session-cookie.js';
 
 /**
  * `persistence` keeps the store in Postgres (on by default when DATABASE_URL is set);
- * `rateLimits` throttles the public booking and application forms.
+ * `rateLimits` throttles auth endpoints and public forms.
  */
 export function createApp({ logging = true, persistence = Boolean(process.env.DATABASE_URL), rateLimits = true } = {}) {
+  signingSecret();
   const app = express();
   // Behind Vercel's proxy the client address is in X-Forwarded-For. Elsewhere the
   // header is client-controlled, so it is only trusted on Vercel.
   if (process.env.VERCEL) app.set('trust proxy', 1);
 
-  app.use(cors());
+  // The browser uses a same-origin proxy. Never approve the cookie CSRF header via CORS.
+  app.use(cors({ allowedHeaders: ['Content-Type', 'Authorization'] }));
   // The largest real body (a recipe or reorder form) is a few KB; 100 KB is generous.
   app.use(express.json({ limit: '100kb' }));
   app.use(guardInput);
@@ -46,6 +50,22 @@ export function createApp({ logging = true, persistence = Boolean(process.env.DA
   // persistence: they never open a transaction, and the probes they send back
   // through this app would otherwise queue behind their own request's lock.
   app.use('/api/health', healthRoutes);
+
+  app.use('/api', (req, res, next) => {
+    res.setHeader('Cache-Control', 'private, no-store');
+    next();
+  }, protectCookieWrites);
+
+  if (rateLimits) {
+    const windowMs = 15 * 60_000;
+    const emailKey = (req) => typeof req.body?.email === 'string' && req.body.email.length <= EMAIL_MAX
+      ? req.body.email.trim().toLowerCase() : null;
+    app.use('/api/auth',
+      limitPost('/login', rateLimit({ limit: 30, windowMs, exemptStaff: false })),
+      limitPost('/login', rateLimit({ limit: 5, windowMs, keyFor: emailKey, failuresOnly: true, exemptStaff: false })),
+      limitPost('/register', rateLimit({ limit: 10, windowMs, exemptStaff: false })),
+    );
+  }
 
   // Everything below the health check reads and writes the persisted store.
   if (persistence) app.use('/api', persistState());

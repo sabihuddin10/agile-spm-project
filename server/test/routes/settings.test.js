@@ -10,11 +10,11 @@ let original;
 before(async () => {
   api = await startServer();
   [manager, admin] = await Promise.all([api.login('manager'), api.login('admin')]);
-  original = (await api.call('GET', '/settings')).body.settings;
+  original = (await api.call('GET', '/settings', { token: manager })).body.settings;
 });
 after(() => api.close());
 
-const current = async () => (await api.call('GET', '/settings')).body.settings;
+const current = async () => (await api.call('GET', '/settings', { token: manager })).body.settings;
 const patch = (token, body) => api.call('PATCH', '/settings', { token, body });
 const restore = async () => {
   const res = await patch(manager, original);
@@ -38,14 +38,19 @@ const NUMERIC = [
   ['autoBreakAfterHours', 1, 12],
 ];
 
-test('GET is public and includes the settings and time slots', async () => {
+test('GET exposes storefront policy and time slots to guests', async () => {
+  // Arrange
+  const path = '/settings';
+
   // Act
-  const { status, body } = await api.call('GET', '/settings');
+  const { status, body } = await api.call('GET', path);
 
   // Assert
   assert.equal(status, 200);
   assert.equal(body.settings.restaurantName, 'Plate & Flame');
   assert.equal(body.settings.taxRate, 0.1);
+  assert.equal('latePenalty' in body.settings, false);
+  assert.equal('kitchenDelayMinutes' in body.settings, false);
   assert.ok(Array.isArray(body.timeSlots) && body.timeSlots.length > 0);
   for (const slot of body.timeSlots) assert.match(slot, /^\d{2}:\d{2}$/);
 });

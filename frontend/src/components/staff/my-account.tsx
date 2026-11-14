@@ -62,7 +62,7 @@ export function MyAccount() {
 
       <div className="grid gap-4 sm:gap-5 lg:grid-cols-3 lg:items-start">
         <div className="space-y-4 sm:space-y-5 lg:col-span-2">
-          <AccountProfileForm key={user.id} user={user} />
+          {user.mustChangePassword ? null : <AccountProfileForm key={user.id} user={user} />}
           <ChangePasswordForm id="change-password" />
         </div>
         <RoleCapabilities role={role} />

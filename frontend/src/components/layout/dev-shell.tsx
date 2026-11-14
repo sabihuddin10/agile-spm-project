@@ -6,7 +6,7 @@ import { useAuth } from '@/context/auth-context';
 import { Badge } from '@/components/ui/badge';
 
 export function DevShell({ children }: { children: React.ReactNode }) {
-  const { user, logout } = useAuth();
+  const { user, logout, signingOut } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -67,9 +67,9 @@ export function DevShell({ children }: { children: React.ReactNode }) {
             <span className="hidden text-sm text-stone-600 sm:block">{user.name}</span>
             <Badge tone="blue" className="hidden sm:inline-flex">{user.role}</Badge>
             <button
-              onClick={() => {
-                logout();
-                router.push('/login');
+              disabled={signingOut}
+              onClick={async () => {
+                if (await logout()) router.push('/login');
               }}
               className="rounded-md px-2 py-1 text-xs text-stone-500 hover:bg-stone-100 hover:text-stone-900"
             >

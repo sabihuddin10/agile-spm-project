@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createPool } from '../src/data/db.js';
+import { issuedToken } from '../test/helpers.js';
 
 const SERVER_DIR = fileURLToPath(new URL('..', import.meta.url));
 
@@ -51,13 +52,13 @@ async function spawnServer() {
       signal: AbortSignal.timeout(180_000),
     });
     const text = await res.text();
-    return { status: res.status, body: text ? JSON.parse(text) : null };
+    return { status: res.status, body: text ? JSON.parse(text) : null, headers: res.headers };
   }
 
   async function login(who) {
     const res = await call('POST', '/auth/login', { body: { email: `${who}@rest.test`, password: 'password' } });
     assert.equal(res.status, 200, `login ${who}`);
-    return res.body.token;
+    return issuedToken(res);
   }
 
   const close = () => new Promise((resolve) => {
@@ -126,6 +127,25 @@ test('a write survives a cold start on another instance', async () => {
   // Assert
   assert.equal(created.status, 201);
   assert.ok((await customerNames(second, token2)).includes('Persisted Pat'));
+  await second.close();
+});
+
+test('logout persists revocation across independent API instances', async () => {
+  // Arrange
+  const first = await spawnServer();
+  const second = await spawnServer();
+  const token = await first.login('customer');
+  const beforeLogout = await second.call('GET', '/auth/me', { token });
+
+  // Act
+  const logout = await first.call('POST', '/auth/logout', { token });
+  const afterLogout = await second.call('GET', '/auth/me', { token });
+
+  // Assert
+  assert.equal(beforeLogout.status, 200);
+  assert.equal(logout.status, 204);
+  assert.equal(afterLogout.status, 401);
+  await first.close();
   await second.close();
 });
 

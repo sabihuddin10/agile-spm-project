@@ -23,7 +23,14 @@ const NUMERIC = [
 
 /** GET /api/settings — restaurant policy (public: the storefront needs tax & points). */
 router.get('/', (req, res) => {
-  res.json({ settings, timeSlots: TIME_SLOTS });
+  if (req.user && ['manager', 'admin'].includes(req.user.role)) {
+    return res.json({ settings, timeSlots: TIME_SLOTS });
+  }
+  const { restaurantName, address, taxRate, serviceChargeRate, pointValue, openingHour, closingHour } = settings;
+  return res.json({
+    settings: { restaurantName, address, taxRate, serviceChargeRate, pointValue, openingHour, closingHour },
+    timeSlots: TIME_SLOTS,
+  });
 });
 
 /** PATCH /api/settings — update tax, service charge, kitchen threshold, etc. (manager/admin). */

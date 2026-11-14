@@ -1,197 +1,112 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { AUTH_EXPIRED_EVENT, AuthProvider, useAuth } from '@/context/auth-context';
-import { authApi, getStoredToken, getStoredUser, storeAuth, clearAuth } from '@/lib/api';
+import { ApiError, authApi } from '@/lib/api';
 import type { User } from '@/types';
 
-vi.mock('@/lib/api', () => ({
-  authApi: { login: vi.fn(), register: vi.fn(), me: vi.fn() },
-  clearAuth: vi.fn(),
-  getStoredToken: vi.fn(() => null),
-  getStoredUser: vi.fn(() => null),
-  storeAuth: vi.fn(),
+vi.mock('@/lib/api', async (original) => ({
+  ...await original<typeof import('@/lib/api')>(),
+  authApi: { login: vi.fn(), register: vi.fn(), me: vi.fn(), logout: vi.fn() },
 }));
 
-function makeUser(overrides: Partial<User> = {}): User {
-  return { id: 'usr_1', name: 'Casey Customer', email: 'casey@example.com', role: 'customer', active: true, ...overrides };
-}
+const customer: User = { id: 'usr_1', name: 'Casey Customer', email: 'casey@example.com', role: 'customer', active: true };
+const manager: User = { ...customer, role: 'manager' };
+const renderAuth = () => renderHook(() => useAuth(), { wrapper: AuthProvider });
 
-function renderAuth() {
-  return renderHook(() => useAuth(), { wrapper: AuthProvider });
-}
+beforeEach(() => {
+  vi.resetAllMocks();
+  localStorage.clear();
+  vi.mocked(authApi.me).mockRejectedValue(new ApiError('Authentication required.', 401, null));
+});
 
 describe('AuthProvider', () => {
-  beforeEach(() => {
-    vi.mocked(getStoredToken).mockReturnValue(null);
-    vi.mocked(getStoredUser).mockReturnValue(null);
+  it('waits for the server before trusting the session and deletes legacy browser credentials', async () => {
+    // Arrange
+    localStorage.setItem('restaurant_ops_token', 'legacy-token');
+    localStorage.setItem('restaurant_ops_user', JSON.stringify(manager));
+    vi.mocked(authApi.me).mockResolvedValue({ user: customer });
+
+    // Act
+    const { result } = renderAuth();
+
+    // Assert
+    expect(result.current.user).toBeNull();
+    expect(result.current.loading).toBe(true);
+    await waitFor(() => expect(result.current.user).toEqual(customer));
+    expect(result.current.loading).toBe(false);
+    expect(result.current.hasRole('manager')).toBe(false);
+    expect(localStorage.getItem('restaurant_ops_token')).toBeNull();
+    expect(localStorage.getItem('restaurant_ops_user')).toBeNull();
   });
 
-  afterEach(() => vi.clearAllMocks());
-
-  it('does nothing when there is no stored session', async () => {
-    // Arrange / Act
+  it('becomes a guest when the server reports no session', async () => {
+    // Arrange
     const { result } = renderAuth();
+
+    // Act
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     // Assert
-    expect(result.current.user).toBe(null);
-    expect(authApi.me).not.toHaveBeenCalled();
+    expect(result.current.user).toBeNull();
   });
 
-  it('restores a stored session immediately, then re-validates it with the server', async () => {
+  it('uses the signed-in user and clears state only after server logout succeeds', async () => {
     // Arrange
-    const stored = makeUser({ name: 'Stale Name' });
-    const fresh = makeUser({ name: 'Fresh Name' });
-    vi.mocked(getStoredToken).mockReturnValue('tok_1');
-    vi.mocked(getStoredUser).mockReturnValue(stored);
-    vi.mocked(authApi.me).mockResolvedValue({ user: fresh });
+    vi.mocked(authApi.login).mockResolvedValue({ user: manager });
+    vi.mocked(authApi.logout).mockResolvedValue(null);
+    const { result } = renderAuth();
+    await act(async () => { await result.current.login(manager.email, 'secret'); });
+    const signedIn = result.current.user;
 
     // Act
-    const { result } = renderAuth();
-
-    // Assert — the stored session is visible right away
-    expect(result.current.user).toEqual(stored);
-
-    // Assert — it is then replaced by the server's answer
-    await waitFor(() => expect(result.current.user).toEqual(fresh));
-    expect(storeAuth).toHaveBeenCalledWith('tok_1', fresh);
-  });
-
-  it('keeps the current session when re-validation fails', async () => {
-    // Arrange
-    const stored = makeUser();
-    vi.mocked(getStoredToken).mockReturnValue('tok_1');
-    vi.mocked(getStoredUser).mockReturnValue(stored);
-    vi.mocked(authApi.me).mockRejectedValue(new Error('401'));
-
-    // Act
-    const { result } = renderAuth();
-    await waitFor(() => expect(authApi.me).toHaveBeenCalled());
+    await act(async () => { await result.current.logout(); });
 
     // Assert
-    expect(result.current.user).toEqual(stored);
+    expect(signedIn).toEqual(manager);
+    expect(authApi.logout).toHaveBeenCalledOnce();
+    expect(result.current.user).toBeNull();
   });
 
-  it('login sets the user and token and persists them', async () => {
+  it('keeps the session available for retry if logout fails', async () => {
     // Arrange
-    const user = makeUser();
-    vi.mocked(authApi.login).mockResolvedValue({ user, token: 'tok_new' });
+    vi.mocked(authApi.me).mockResolvedValue({ user: manager });
+    vi.mocked(authApi.logout).mockRejectedValue(new Error('Network error'));
     const { result } = renderAuth();
+    await waitFor(() => expect(result.current.user).toEqual(manager));
 
     // Act
-    await act(async () => {
-      await result.current.login('casey@example.com', 'secret1');
-    });
+    await act(async () => { await result.current.logout(); });
 
     // Assert
-    expect(result.current.user).toEqual(user);
-    expect(result.current.token).toBe('tok_new');
-    expect(storeAuth).toHaveBeenCalledWith('tok_new', user);
+    expect(result.current.user).toEqual(manager);
+    expect(result.current.signingOut).toBe(false);
   });
 
-  it('register sets the user and token and persists them', async () => {
+  it('uses the registered user and refreshes state after a profile change', async () => {
     // Arrange
-    const user = makeUser({ name: 'Nina New' });
-    vi.mocked(authApi.register).mockResolvedValue({ user, token: 'tok_reg' });
+    vi.mocked(authApi.register).mockResolvedValue({ user: customer });
     const { result } = renderAuth();
+    await act(async () => { await result.current.register(customer.name, customer.email, 'secret'); });
+    const updated = { ...customer, name: 'Casey Renamed' };
 
     // Act
-    await act(async () => {
-      await result.current.register('Nina New', 'nina@example.com', 'secret1');
-    });
+    act(() => result.current.updateSession(updated));
 
     // Assert
-    expect(result.current.user).toEqual(user);
-    expect(storeAuth).toHaveBeenCalledWith('tok_reg', user);
+    expect(result.current.user).toEqual(updated);
+    expect(localStorage.length).toBe(0);
   });
 
-  it('logout clears the session', async () => {
+  it('clears the signed-in user after an auth:expired event', async () => {
     // Arrange
-    const user = makeUser();
-    vi.mocked(authApi.login).mockResolvedValue({ user, token: 'tok_1' });
+    vi.mocked(authApi.me).mockResolvedValue({ user: manager });
     const { result } = renderAuth();
-    await act(async () => {
-      await result.current.login('casey@example.com', 'secret1');
-    });
-
-    // Act
-    act(() => result.current.logout());
-
-    // Assert
-    expect(result.current.user).toBe(null);
-    expect(result.current.token).toBe(null);
-    expect(clearAuth).toHaveBeenCalled();
-  });
-
-  it('hasRole reflects the signed-in user only', async () => {
-    // Arrange
-    const manager = makeUser({ role: 'manager' });
-    vi.mocked(authApi.login).mockResolvedValue({ user: manager, token: 'tok_1' });
-    const { result } = renderAuth();
-
-    // Assert — signed out
-    expect(result.current.hasRole('manager', 'admin')).toBe(false);
-
-    // Act
-    await act(async () => {
-      await result.current.login('maya@rest.test', 'secret1');
-    });
-
-    // Assert
-    expect(result.current.hasRole('manager', 'admin')).toBe(true);
-    expect(result.current.hasRole('chef')).toBe(false);
-  });
-
-  it('clears the session when an auth:expired event fires', async () => {
-    // Arrange
-    const user = makeUser();
-    vi.mocked(authApi.login).mockResolvedValue({ user, token: 'tok_1' });
-    const { result } = renderAuth();
-    await act(async () => {
-      await result.current.login('casey@example.com', 'secret1');
-    });
+    await waitFor(() => expect(result.current.hasRole('manager')).toBe(true));
 
     // Act
     act(() => window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT)));
 
     // Assert
-    expect(result.current.user).toBe(null);
-    expect(result.current.token).toBe(null);
-  });
-
-  it('updateSession stores a new token and user (after a password change)', async () => {
-    // Arrange
-    vi.mocked(getStoredToken).mockReturnValue('tok_old');
-    vi.mocked(getStoredUser).mockReturnValue(makeUser({ mustChangePassword: true }));
-    vi.mocked(authApi.me).mockResolvedValue({ user: makeUser({ mustChangePassword: true }) });
-    const { result } = renderAuth();
-    await waitFor(() => expect(storeAuth).toHaveBeenCalled()); // initial re-validation settled
-    const updated = makeUser({ mustChangePassword: false });
-
-    // Act
-    act(() => result.current.updateSession(updated, 'tok_new'));
-
-    // Assert
-    expect(result.current.user).toEqual(updated);
-    expect(result.current.token).toBe('tok_new');
-    expect(storeAuth).toHaveBeenLastCalledWith('tok_new', updated);
-  });
-
-  it('updateSession keeps the stored token when only the user changed', async () => {
-    // Arrange
-    vi.mocked(getStoredToken).mockReturnValue('tok_1');
-    vi.mocked(getStoredUser).mockReturnValue(makeUser());
-    vi.mocked(authApi.me).mockResolvedValue({ user: makeUser() });
-    const { result } = renderAuth();
-    await waitFor(() => expect(storeAuth).toHaveBeenCalled()); // initial re-validation settled
-    const renamed = makeUser({ name: 'Casey Renamed' });
-
-    // Act
-    act(() => result.current.updateSession(renamed));
-
-    // Assert
-    expect(result.current.user).toEqual(renamed);
-    expect(result.current.token).toBe('tok_1');
-    expect(storeAuth).toHaveBeenLastCalledWith('tok_1', renamed);
+    expect(result.current.user).toBeNull();
   });
 });

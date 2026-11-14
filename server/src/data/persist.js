@@ -110,6 +110,7 @@ async function handle(res, next) {
           res.statusCode = 500;
           res.removeHeader('Content-Length');
           res.removeHeader('ETag');
+          res.removeHeader('Set-Cookie');
           res.setHeader('Content-Type', 'application/json; charset=utf-8');
           originalEnd.call(res, JSON.stringify({ error: 'Could not save changes. Please try again.' }));
         })

@@ -89,7 +89,7 @@ describe('DevShell', () => {
 
   it('signs out and redirects to login', async () => {
     // Arrange
-    const logout = vi.fn();
+    const logout = vi.fn().mockResolvedValue(true);
     vi.mocked(useAuth).mockReturnValue({ user: makeUser(), logout } as unknown as ReturnType<typeof useAuth>);
     const user = userEvent.setup({ delay: null });
     render(<DevShell>content</DevShell>);
@@ -150,7 +150,7 @@ describe('MenuDrawer', () => {
 
   it('signs out and closes when "Sign out" is clicked', async () => {
     // Arrange
-    const logout = vi.fn();
+    const logout = vi.fn().mockResolvedValue(true);
     const onClose = vi.fn();
     vi.mocked(useAuth).mockReturnValue({ user: makeUser({ role: 'customer' }), logout } as unknown as ReturnType<typeof useAuth>);
     const user = userEvent.setup({ delay: null });
@@ -457,7 +457,7 @@ describe('StaffShell', () => {
 
   it('signs out and routes to login', async () => {
     // Arrange
-    const logout = vi.fn();
+    const logout = vi.fn().mockResolvedValue(true);
     vi.mocked(useAuth).mockReturnValue({ user: makeUser({ role: 'manager' }), logout } as unknown as ReturnType<typeof useAuth>);
     const user = userEvent.setup({ delay: null });
     render(<StaffShell>content</StaffShell>);
@@ -571,7 +571,7 @@ describe('StorefrontShell', () => {
 
   it('shows a staff link and the account menu for a signed-in staff member', async () => {
     // Arrange
-    const logout = vi.fn();
+    const logout = vi.fn().mockResolvedValue(true);
     vi.mocked(useAuth).mockReturnValue({ user: makeUser({ role: 'manager' }), logout } as unknown as ReturnType<typeof useAuth>);
     vi.mocked(useCart).mockReturnValue({ count: 0, setOpen: vi.fn() } as unknown as ReturnType<typeof useCart>);
     const user = userEvent.setup({ delay: null });

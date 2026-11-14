@@ -178,8 +178,7 @@
             "active": true,
             "mustChangePassword": false,
             "createdAt": "2026-01-04T10:00:00.000Z"
-          },
-          "token": "<jwt>"
+          }
         }
       },
       "errors": [
@@ -198,7 +197,7 @@
       "path": "/api/auth/login",
       "params": [],
       "documented": true,
-      "summary": "Sign in with email and password (any role) and receive a JWT.",
+      "summary": "Sign in with email and password (any role) and receive an HttpOnly session cookie.",
       "auth": "none",
       "roles": [],
       "rolesSource": null,
@@ -228,15 +227,39 @@
             "active": true,
             "mustChangePassword": false,
             "createdAt": "2026-01-04T10:00:00.000Z"
-          },
-          "token": "<jwt>"
+          }
         }
       },
       "errors": [
         "400 email or password missing / not text",
         "401 wrong email or password",
-        "403 account suspended"
+        "403 account suspended",
+        "429 too many attempts"
       ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "POST /api/auth/logout",
+      "module": "auth",
+      "method": "POST",
+      "path": "/api/auth/logout",
+      "params": [],
+      "documented": true,
+      "summary": "Revoke every session for the signed-in account and clear the browser cookie.",
+      "auth": "none",
+      "roles": [],
+      "rolesSource": null,
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 204,
+        "example": null
+      },
+      "errors": [],
       "probe": {
         "enabled": false,
         "reason": "Not probed (mutating)"
@@ -347,7 +370,7 @@
       "path": "/api/auth/me/password",
       "params": [],
       "documented": true,
-      "summary": "Change your own password. Your other sessions are signed out; use the returned token for this one. Admins do not need their current password.",
+      "summary": "Confirm your current password and set a new one. The browser receives a new session cookie and other sessions are revoked.",
       "auth": "required",
       "roles": [],
       "rolesSource": null,
@@ -356,8 +379,8 @@
       "body": {
         "currentPassword": {
           "type": "string",
-          "required": false,
-          "note": "Required for everyone except admins"
+          "required": true,
+          "note": ""
         },
         "newPassword": {
           "type": "string",
@@ -377,8 +400,7 @@
             "active": true,
             "mustChangePassword": false,
             "createdAt": "2026-01-04T10:00:00.000Z"
-          },
-          "token": "<jwt>"
+          }
         }
       },
       "errors": [
@@ -785,6 +807,11 @@
           "type": "string",
           "required": false,
           "note": "Valid, not used by another account"
+        },
+        "currentPassword": {
+          "type": "string",
+          "required": false,
+          "note": "Required when changing the sign-in email"
         },
         "phone": {
           "type": "string",
@@ -1316,7 +1343,7 @@
       "path": "/api/menu/items",
       "params": [],
       "documented": true,
-      "summary": "Flat list of every menu item. Chefs, managers and admins also get each recipe.",
+      "summary": "Flat list of items in public categories. Staff see all items. Chefs, managers and admins also get recipes.",
       "auth": "optional",
       "roles": [],
       "rolesSource": null,
@@ -6119,7 +6146,7 @@
       "path": "/api/settings",
       "params": [],
       "documented": true,
-      "summary": "Restaurant policy (tax, service charge, points value, hours) and booking time slots.",
+      "summary": "Public restaurant policy and booking time slots. Managers and admins also receive internal settings.",
       "auth": "optional",
       "roles": [],
       "rolesSource": null,
