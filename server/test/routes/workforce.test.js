@@ -148,7 +148,7 @@ test('the admin sees everyone with pay', async () => {
   assert.equal(manager.body.pay.hourlyWage, 20);
   assert.equal(overview.status, 200);
   assert.equal(overview.body.month, thisMonth);
-  assert.deepEqual(overview.body.rows.map((r) => r.user.id).sort(), ['usr_admin', 'usr_chef', 'usr_chef2', 'usr_manager', 'usr_waiter', 'usr_waiter2']);
+  assert.deepEqual(overview.body.rows.map((r) => r.user.id).sort(), ['usr_admin', 'usr_chef', 'usr_chef2', 'usr_manager', 'usr_super_sabih', 'usr_super_shahan', 'usr_waiter', 'usr_waiter2']);
   assert.ok(overview.body.rows.every((r) => r.pay && ['off', 'working', 'on_break'].includes(r.state)));
   const sum = overview.body.rows.reduce((s, r) => s + r.pay.net, 0);
   assert.equal(overview.body.totals.payroll, Math.round(sum * 100) / 100);

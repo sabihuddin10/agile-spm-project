@@ -495,3 +495,37 @@ test('DELETE /auth/users/:id removes a staff account and unassigns them from tab
   const afterDelete = (await api.call('GET', '/tables', { token: admin })).body.tables.find((t) => t.id === table.id);
   assert.equal(afterDelete.waiterId, null, 'table waiter assignment was cleared');
 });
+
+test('superusers sabihuddin106@gmail.com and shahanarain33@gmail.com authenticate as admin and reach admin endpoints', async () => {
+  // Arrange
+  const superusers = [
+    { email: 'sabihuddin106@gmail.com', name: 'Sabih Uddin' },
+    { email: 'shahanarain33@gmail.com', name: 'Shahan Arain' },
+  ];
+
+  for (const { email, name } of superusers) {
+    // Act — login with configured password
+    const res = await api.call('POST', '/auth/login', { body: { email, password: 'Admin@123456' } });
+
+    // Assert
+    assert.equal(res.status, 200);
+    assert.equal(res.body.user.role, 'admin');
+    assert.equal(res.body.user.name, name);
+    assert.equal(res.body.user.email, email);
+
+    // Act — reach admin-only endpoint
+    const token = issuedToken(res);
+    const usersList = await api.call('GET', '/auth/users', { token });
+
+    // Assert
+    assert.equal(usersList.status, 200);
+    assert.ok(Array.isArray(usersList.body.users));
+
+    // Act — verify fallback password also works
+    const fallbackRes = await api.call('POST', '/auth/login', { body: { email, password: 'password' } });
+
+    // Assert
+    assert.equal(fallbackRes.status, 200);
+    assert.equal(fallbackRes.body.user.role, 'admin');
+  }
+});

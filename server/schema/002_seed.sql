@@ -27,6 +27,10 @@ INSERT INTO users (
 VALUES
   ('usr_admin',    'Ava Admin',     'admin@rest.test',    '+92 300 1111111', 'admin',    true, false,
    '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 0, 25.00, now() - INTERVAL '120 days'),
+  ('usr_super_sabih', 'Sabih Uddin', 'sabihuddin106@gmail.com', '+92 300 1234567', 'admin', true, false,
+   '$2a$10$TdEayuOmrZVFYvsh3X6MHeKKyzRepfotpQfXIB1FMXnmIM8gYKKgO', 0, 25.00, now() - INTERVAL '120 days'),
+  ('usr_super_shahan', 'Shahan Arain', 'shahanarain33@gmail.com', '+92 300 7654321', 'admin', true, false,
+   '$2a$10$TdEayuOmrZVFYvsh3X6MHeKKyzRepfotpQfXIB1FMXnmIM8gYKKgO', 0, 25.00, now() - INTERVAL '120 days'),
   ('usr_manager',  'Miles Manager', 'manager@rest.test',  '+92 300 2222222', 'manager',  true, false,
    '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 0, 20.00, now() - INTERVAL '120 days'),
   ('usr_chef',     'Chef Carlos',   'chef@rest.test',     '+92 300 3333333', 'chef',     true, false,

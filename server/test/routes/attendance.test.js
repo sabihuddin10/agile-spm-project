@@ -189,7 +189,7 @@ test('presence is scoped by role: same level, managers also waiters and chefs, a
   assert.deepEqual(roles(seen.chef), ['chef']);
   assert.deepEqual(roles(seen.manager), ['chef', 'manager', 'waiter']);
   assert.deepEqual(roles(seen.admin), ['admin', 'chef', 'manager', 'waiter']);
-  assert.equal(seen.admin.length, 6);
+  assert.equal(seen.admin.length, 8);
   for (const p of seen.admin) {
     assert.deepEqual(Object.keys(p).sort(), ['name', 'role', 'since', 'state', 'todayShift', 'userId']);
     assert.ok(['off', 'working', 'on_break'].includes(p.state));

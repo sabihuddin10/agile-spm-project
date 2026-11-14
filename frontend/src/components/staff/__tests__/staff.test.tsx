@@ -432,6 +432,31 @@ describe('AllAccountsPanel', () => {
     expect(screen.getByText('No accounts match')).toBeInTheDocument();
   });
 
+  it('switches between all, staff-only, and customer-only account groups', async () => {
+    // Arrange
+    auth.user = admin;
+    vi.mocked(authApi.users).mockResolvedValue({ users: [admin, waiter, customer] } as never);
+    const user = userEvent.setup({ delay: null });
+    render(<AllAccountsPanel />);
+    await screen.findByText('Cora Customer');
+
+    // Both sections visible by default
+    expect(screen.getByRole('heading', { name: /Staff accounts/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Customer accounts/i })).toBeInTheDocument();
+
+    // Act — click Staff
+    await user.click(screen.getByRole('button', { name: /^Staff \(/i }));
+    // Assert
+    expect(screen.getByRole('heading', { name: /Staff accounts/i })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /Customer accounts/i })).not.toBeInTheDocument();
+
+    // Act — click Customers
+    await user.click(screen.getByRole('button', { name: /^Customers \(/i }));
+    // Assert
+    expect(screen.queryByRole('heading', { name: /Staff accounts/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Customer accounts/i })).toBeInTheDocument();
+  });
+
   it('reloads the list and notifies the parent after a change', async () => {
     // Arrange
     auth.user = admin;

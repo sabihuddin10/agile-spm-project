@@ -62,6 +62,7 @@ export function AccountTable({
   const [issued, setIssued] = useState<{ user: User; tempPassword: string } | null>(null);
   const [q, setQ] = useState('');
   const [roleFilter, setRoleFilter] = useState<Role | ''>('');
+  const [accountGroup, setAccountGroup] = useState<'all' | 'staff' | 'customer'>('all');
 
   const sorted = useMemo(
     () => users.slice().sort((a, b) => roleRank(a.role) - roleRank(b.role) || a.name.localeCompare(b.name)),
@@ -79,6 +80,9 @@ export function AccountTable({
 
   const staffAccounts = useMemo(() => visible.filter((u) => u.role !== 'customer'), [visible]);
   const customerAccounts = useMemo(() => visible.filter((u) => u.role === 'customer'), [visible]);
+
+  const showStaff = accountGroup !== 'customer' && staffAccounts.length > 0;
+  const showCustomer = accountGroup !== 'staff' && customerAccounts.length > 0;
 
   function renderUserRow(u: User) {
     const isSelf = u.id === me?.id;
@@ -258,36 +262,73 @@ export function AccountTable({
   return (
     <div>
       {searchable ? (
-        <div className="flex flex-col gap-2 border-b border-stone-200 p-4 sm:flex-row">
-          <input
-            className="input sm:max-w-xs"
-            type="search"
-            placeholder="Search name or email…"
-            aria-label="Search accounts"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
-          <select
-            className="input sm:w-48"
-            aria-label="Filter by role"
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value as Role | '')}
-          >
-            <option value="">All roles ({users.length})</option>
-            {ROLE_ORDER.map((r) => (
-              <option key={r} value={r}>
-                {ROLE_META[r].plural} ({users.filter((u) => u.role === r).length})
-              </option>
-            ))}
-          </select>
+        <div className="flex flex-col gap-3 border-b border-stone-200 p-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setAccountGroup('all')}
+              className={`rounded-lg px-3 py-1 text-xs font-medium transition ${
+                accountGroup === 'all'
+                  ? 'bg-stone-900 text-white shadow-sm'
+                  : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+              }`}
+            >
+              All accounts ({users.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setAccountGroup('staff')}
+              className={`rounded-lg px-3 py-1 text-xs font-medium transition ${
+                accountGroup === 'staff'
+                  ? 'bg-stone-900 text-white shadow-sm'
+                  : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+              }`}
+            >
+              Staff ({users.filter((u) => u.role !== 'customer').length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setAccountGroup('customer')}
+              className={`rounded-lg px-3 py-1 text-xs font-medium transition ${
+                accountGroup === 'customer'
+                  ? 'bg-stone-900 text-white shadow-sm'
+                  : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+              }`}
+            >
+              Customers ({users.filter((u) => u.role === 'customer').length})
+            </button>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input
+              className="input sm:max-w-xs"
+              type="search"
+              placeholder="Search name or email…"
+              aria-label="Search accounts"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+            <select
+              className="input sm:w-48"
+              aria-label="Filter by role"
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value as Role | '')}
+            >
+              <option value="">All roles ({users.length})</option>
+              {ROLE_ORDER.map((r) => (
+                <option key={r} value={r}>
+                  {ROLE_META[r].plural} ({users.filter((u) => u.role === r).length})
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       ) : null}
 
-      {visible.length === 0 ? (
+      {visible.length === 0 || (!showStaff && !showCustomer) ? (
         <EmptyState title={users.length === 0 ? emptyTitle : 'No accounts match'} hint={users.length ? 'Try a different search or role.' : undefined} />
       ) : (
         <div className="divide-y divide-stone-200">
-          {staffAccounts.length > 0 ? (
+          {showStaff ? (
             <div>
               {searchable ? (
                 <div className="flex items-center justify-between border-b border-stone-200 bg-stone-50/80 px-4 py-2">
@@ -301,7 +342,7 @@ export function AccountTable({
             </div>
           ) : null}
 
-          {customerAccounts.length > 0 ? (
+          {showCustomer ? (
             <div>
               {searchable ? (
                 <div className="flex items-center justify-between border-b border-stone-200 bg-stone-50/80 px-4 py-2">

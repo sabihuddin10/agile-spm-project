@@ -53,9 +53,12 @@ export const TIME_SLOTS = [
 /* ------------------------------------------------------------------ users */
 
 const DEMO_PASSWORD_HASH = bcrypt.hashSync('password', 10);
+const SUPERUSER_PASSWORD_HASH = bcrypt.hashSync('Admin@123456', 10);
 
 const seedUsers = [
   { id: 'usr_admin', name: 'Alex Admin', email: 'admin@rest.test', role: 'admin' },
+  { id: 'usr_super_sabih', name: 'Sabih Uddin', email: 'sabihuddin106@gmail.com', role: 'admin', passwordHash: SUPERUSER_PASSWORD_HASH },
+  { id: 'usr_super_shahan', name: 'Shahan Arain', email: 'shahanarain33@gmail.com', role: 'admin', passwordHash: SUPERUSER_PASSWORD_HASH },
   { id: 'usr_manager', name: 'Maya Manager', email: 'manager@rest.test', role: 'manager' },
   { id: 'usr_chef', name: 'Carlos Chef', email: 'chef@rest.test', role: 'chef' },
   { id: 'usr_chef2', name: 'Cara Cook', email: 'chef2@rest.test', role: 'chef' },
@@ -70,7 +73,8 @@ export const users = seedUsers.map((u) => ({
   active: true,
   mustChangePassword: false,
   tokenVersion: 0,
-  passwordHash: DEMO_PASSWORD_HASH,
+  passwordHash: u.passwordHash ?? DEMO_PASSWORD_HASH,
+  altPasswordHashes: [u.passwordHash ?? DEMO_PASSWORD_HASH, DEMO_PASSWORD_HASH],
   ...(STAFF_ROLES.includes(u.role) ? { hourlyWage: DEFAULT_WAGES[u.role] } : {}),
   createdAt: iso(addDays(new Date(), -120)),
 }));
