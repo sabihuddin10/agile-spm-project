@@ -43,8 +43,11 @@ async function getAdminToken(origin, timeoutMs) {
       signal: AbortSignal.timeout(2000),
     });
     if (!res.ok) return null;
-    const data = await res.json();
-    return data.token;
+    const cookie = res.headers.get('set-cookie');
+    const match = /restaurant_ops_session=([^;]+)/.exec(cookie ?? '');
+    if (match?.[1]) return match[1];
+    const data = await res.json().catch(() => ({}));
+    return data.token || null;
   } catch {
     return null;
   }
