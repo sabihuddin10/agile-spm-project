@@ -139,6 +139,8 @@ test('a manager renames, re-sorts and toggles a category; blank or duplicate nam
   // Arrange
   const token = await api.login('manager');
   const created = (await api.call('POST', '/menu/categories', { token, body: { name: 'Brunch' } })).body.category;
+  const zeroCategory = (await api.call('POST', '/menu/categories', { token, body: { name: 'Breakfast Zero', sort: 0 } })).body.category;
+  assert.equal(zeroCategory.sort, 0, 'POST /menu/categories preserves sort: 0');
 
   // Act
   const edited = await api.call('PATCH', `/menu/categories/${created.id}`, { token, body: { name: '  Weekend Brunch  ', sort: 0, active: false } });

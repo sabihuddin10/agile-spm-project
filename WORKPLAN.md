@@ -138,6 +138,10 @@ If a phase grows too big, it is split, never stretched. Update this file wheneve
 - [x] Slot grid tests pinned to a far-future date; they failed after 19:00 on 2026-10-10 because they hard-coded that date
 - [x] Released to `main` as 7c9194d (398 server tests, 949 frontend tests)
 - [x] Audit of the interrupted staff/workforce/settings helper: all 9 brief tasks are on `main`; the remaining story IDs are only in code comments
+- [x] Tables domain hardening: integer seats guard, atomic PATCH mutation, and active reservation deletion protection
+- [x] Menu domain hardening: preserve sort 0 on category creation
+- [x] Auth domain hardening: clear table waiter assignment when staff account is removed
+- [x] Workforce domain hardening: 404 boundary test for adjustment deletion on unknown staff
 
 ## Phase 7b: Clean-up [ ]
 

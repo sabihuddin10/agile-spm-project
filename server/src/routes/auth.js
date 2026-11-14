@@ -7,6 +7,7 @@ import {
   createUser,
   sanitizeUser,
   customers,
+  tables,
   nextId,
   ROLES,
 } from '../data/store.js';
@@ -243,6 +244,7 @@ router.delete('/users/:id', requireAdmin, (req, res) => {
 
   const [removed] = users.splice(idx, 1);
   for (const c of customers) if (c.userId === removed.id) c.userId = null;
+  for (const t of tables) if (t.waiterId === removed.id) t.waiterId = null;
   return res.json({ deleted: true, id: removed.id });
 });
 
