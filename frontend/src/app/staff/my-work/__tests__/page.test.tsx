@@ -7,7 +7,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import MyWorkPage from '@/app/staff/my-work/page';
 import { useAuth } from '@/context/auth-context';
-import { storeAuth } from '@/lib/api';
+import { setWorkforceMockUser } from '@/lib/workforce-api';
 import { workforceApi, workforceMock } from '@/lib/workforce-api';
 import type { User } from '@/types';
 
@@ -31,7 +31,7 @@ const waiter: User = { id: 'usr_waiter', name: 'Will Waiter', email: 'waiter@res
 beforeEach(() => {
   localStorage.clear();
   workforceMock.reset();
-  storeAuth('token', waiter);
+  setWorkforceMockUser(waiter);
   vi.mocked(useAuth).mockReturnValue({ user: waiter } as unknown as ReturnType<typeof useAuth>);
   toast.mockClear();
 });

@@ -1,25 +1,23 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Role, User } from '@/types';
-import { authApi, clearAuth, getStoredToken, getStoredUser, storeAuth } from '@/lib/api';
+import { ApiError, AUTH_EXPIRED_EVENT, authApi, clearLegacyAuth } from '@/lib/api';
+import { setWorkforceMockUser } from '@/lib/workforce-api';
+
+export { AUTH_EXPIRED_EVENT } from '@/lib/api';
 
 interface AuthContextValue {
   user: User | null;
-  token: string | null;
   loading: boolean;
+  signingOut: boolean;
   login: (email: string, password: string) => Promise<User>;
   register: (name: string, email: string, password: string) => Promise<User>;
-  logout: () => void;
+  logout: () => Promise<boolean>;
   /** Re-fetch the signed-in user (e.g. after an admin changes their role). */
   refreshUser: () => Promise<void>;
-  /**
-   * Replace the signed-in user (and, when given, the session token) after a
-   * self-service change. Changing your password revokes every other session and
-   * issues a new token, which must be stored here to stay signed in.
-   */
-  updateSession: (user: User, token?: string) => void;
+  updateSession: (user: User) => void;
   hasRole: (...roles: Role[]) => boolean;
 }
 
@@ -28,83 +26,91 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 const AUTH_PATHS = ['/login', '/register'];
 const PROTECTED_PREFIXES = ['/staff', '/dev', '/account'];
 
-export const AUTH_EXPIRED_EVENT = 'auth:expired';
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [signingOut, setSigningOut] = useState(false);
+  const [logoutError, setLogoutError] = useState(false);
+  const [expired, setExpired] = useState(false);
+  const generation = useRef(0);
+  const currentUser = useRef<User | null>(null);
+  const logoutPending = useRef(false);
 
-  const refreshUser = useCallback(async () => {
-    const t = getStoredToken();
-    if (!t) return;
-    try {
-      const { user: fresh } = await authApi.me();
-      setUser(fresh);
-      setToken(t);
-      storeAuth(t, fresh);
-    } catch {
-      /* a 401 is handled by the auth:expired listener below */
-    }
+  const replaceUser = useCallback((next: User | null) => {
+    generation.current += 1;
+    currentUser.current = next;
+    setWorkforceMockUser(next);
+    setUser(next);
   }, []);
 
-  // Restore the stored session instantly, then re-validate it with the server so
-  // role changes and suspensions apply on the next page load (US9.2, US9.4).
-  useEffect(() => {
-    const t = getStoredToken();
-    const stored = getStoredUser<User>();
-    if (t && stored) {
-      setUser(stored);
-      setToken(t);
+  const expire = useCallback(() => {
+    if (!currentUser.current) return;
+    setExpired(true);
+    replaceUser(null);
+  }, [replaceUser]);
+
+  const refreshUser = useCallback(async () => {
+    const started = generation.current;
+    try {
+      const { user: fresh } = await authApi.me();
+      if (started === generation.current) replaceUser(fresh);
+    } catch (error) {
+      if (started === generation.current && error instanceof ApiError && error.status === 401) expire();
     }
-    setLoading(false);
-    if (t) refreshUser();
+  }, [expire, replaceUser]);
+
+  useEffect(() => {
+    clearLegacyAuth();
+    let mounted = true;
+    void refreshUser().finally(() => { if (mounted) setLoading(false); });
+    return () => {
+      mounted = false;
+      generation.current += 1;
+    };
   }, [refreshUser]);
 
   useEffect(() => {
-    function onExpired() {
-      setUser(null);
-      setToken(null);
-    }
-    window.addEventListener(AUTH_EXPIRED_EVENT, onExpired);
-    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, onExpired);
-  }, []);
+    window.addEventListener(AUTH_EXPIRED_EVENT, expire);
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, expire);
+  }, [expire]);
 
   const login = useCallback(async (email: string, password: string) => {
-    const { user: u, token: t } = await authApi.login(email, password);
-    setUser(u);
-    setToken(t);
-    storeAuth(t, u);
+    const { user: u } = await authApi.login(email, password);
+    setExpired(false);
+    replaceUser(u);
     return u;
-  }, []);
+  }, [replaceUser]);
 
   const register = useCallback(async (name: string, email: string, password: string) => {
-    const { user: u, token: t } = await authApi.register(name, email, password);
-    setUser(u);
-    setToken(t);
-    storeAuth(t, u);
+    const { user: u } = await authApi.register(name, email, password);
+    setExpired(false);
+    replaceUser(u);
     return u;
-  }, []);
+  }, [replaceUser]);
 
-  const updateSession = useCallback((u: User, t?: string) => {
-    const next = t ?? getStoredToken();
-    setUser(u);
-    if (!next) return;
-    setToken(next);
-    storeAuth(next, u);
-  }, []);
-
-  const logout = useCallback(() => {
-    clearAuth();
-    setUser(null);
-    setToken(null);
-  }, []);
+  const logout = useCallback(async () => {
+    if (logoutPending.current) return false;
+    logoutPending.current = true;
+    setSigningOut(true);
+    setLogoutError(false);
+    try {
+      await authApi.logout();
+      replaceUser(null);
+      return true;
+    } catch {
+      setLogoutError(true);
+      return false;
+    } finally {
+      logoutPending.current = false;
+      setSigningOut(false);
+    }
+  }, [replaceUser]);
 
   const hasRole = useCallback((...roles: Role[]) => Boolean(user && roles.includes(user.role)), [user]);
 
   const value = useMemo(
-    () => ({ user, token, loading, login, register, logout, refreshUser, updateSession, hasRole }),
-    [user, token, loading, login, register, logout, refreshUser, updateSession, hasRole],
+    () => ({ user, loading, signingOut, login, register, logout, refreshUser, updateSession: replaceUser, hasRole }),
+    [user, loading, signingOut, login, register, logout, refreshUser, replaceUser, hasRole],
   );
 
   // Zone guards: signed-out users leave protected zones; signed-in users skip
@@ -115,7 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const onAuthPage = AUTH_PATHS.some((p) => path.startsWith(p));
 
     if (!user) {
-      if (PROTECTED_PREFIXES.some((p) => path.startsWith(p))) window.location.assign('/login');
+      if (PROTECTED_PREFIXES.some((p) => path.startsWith(p))) window.location.assign(expired ? '/login?expired=1' : '/login');
       return;
     }
     if (onAuthPage) {
@@ -125,9 +131,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (path.startsWith('/staff') && user.role === 'customer') {
       window.location.assign('/');
     }
-  }, [user, loading]);
+  }, [user, loading, expired]);
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {logoutError && user ? <p role="alert" className="fixed inset-x-4 bottom-4 z-50 rounded-lg bg-red-900 p-3 text-white">Could not sign out. Please try again.</p> : null}
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth(): AuthContextValue {

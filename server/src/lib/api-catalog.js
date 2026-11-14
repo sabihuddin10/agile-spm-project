@@ -146,14 +146,18 @@ export const ROUTE_DOCS = {
       email: req('string', 'Valid email, unique, max 254'),
       password: req('string', 'Password policy: 8–128 characters with a lowercase and an uppercase letter, a number and a special character; not your email/name or a very common password'),
     },
-    response: ok({ user: { ...USER, role: 'customer' }, token: '<jwt>' }, 201),
+    response: ok({ user: { ...USER, role: 'customer' } }, 201),
     errors: ['400 missing/invalid fields, or "Password needs: …" listing the unmet rules (any role in the body is ignored)', '409 email already registered'],
   },
   'POST /api/auth/login': {
-    summary: 'Sign in with email and password (any role) and receive a JWT.',
+    summary: 'Sign in with email and password (any role) and receive an HttpOnly session cookie.',
     body: { email: req('string'), password: req('string', 'Not checked against the password policy, so older passwords still work') },
-    response: ok({ user: USER, token: '<jwt>' }),
-    errors: ['400 email or password missing / not text', '401 wrong email or password', '403 account suspended'],
+    response: ok({ user: USER }),
+    errors: ['400 email or password missing / not text', '401 wrong email or password', '403 account suspended', '429 too many attempts'],
+  },
+  'POST /api/auth/logout': {
+    summary: 'Revoke every session for the signed-in account and clear the browser cookie.',
+    response: ok(null, 204),
   },
   'GET /api/auth/me': {
     summary: 'The signed-in user.',
@@ -166,9 +170,9 @@ export const ROUTE_DOCS = {
     errors: ['400 blank name / invalid email or phone / wrong or missing current password', '409 email already in use'],
   },
   'POST /api/auth/me/password': {
-    summary: 'Change your own password. Your other sessions are signed out; use the returned token for this one. Admins do not need their current password.',
-    body: { currentPassword: opt('string', 'Required for everyone except admins'), newPassword: req('string', 'Meets the password policy, different from the current one') },
-    response: ok({ user: USER, token: '<jwt>' }),
+    summary: 'Confirm your current password and set a new one. The browser receives a new session cookie and other sessions are revoked.',
+    body: { currentPassword: req('string'), newPassword: req('string', 'Meets the password policy, different from the current one') },
+    response: ok({ user: USER }),
     errors: ['400 wrong current password / unchanged / "Password needs: …" listing the unmet rules'],
   },
   'PATCH /api/auth/users/:id/profile': {
@@ -221,7 +225,7 @@ export const ROUTE_DOCS = {
     summary: 'Edit the caller\'s own profile; name and email changes also update the login account.',
     roles: ['customer'],
     access: 'Other roles get 403.',
-    body: { name: opt('string'), email: opt('string', 'Valid, not used by another account'), phone: opt('string'), preferences: PREFERENCES, notes: opt('string') },
+    body: { name: opt('string'), email: opt('string', 'Valid, not used by another account'), currentPassword: opt('string', 'Required when changing the sign-in email'), phone: opt('string'), preferences: PREFERENCES, notes: opt('string') },
     response: ok({ customer: CUSTOMER }),
     errors: ['400 invalid field', '403 not a customer', '409 email in use'],
   },
@@ -259,7 +263,7 @@ export const ROUTE_DOCS = {
     response: ok({ menu: [{ id: 'cat_2', name: 'Pizza', sort: 2, active: true, itemCount: 1, items: [MENU_ITEM] }], tags: ['vegetarian', 'vegan'], allergens: ['gluten', 'dairy'] }),
   },
   'GET /api/menu/items': {
-    summary: 'Flat list of every menu item. Chefs, managers and admins also get each recipe.',
+    summary: 'Flat list of items in public categories. Staff see all items. Chefs, managers and admins also get recipes.',
     response: ok({ items: [MENU_ITEM] }),
   },
   'POST /api/menu/items': {
@@ -702,7 +706,7 @@ export const ROUTE_DOCS = {
 
   /* ---- settings */
   'GET /api/settings': {
-    summary: 'Restaurant policy (tax, service charge, points value, hours) and booking time slots.',
+    summary: 'Public restaurant policy and booking time slots. Managers and admins also receive internal settings.',
     response: ok({ settings: SETTINGS, timeSlots: ['12:00', '12:30'] }),
   },
   'PATCH /api/settings': {
@@ -756,7 +760,7 @@ export function listRoutes(app) {
 
   const addRoute = (route, prefix, auth) => {
     const path = join(prefix, route.path);
-    const routeAuth = route.stack.some((l) => l.name === 'authenticate') ? 'required' : null;
+    const routeAuth = route.stack.some((l) => ['authenticate', 'authenticateForAccountRecovery'].includes(l.name)) ? 'required' : null;
     for (const method of Object.keys(route.methods).filter((m) => route.methods[m] && m !== '_all')) {
       out.push({ method: method.toUpperCase(), path, mountAuth: auth, routeAuth, guardRoles: guardRoles(route.stack) });
     }

@@ -1,9 +1,10 @@
 import { verifyToken } from '../lib/jwt.js';
 import { findUserById } from '../data/store.js';
+import { sessionCookie } from '../lib/session-cookie.js';
 
 function userFromRequest(req) {
   const header = req.headers.authorization || '';
-  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+  const token = header ? /^Bearer (\S+)$/i.exec(header)?.[1] : sessionCookie(req);
   if (!token) return { error: 'Authentication required.' };
   const payload = verifyToken(token);
   if (!payload) return { error: 'Invalid or expired token.' };
@@ -15,13 +16,24 @@ function userFromRequest(req) {
 }
 
 /**
- * Attach the authenticated user (from the Bearer token) to req.user.
+ * Attach the authenticated user (from a session cookie or Bearer token) to req.user.
  * Responds 401 when the token is missing/invalid or the user is suspended or
  * removed — so suspension takes effect on the very next request (US9.4).
  */
 export function authenticate(req, res, next) {
+  return attachUser(req, res, next, false);
+}
+
+export function authenticateForAccountRecovery(req, res, next) {
+  return attachUser(req, res, next, true);
+}
+
+function attachUser(req, res, next, allowTemporaryPassword) {
   const { user, error } = userFromRequest(req);
   if (!user) return res.status(401).json({ error });
+  if (user.mustChangePassword && !allowTemporaryPassword) {
+    return res.status(403).json({ error: 'Change your temporary password before continuing.' });
+  }
   req.user = user;
   return next();
 }
@@ -29,7 +41,14 @@ export function authenticate(req, res, next) {
 /** Attach req.user when a valid token is present; otherwise continue as a guest. */
 export function optionalAuth(req, res, next) {
   const { user } = userFromRequest(req);
-  if (user) req.user = user;
+  if (user && !user.mustChangePassword) req.user = user;
+  return next();
+}
+
+/** Logout also clears expired or already revoked cookies. */
+export function revokeSession(req, res, next) {
+  const { user } = userFromRequest(req);
+  if (user) user.tokenVersion = (user.tokenVersion ?? 0) + 1;
   return next();
 }
 

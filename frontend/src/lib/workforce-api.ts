@@ -8,7 +8,7 @@ import type {
   User,
   WorkforceOverview,
 } from '@/types';
-import { api, getStoredUser, settingsApi } from '@/lib/api';
+import { api, settingsApi } from '@/lib/api';
 import { createWorkforceMock, DEFAULT_ATTENDANCE_SETTINGS } from '@/lib/workforce-mock';
 
 /**
@@ -22,10 +22,13 @@ export const WORKFORCE_MOCK = process.env.NEXT_PUBLIC_WORKFORCE_MOCK === 'true';
 
 export const workforceMock = createWorkforceMock();
 
-/** The signed-in user, as the auth context stored it. */
-function actor() {
-  return getStoredUser<User>();
+let mockUser: User | null = null;
+
+export function setWorkforceMockUser(user: User | null) {
+  if (WORKFORCE_MOCK) mockUser = user;
 }
+
+const actor = () => mockUser;
 
 function qs(params: Record<string, string | undefined>): string {
   const entries = Object.entries(params).filter((e): e is [string, string] => Boolean(e[1]));

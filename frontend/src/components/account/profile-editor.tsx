@@ -13,6 +13,7 @@ import {
 } from '@/lib/validation/fields';
 import { useFormValidation, type Rules } from '@/lib/validation/use-form-validation';
 import { FieldError, SubmitHint, describedBy } from '@/components/forms/field-error';
+import { PasswordInput } from '@/components/forms/password-input';
 
 const NOTES_MAX = 500;
 
@@ -57,24 +58,29 @@ export function ProfileEditor({ customer, onSaved }: { customer: Customer; onSav
   const [draft, setDraft] = useState<Draft>(saved);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentPassword, setCurrentPassword] = useState('');
   const v = useFormValidation(draft, { ...RULES, phone: (p) => validatePhone(p, { original: saved.phone }) }, { labels: LABELS });
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
+  const changingEmail = draft.email.trim().toLowerCase() !== saved.email.trim().toLowerCase();
+  const needsPassword = changingEmail && !currentPassword;
 
   function set<K extends keyof Draft>(key: K, value: Draft[K]) {
+    if (key === 'email') setCurrentPassword('');
     setDraft((d) => ({ ...d, [key]: value }));
     setError(null);
   }
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    if (!v.touchAll()) return;
+    if (!v.touchAll() || needsPassword) return;
     setSaving(true);
     setError(null);
     try {
       const { customer: updated } = await customerApi.updateMe({
         name: normalizeName(draft.name),
         email: draft.email.trim(),
+        ...(changingEmail ? { currentPassword } : {}),
         phone: draft.phone.trim(),
         notes: draft.notes,
         preferences: { dietary: draft.dietary, allergies: draft.allergies },
@@ -82,6 +88,7 @@ export function ProfileEditor({ customer, onSaved }: { customer: Customer; onSav
       const next = toDraft(updated);
       setSaved(next);
       setDraft(next);
+      setCurrentPassword('');
       v.reset();
       onSaved(updated);
       toast('Profile saved.', 'success');
@@ -129,6 +136,21 @@ export function ProfileEditor({ customer, onSaved }: { customer: Customer; onSav
             placeholder="name@example.com"
             required
           />
+          {changingEmail ? (
+            <div>
+              <label htmlFor="profile-current-password" className="label">Current password</label>
+              <PasswordInput
+                id="profile-current-password"
+                autoComplete="current-password"
+                tone="dark"
+                disabled={saving}
+                value={currentPassword}
+                onChange={setCurrentPassword}
+                describedBy="profile-password-hint"
+              />
+              <p id="profile-password-hint" className="mt-1 text-xs text-bone-faint">Confirm your password to change your sign-in email.</p>
+            </div>
+          ) : null}
           <Field
             id="profile-phone"
             label="Phone"
@@ -192,8 +214,8 @@ export function ProfileEditor({ customer, onSaved }: { customer: Customer; onSav
           <button
             type="submit"
             className="btn-primary"
-            disabled={saving || !dirty || !v.isValid}
-            aria-disabled={saving || !dirty || !v.isValid}
+            disabled={saving || !dirty || !v.isValid || needsPassword}
+            aria-disabled={saving || !dirty || !v.isValid || needsPassword}
             aria-describedby={v.isValid ? undefined : 'profile-submit-hint'}
           >
             {saving ? 'Saving…' : 'Save changes'}
@@ -204,6 +226,7 @@ export function ProfileEditor({ customer, onSaved }: { customer: Customer; onSav
               className="btn-ghost"
               onClick={() => {
                 setDraft(saved);
+                setCurrentPassword('');
                 setError(null);
                 v.reset();
               }}

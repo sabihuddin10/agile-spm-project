@@ -1,13 +1,136 @@
 /** Auth & access-control module — routes/auth.js (US1.1). */
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { startServer } from '../helpers.js';
+import { spawnSync } from 'node:child_process';
+import { issuedToken, startServer } from '../helpers.js';
 
 let api;
 before(async () => {
   api = await startServer();
 });
 after(() => api.close());
+
+test('production app startup requires a configured JWT secret', () => {
+  // Arrange
+  const env = { ...process.env, NODE_ENV: 'production', JWT_SECRET: '' };
+  const boot = "import { createApp } from './src/app.js'; createApp({ persistence: false });";
+
+  // Act
+  const result = spawnSync(process.execPath, ['--input-type=module', '-e', boot], {
+    cwd: new URL('../../', import.meta.url), env, encoding: 'utf8',
+  });
+
+  // Assert
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /JWT_SECRET/);
+});
+
+test('login throttles repeated failures for the normalized email', async (t) => {
+  // Arrange
+  const limited = await startServer({ rateLimits: true });
+  t.after(() => limited.close());
+  const emails = ['missing@example.com', ' Missing@example.com ', 'MISSING@example.com'];
+
+  // Act
+  const responses = [];
+  for (let i = 0; i < 6; i += 1) {
+    responses.push(await limited.call('POST', '/auth/login', {
+      body: { email: emails[i % emails.length], password: 'incorrect' },
+    }));
+  }
+  const different = await limited.call('POST', '/auth/login', {
+    body: { email: 'customer@rest.test', password: 'password' },
+  });
+
+  // Assert
+  assert.deepEqual(responses.map((res) => res.status), [401, 401, 401, 401, 401, 429]);
+  assert.ok(Number(responses.at(-1).headers.get('retry-after')) > 0);
+  assert.equal(different.status, 200);
+});
+
+test('login uses an HttpOnly cookie and logout revokes the account sessions', async () => {
+  // Arrange
+  const body = { name: 'Logout Test', email: 'logout@example.com', password: 'Secret-pass1' };
+  await api.call('POST', '/auth/register', { body });
+  const login = await api.call('POST', '/auth/login', { body });
+  const otherSession = await api.login(body.email, body.password);
+  const setCookie = login.headers.get('set-cookie');
+  const cookie = setCookie?.split(';')[0] ?? '';
+
+  // Act
+  const me = await api.call('GET', '/auth/me', { headers: { Cookie: cookie } });
+  const missingHeader = await api.call('POST', '/auth/logout', { headers: { Cookie: cookie } });
+  const logout = await api.call('POST', '/auth/logout', { headers: { Cookie: cookie, 'X-Requested-With': 'RestaurantOps' } });
+  const afterLogout = await api.call('GET', '/auth/me', { headers: { Cookie: cookie } });
+  const other = await api.call('GET', '/auth/me', { token: otherSession });
+
+  // Assert
+  assert.equal(login.status, 200);
+  assert.equal('token' in login.body, false);
+  assert.match(setCookie, /; HttpOnly/i);
+  assert.match(setCookie, /; SameSite=Lax/i);
+  assert.match(setCookie, /; Path=\/api(?:;|$)/i);
+  assert.equal(me.status, 200);
+  assert.equal(missingHeader.status, 403);
+  assert.equal(logout.status, 204);
+  assert.match(logout.headers.get('set-cookie'), /Expires=/i);
+  assert.equal(afterLogout.status, 401);
+  assert.equal(other.status, 401);
+});
+
+test('reactivation requires a fresh sign-in', async () => {
+  // Arrange
+  const credentials = { name: 'Suspend Test', email: 'suspend@example.com', password: 'Secret-pass1' };
+  const registered = await api.call('POST', '/auth/register', { body: credentials });
+  const token = await api.login(credentials.email, credentials.password);
+  const admin = await api.login('admin');
+  const account = `/auth/users/${registered.body.user.id}`;
+
+  // Act
+  const suspend = await api.call('PATCH', account, { token: admin, body: { active: false } });
+  const inactive = await api.call('GET', '/auth/me', { token });
+  const restore = await api.call('PATCH', account, { token: admin, body: { active: true } });
+  const oldSession = await api.call('GET', '/auth/me', { token });
+  const fresh = await api.login(credentials.email, credentials.password);
+  const newSession = await api.call('GET', '/auth/me', { token: fresh });
+
+  // Assert
+  assert.deepEqual([suspend.status, inactive.status, restore.status, oldSession.status, newSession.status], [200, 401, 200, 401, 200]);
+});
+
+test('a temporary password only opens the account recovery flow', async () => {
+  // Arrange
+  const hired = await hire('chef');
+  const token = await api.login(hired.email, hired.password);
+
+  // Act
+  const me = await api.call('GET', '/auth/me', { token });
+  const inventory = await api.call('GET', '/inventory', { token });
+  const edit = await api.call('PATCH', '/auth/me', { token, body: { name: 'Changed Name' } });
+
+  // Assert
+  assert.equal(me.body.user.mustChangePassword, true);
+  assert.equal(inventory.status, 403);
+  assert.equal(edit.status, 403);
+});
+
+test('a customer must confirm their password before changing their sign-in email', async () => {
+  // Arrange
+  const credentials = { name: 'Email Test', email: 'email@example.com', password: 'Secret-pass1' };
+  await api.call('POST', '/auth/register', { body: credentials });
+  const token = await api.login(credentials.email, credentials.password);
+
+  // Act
+  const rejected = await api.call('PATCH', '/customers/me', { token, body: { email: 'changed@example.com' } });
+  const accepted = await api.call('PATCH', '/customers/me', {
+    token, body: { email: 'changed@example.com', currentPassword: credentials.password },
+  });
+
+  // Assert
+  assert.equal(rejected.status, 400);
+  assert.equal(accepted.status, 200);
+  assert.equal(accepted.body.customer.email, 'changed@example.com');
+});
 
 test('US1.1 each role reaches exactly its permitted endpoints', async () => {
   // Arrange
@@ -60,7 +183,7 @@ test('US1.2 registration validates input and creates a logged-in customer', asyn
   // Assert
   assert.equal(ok.status, 201);
   assert.equal(ok.body.user.role, 'customer');
-  const me = await api.call('GET', '/customers/me', { token: ok.body.token });
+  const me = await api.call('GET', '/customers/me', { token: issuedToken(ok) });
   assert.equal(me.body.customer.name, 'Nina New');
 
   // Act / Assert — a duplicate email (any case) is refused
@@ -102,13 +225,18 @@ test('/auth/roles lists the five stakeholder roles', async () => {
 });
 
 /** Hire a fresh staff member through the real application flow; returns { id, email, password, user }. */
-async function hire(role, by = 'manager') {
+async function hire(role, by = 'manager', { changePassword = false } = {}) {
   const tag = `${role}${Date.now()}${Math.random().toString(36).slice(2, 6)}`;
   const email = `${tag}@example.com`;
   const applied = await api.call('POST', '/staff/applications', { body: { name: `Hire ${tag}`, email, desiredRole: role === 'manager' ? 'waiter' : role } });
   const approver = await api.login(by);
   const approved = await api.call('POST', `/staff/applications/${applied.body.application.id}/approve`, { token: approver, body: role === 'manager' ? { role: 'manager' } : {} });
-  return { id: approved.body.user.id, email, password: approved.body.tempPassword, user: approved.body.user };
+  const { user, tempPassword } = approved.body;
+  if (!changePassword) return { id: user.id, email, password: tempPassword, user };
+  const token = await api.login(email, tempPassword);
+  const password = 'Changed-hire-32!';
+  const changed = await api.call('POST', '/auth/me/password', { token, body: { currentPassword: tempPassword, newPassword: password } });
+  return { id: user.id, email, password, user: changed.body.user };
 }
 
 test('a newly approved hire must change their temporary password', async () => {
@@ -122,7 +250,7 @@ test('a newly approved hire must change their temporary password', async () => {
 
 test('staff edit their own name and phone; changing the email needs the current password', async () => {
   // Arrange
-  const hired = await hire('chef');
+  const hired = await hire('chef', 'manager', { changePassword: true });
   const token = await api.login(hired.email, hired.password);
 
   // Act
@@ -170,7 +298,7 @@ test('changing your own password keeps this session, signs out the others and cl
   assert.deepEqual([wrong.status, short.status, same.status], [400, 400, 400]);
   assert.equal(changed.status, 200);
   assert.equal(changed.body.user.mustChangePassword, false);
-  assert.equal((await api.call('GET', '/auth/me', { token: changed.body.token })).status, 200, 'the returned token works');
+  assert.equal((await api.call('GET', '/auth/me', { token: issuedToken(changed) })).status, 200, 'the rotated session works');
   assert.equal((await api.call('GET', '/auth/me', { token: tokenB })).status, 401, 'other sessions are signed out');
   assert.equal((await api.call('POST', '/auth/login', { body: { email: hired.email, password: 'Secret-123x' } })).status, 200);
 });
@@ -225,7 +353,7 @@ test('an admin manages managers, but not another admin — not their details, ro
   assert.equal(customer.status, 200, 'customer accounts stay manageable by an admin');
 });
 
-test('an admin changes their own password without the current one; other roles still need it', async () => {
+test('admins and other roles must confirm the current password to change their own', async () => {
   // Arrange — a second admin, so the seeded demo admin keeps its "password" for the other tests
   const demoAdmin = await api.login('admin');
   const promoted = await hire('waiter');
@@ -235,11 +363,13 @@ test('an admin changes their own password without the current one; other roles s
   const waiterToken = await api.login(waiter.email, waiter.password);
 
   // Act
-  const adminChange = await api.call('POST', '/auth/me/password', { token: admin, body: { newPassword: 'Admin-new-1!' } });
+  const adminNoCurrent = await api.call('POST', '/auth/me/password', { token: admin, body: { newPassword: 'Admin-new-1!' } });
+  const adminChange = await api.call('POST', '/auth/me/password', { token: admin, body: { currentPassword: promoted.password, newPassword: 'Admin-new-1!' } });
   const waiterNoCurrent = await api.call('POST', '/auth/me/password', { token: waiterToken, body: { newPassword: 'Waiter-new-1!' } });
-  const adminSame = await api.call('POST', '/auth/me/password', { token: adminChange.body.token, body: { newPassword: 'Admin-new-1!' } });
+  const adminSame = await api.call('POST', '/auth/me/password', { token: issuedToken(adminChange), body: { currentPassword: 'Admin-new-1!', newPassword: 'Admin-new-1!' } });
 
   // Assert
+  assert.equal(adminNoCurrent.status, 400);
   assert.equal(adminChange.status, 200);
   assert.equal((await api.call('POST', '/auth/login', { body: { email: promoted.email, password: 'Admin-new-1!' } })).status, 200);
   assert.equal(waiterNoCurrent.status, 400);
@@ -304,7 +434,7 @@ test('registration ignores a role (or any other field) in the body', async () =>
 test('profile and account fields are type-checked and length-limited', async () => {
   // Arrange
   const admin = await api.login('admin');
-  const hired = await hire('waiter');
+  const hired = await hire('waiter', 'manager', { changePassword: true });
   const token = await api.login(hired.email, hired.password);
 
   // Act
