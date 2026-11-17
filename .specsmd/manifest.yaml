@@ -1,0 +1,6 @@
+flow: aidlc
+version: 0.1.74
+installed_at: '2026-11-17T04:21:11.705Z'
+tools:
+  - copilot
+  - codex
