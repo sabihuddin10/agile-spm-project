@@ -12,9 +12,9 @@ completed: null
 current_stage: null
 stages_completed: []
 owner:
-  member: Sabih Uddin
-  student_id: 22k4347
-  group_slot: M1
+  member: Muhammad Zain Abbas
+  student_id: 22k-5028
+  group_slot: M9
   role: QA Automation Engineer
 requires_bolts: []
 enables_bolts:
@@ -41,7 +41,7 @@ Cover one customer and one staff critical journey across browser, Next.js proxy,
 
 ## Owner
 
-**Sabih Uddin (22k4347, M1) — QA Automation Engineer**
+**Muhammad Zain Abbas (22k-5028, M9) — QA Automation Engineer**
 
 ## Stories Included
 

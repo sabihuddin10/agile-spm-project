@@ -12,9 +12,9 @@ completed: null
 current_stage: null
 stages_completed: []
 owner:
-  member: Khalil
-  student_id: k232007
-  group_slot: M6
+  member: Muhammad Zain Abbas
+  student_id: 22k-5028
+  group_slot: M9
   role: Frontend Performance Engineer
 requires_bolts: []
 enables_bolts: []
@@ -39,7 +39,7 @@ Keep mock behavior in tests/dev without statically importing or instantiating mo
 
 ## Owner
 
-**Khalil (k232007, M6) — Frontend Performance Engineer**
+**Muhammad Zain Abbas (22k-5028, M9) — Frontend Performance Engineer**
 
 ## Stories Included
 

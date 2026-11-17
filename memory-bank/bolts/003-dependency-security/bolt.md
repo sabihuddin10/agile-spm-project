@@ -12,9 +12,9 @@ completed: null
 current_stage: null
 stages_completed: []
 owner:
-  member: Syed Okasha
-  student_id: 23k-0850
-  group_slot: M3
+  member: Muhammad Zain Abbas
+  student_id: 22k-5028
+  group_slot: M9
   role: Backend Security Engineer
 requires_bolts:
   - 001-quality-engineering
@@ -42,7 +42,7 @@ Resolve body-parser, proxy-addr, qs, and Morgan advisories while preserving all 
 
 ## Owner
 
-**Syed Okasha (23k-0850, M3) — Backend Security Engineer**
+**Muhammad Zain Abbas (22k-5028, M9) — Backend Security Engineer**
 
 ## Stories Included
 

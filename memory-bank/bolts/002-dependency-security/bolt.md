@@ -12,9 +12,9 @@ completed: null
 current_stage: null
 stages_completed: []
 owner:
-  member: Shah Anas Khan
-  student_id: 23K-3028
-  group_slot: M2
+  member: Muhammad Zain Abbas
+  student_id: 22k-5028
+  group_slot: M9
   role: Frontend Security Engineer
 requires_bolts:
   - 001-quality-engineering
@@ -42,7 +42,7 @@ Remove Next.js/PostCSS/source-map-js high and critical findings without breaking
 
 ## Owner
 
-**Shah Anas Khan (23K-3028, M2) — Frontend Security Engineer**
+**Muhammad Zain Abbas (22k-5028, M9) — Frontend Security Engineer**
 
 ## Stories Included
 

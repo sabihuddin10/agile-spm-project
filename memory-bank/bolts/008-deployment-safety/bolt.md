@@ -12,9 +12,9 @@ completed: null
 current_stage: null
 stages_completed: []
 owner:
-  member: Shahaan Khalid
-  student_id: 22K4442
-  group_slot: M8
+  member: Muhammad Zain Abbas
+  student_id: 22k-5028
+  group_slot: M9
   role: Release Engineer
 requires_bolts: []
 enables_bolts: []
@@ -39,7 +39,7 @@ Reject missing, malformed, or localhost production API origins and preserve/exte
 
 ## Owner
 
-**Shahaan Khalid (22K4442, M8) — Release Engineer**
+**Muhammad Zain Abbas (22k-5028, M9) — Release Engineer**
 
 ## Stories Included
 

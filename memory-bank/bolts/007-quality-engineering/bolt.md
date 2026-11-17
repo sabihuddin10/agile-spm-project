@@ -12,9 +12,9 @@ completed: null
 current_stage: null
 stages_completed: []
 owner:
-  member: Fozan Javid
-  student_id: 23K0605
-  group_slot: M7
+  member: Muhammad Zain Abbas
+  student_id: 22k-5028
+  group_slot: M9
   role: Test Infrastructure Engineer
 requires_bolts: []
 enables_bolts: []
@@ -39,7 +39,7 @@ Reduce the 101.81-second audit baseline by at least 30% while keeping all 961 te
 
 ## Owner
 
-**Fozan Javid (23K0605, M7) — Test Infrastructure Engineer**
+**Muhammad Zain Abbas (22k-5028, M9) — Test Infrastructure Engineer**
 
 ## Stories Included
 

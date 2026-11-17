@@ -12,9 +12,9 @@ completed: null
 current_stage: null
 stages_completed: []
 owner:
-  member: Muhammad Shaheer Zafar
-  student_id: 22K5138
-  group_slot: M4
+  member: Muhammad Zain Abbas
+  student_id: 22k-5028
+  group_slot: M9
   role: Platform Reliability Engineer
 requires_bolts: []
 enables_bolts: []
@@ -39,7 +39,7 @@ Separate limiter policy from storage and provide an atomic production adapter pl
 
 ## Owner
 
-**Muhammad Shaheer Zafar (22K5138, M4) — Platform Reliability Engineer**
+**Muhammad Zain Abbas (22k-5028, M9) — Platform Reliability Engineer**
 
 ## Stories Included
 

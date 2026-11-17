@@ -12,9 +12,9 @@ completed: null
 current_stage: null
 stages_completed: []
 owner:
-  member: Burhan
-  student_id: 22k0591
-  group_slot: M5
+  member: Muhammad Zain Abbas
+  student_id: 22k-5028
+  group_slot: M9
   role: Frontend Reliability Engineer
 requires_bolts: []
 enables_bolts: []
@@ -39,7 +39,7 @@ Prevent overlapping callbacks, unhandled rejections, and stale scheduling across
 
 ## Owner
 
-**Burhan (22k0591, M5) — Frontend Reliability Engineer**
+**Muhammad Zain Abbas (22k-5028, M9) — Frontend Reliability Engineer**
 
 ## Stories Included
 
