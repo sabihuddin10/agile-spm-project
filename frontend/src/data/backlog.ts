@@ -889,12 +889,14 @@ export const BACKLOG_SUMMARY: BacklogSummary = (() => {
   };
 })();
 
-export const TEAM_ROSTER: { id: string; role: string; moduleLead: string }[] = [
-  { id: '#1', role: 'Product Owner', moduleLead: 'Order Management + Billing' },
-  { id: '#2', role: 'Scrum Master', moduleLead: 'Kitchen Workflow' },
-  { id: '#3', role: 'Developer', moduleLead: 'Menu Management + Inventory' },
-  { id: '#4', role: 'Developer', moduleLead: 'Customer Management + Reservations' },
-  { id: '#5', role: 'Developer', moduleLead: 'Table Management + Staff Management' },
-  { id: '#6', role: 'UI/UX + Developer', moduleLead: 'Storefront (Customer) UI — all sprints' },
-  { id: '#7', role: 'QA / DevOps', moduleLead: 'Analytics + Infrastructure' },
+export const TEAM_ROSTER: { id: string; role: string; moduleLead: string; name?: string; rollNo?: string }[] = [
+  { id: '#1', name: 'Sabih Uddin Meraj', rollNo: '22K4347', role: 'Product Owner', moduleLead: 'Order Management + Billing' },
+  { id: '#2', name: 'Burhanuddin Khatri', rollNo: '22K0591', role: 'DevOps / Database', moduleLead: 'Kitchen Workflow & Neon DB Persistence' },
+  { id: '#3', name: 'Fozan Javaid', rollNo: '23K0605', role: 'Scrum Master', moduleLead: 'Menu Management + Inventory' },
+  { id: '#4', name: 'Shaheer Zafar', rollNo: '22K5138', role: 'Developer', moduleLead: 'Customer Management + Reservations (PR #10 Tables Validation)' },
+  { id: '#5', name: 'Shahaan Khalid', rollNo: '22K4442', role: 'Developer', moduleLead: 'Table Management + Staff & Super Admin' },
+  { id: '#6', name: 'Syed Okasha Shoaib', rollNo: '23K-0850', role: 'QA / Security', moduleLead: 'Storefront UI/UX & Auth Hardening' },
+  { id: '#7', name: 'Shah Anas Khan', rollNo: '23K-3028', role: 'Docs & Planning', moduleLead: 'Analytics + Quality & Security Operations' },
+  { id: '#8', name: 'Kahlil Ahmed', rollNo: 'K232007', role: 'Testing & Research', moduleLead: 'Manual/UI Testing & Component Isolation' },
+  { id: '#9', name: 'Muhammad Zain Abbas', rollNo: '22K5028', role: 'Review & Reporting', moduleLead: 'Sprint Reviews & Lockfile Audit Governance' },
 ];

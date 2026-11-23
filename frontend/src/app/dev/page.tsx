@@ -159,6 +159,7 @@ export default function ScrumBoardPage() {
             <thead>
               <tr>
                 <th>Member</th>
+                <th>Name / Roll No</th>
                 <th>Primary role</th>
                 <th>Module lead(s)</th>
               </tr>
@@ -167,6 +168,7 @@ export default function ScrumBoardPage() {
               {TEAM_ROSTER.map((m) => (
                 <tr key={m.id}>
                   <td className="font-mono font-semibold">{m.id}</td>
+                  <td className="font-medium text-stone-900">{m.name ? `${m.name} (${m.rollNo})` : '—'}</td>
                   <td>{m.role}</td>
                   <td className="text-stone-600">{m.moduleLead}</td>
                 </tr>

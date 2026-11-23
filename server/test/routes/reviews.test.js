@@ -1,7 +1,7 @@
 /** Reviews module — routes/reviews.js (Customer feedback, ratings, and manager moderation). */
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { startServer, menuItem } from '../helpers.js';
+import { startServer, issuedToken, menuItem } from '../helpers.js';
 
 let api;
 let manager;
@@ -50,7 +50,7 @@ test('a customer submits a review for their served/paid order, and managers rece
     body: { name: 'Gourmet Reviewer', email: 'gourmet@example.com', password: 'Secret-pass1', phone: '+92 300 5550999' },
   });
   assert.equal(reg.status, 201);
-  const custToken = reg.body.token;
+  const custToken = issuedToken(reg);
 
   const dish = await menuItem(api.call, 'Garlic Bread');
   const orderRes = await api.call('POST', '/orders', {
@@ -93,22 +93,24 @@ test('a customer submits a review for their served/paid order, and managers rece
 
 test('submitting a review for another customer order is 403, and unfulfilled order is 400', async () => {
   // Arrange — create Customer A and Customer B
-  const userA = (await api.call('POST', '/auth/register', {
+  const regA = await api.call('POST', '/auth/register', {
     body: { name: 'Customer Alpha', email: 'alpha@example.com', password: 'Secret-pass1' },
-  })).body;
-  const userB = (await api.call('POST', '/auth/register', {
+  });
+  const regB = await api.call('POST', '/auth/register', {
     body: { name: 'Customer Beta', email: 'beta@example.com', password: 'Secret-pass1' },
-  })).body;
+  });
+  const tokenA = issuedToken(regA);
+  const tokenB = issuedToken(regB);
 
   const dish = await menuItem(api.call, 'Garlic Bread');
   const orderA = (await api.call('POST', '/orders', {
-    token: userA.token,
+    token: tokenA,
     body: { type: 'online', fulfillment: 'pickup', items: [{ menuItemId: dish.id, qty: 1 }] },
   })).body.order;
 
   // Act / Assert 1 — unfulfilled order cannot be reviewed
   const unfulfilled = await api.call('POST', '/reviews', {
-    token: userA.token,
+    token: tokenA,
     body: { orderId: orderA.id, rating: 5, comment: 'Too early review' },
   });
   assert.equal(unfulfilled.status, 400);
@@ -119,7 +121,7 @@ test('submitting a review for another customer order is 403, and unfulfilled ord
 
   // Act / Assert 2 — Customer B cannot review Customer A's order
   const forbidden = await api.call('POST', '/reviews', {
-    token: userB.token,
+    token: tokenB,
     body: { orderId: orderA.id, rating: 5, comment: 'Trying to review someone else order' },
   });
   assert.equal(forbidden.status, 403);
@@ -128,27 +130,28 @@ test('submitting a review for another customer order is 403, and unfulfilled ord
 
 test('duplicate reviews for the same order are refused with 409 Conflict', async () => {
   // Arrange
-  const user = (await api.call('POST', '/auth/register', {
+  const reg = await api.call('POST', '/auth/register', {
     body: { name: 'Duplicate Tester', email: 'dup.tester@example.com', password: 'Secret-pass1' },
-  })).body;
+  });
+  const token = issuedToken(reg);
 
   const dish = await menuItem(api.call, 'Garlic Bread');
   const order = (await api.call('POST', '/orders', {
-    token: user.token,
+    token,
     body: { type: 'online', fulfillment: 'pickup', items: [{ menuItemId: dish.id, qty: 1 }] },
   })).body.order;
   await fulfillOrder(order.id);
 
   // Act — first review succeeds
   const first = await api.call('POST', '/reviews', {
-    token: user.token,
+    token,
     body: { orderId: order.id, rating: 4, comment: 'First review' },
   });
   assert.equal(first.status, 201);
 
   // Act — duplicate review on same order
   const second = await api.call('POST', '/reviews', {
-    token: user.token,
+    token,
     body: { orderId: order.id, rating: 5, comment: 'Second attempt' },
   });
 
@@ -159,22 +162,23 @@ test('duplicate reviews for the same order are refused with 409 Conflict', async
 
 test('review input is type-checked: rating must be 1 to 5, comment within limit', async () => {
   // Arrange
-  const user = (await api.call('POST', '/auth/register', {
+  const reg = await api.call('POST', '/auth/register', {
     body: { name: 'Type Tester', email: 'type.tester@example.com', password: 'Secret-pass1' },
-  })).body;
+  });
+  const token = issuedToken(reg);
   const dish = await menuItem(api.call, 'Garlic Bread');
   const order = (await api.call('POST', '/orders', {
-    token: user.token,
+    token,
     body: { type: 'online', fulfillment: 'pickup', items: [{ menuItemId: dish.id, qty: 1 }] },
   })).body.order;
   await fulfillOrder(order.id);
 
   // Act
-  const zeroRating = await api.call('POST', '/reviews', { token: user.token, body: { orderId: order.id, rating: 0 } });
-  const sixRating = await api.call('POST', '/reviews', { token: user.token, body: { orderId: order.id, rating: 6 } });
-  const stringRating = await api.call('POST', '/reviews', { token: user.token, body: { orderId: order.id, rating: 'five' } });
-  const floatRating = await api.call('POST', '/reviews', { token: user.token, body: { orderId: order.id, rating: 4.5 } });
-  const longComment = await api.call('POST', '/reviews', { token: user.token, body: { orderId: order.id, rating: 5, comment: 'x'.repeat(1001) } });
+  const zeroRating = await api.call('POST', '/reviews', { token, body: { orderId: order.id, rating: 0 } });
+  const sixRating = await api.call('POST', '/reviews', { token, body: { orderId: order.id, rating: 6 } });
+  const stringRating = await api.call('POST', '/reviews', { token, body: { orderId: order.id, rating: 'five' } });
+  const floatRating = await api.call('POST', '/reviews', { token, body: { orderId: order.id, rating: 4.5 } });
+  const longComment = await api.call('POST', '/reviews', { token, body: { orderId: order.id, rating: 5, comment: 'x'.repeat(1001) } });
 
   // Assert
   for (const res of [zeroRating, sixRating, stringRating, floatRating, longComment]) {
@@ -184,20 +188,21 @@ test('review input is type-checked: rating must be 1 to 5, comment within limit'
 
 test('GET /api/reviews/mine lists the customer own reviews newest first', async () => {
   // Arrange
-  const user = (await api.call('POST', '/auth/register', {
+  const reg = await api.call('POST', '/auth/register', {
     body: { name: 'Mine Reviewer', email: 'mine.reviewer@example.com', password: 'Secret-pass1' },
-  })).body;
+  });
+  const token = issuedToken(reg);
   const dish = await menuItem(api.call, 'Garlic Bread');
   const order = (await api.call('POST', '/orders', {
-    token: user.token,
+    token,
     body: { type: 'online', fulfillment: 'pickup', items: [{ menuItemId: dish.id, qty: 1 }] },
   })).body.order;
   await fulfillOrder(order.id);
 
-  await api.call('POST', '/reviews', { token: user.token, body: { orderId: order.id, rating: 5, comment: 'My favorite spot!' } });
+  await api.call('POST', '/reviews', { token, body: { orderId: order.id, rating: 5, comment: 'My favorite spot!' } });
 
   // Act
-  const mine = await api.call('GET', '/reviews/mine', { token: user.token });
+  const mine = await api.call('GET', '/reviews/mine', { token });
 
   // Assert
   assert.equal(mine.status, 200);

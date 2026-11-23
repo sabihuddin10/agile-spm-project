@@ -1,7 +1,7 @@
 /** Customers module — routes/customers.js (US1.2–US1.5). */
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { startServer } from '../helpers.js';
+import { startServer, issuedToken } from '../helpers.js';
 
 let api;
 before(async () => {
@@ -141,11 +141,12 @@ test('DELETE /customers/:id refuses a customer with active reservations, keeping
     body: { name: 'Booking Guest', email: 'booking.guest@example.com', password: 'Secret-pass1', phone: '+92 300 5550199' },
   });
   assert.equal(reg.status, 201);
-  const custRes = await api.call('GET', '/customers/me', { token: reg.body.token });
+  const custToken = issuedToken(reg);
+  const custRes = await api.call('GET', '/customers/me', { token: custToken });
   const customerId = custRes.body.customer.id;
 
   const booking = await api.call('POST', '/reservations', {
-    token: reg.body.token,
+    token: custToken,
     body: {
       customerName: 'Booking Guest',
       email: 'booking.guest@example.com',
@@ -165,7 +166,7 @@ test('DELETE /customers/:id refuses a customer with active reservations, keeping
   assert.match(deleteActive.body.error, /active reservations/i);
 
   // Act — customer cancels the reservation
-  const cancelRes = await api.call('POST', `/reservations/${bookingId}/cancel`, { token: reg.body.token });
+  const cancelRes = await api.call('POST', `/reservations/${bookingId}/cancel`, { token: custToken });
   assert.equal(cancelRes.status, 200);
 
   // Act — manager deletes the customer now that reservation is cancelled

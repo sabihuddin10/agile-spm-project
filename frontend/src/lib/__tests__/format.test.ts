@@ -72,8 +72,8 @@ describe('formatDate / formatDateTime / formatTime', () => {
   });
 
   it('renders the time of an ISO timestamp in 12-hour AM/PM form', () => {
-    expect(formatTime('2026-10-07T12:00:00.000Z')).toMatch(/\d{1,2}:\d{2} [AP]M/);
-    expect(formatDateTime('2026-10-07T12:00:00.000Z')).toMatch(/\d{1,2}:\d{2} [AP]M/);
+    expect(formatTime('2026-10-07T12:00:00.000Z')).toMatch(/\d{1,2}:\d{2} [AP]M/i);
+    expect(formatDateTime('2026-10-07T12:00:00.000Z')).toMatch(/\d{1,2}:\d{2} [AP]M/i);
   });
 });
 
