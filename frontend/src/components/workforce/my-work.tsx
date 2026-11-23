@@ -174,6 +174,7 @@ export function MyWork() {
                 ? 'Kitchen team on today, live.'
                 : undefined
           }
+          accountHref={p => p.userId === user?.id ? `/staff/workforce?staff=${p.userId}` : null}
         />
       </div>
     </>

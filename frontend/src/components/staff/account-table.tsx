@@ -1,9 +1,11 @@
 'use client';
 
+import Link from 'next/link';
+
 import { useMemo, useState } from 'react';
 import type { Role, User } from '@/types';
 import { authApi } from '@/lib/api';
-import { can, canAdministerAccount, canManageAccount } from '@/lib/permissions';
+import { ASSIGNABLE_ROLES, can, canAdministerAccount, canManageAccount } from '@/lib/permissions';
 import { errorMessage } from '@/lib/format';
 import { useAuth } from '@/context/auth-context';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +22,7 @@ const article = (word: string) => (/^[aeiou]/i.test(word) ? 'an' : 'a');
 
 /** One line on what a role can reach, shown before a role change is applied. */
 const ROLE_ACCESS: Record<Role, string> = {
+  superadmin: 'The super admin can do everything, including managing admins. The role is bound to one account and never assigned here.',
   admin: 'Admins can do everything, including changing roles, suspending and removing accounts.',
   manager:
     'Managers run the menu, inventory, refunds, shifts, analytics and settings, and manage waiter and chef accounts.',
@@ -62,6 +65,7 @@ export function AccountTable({
   const [issued, setIssued] = useState<{ user: User; tempPassword: string } | null>(null);
   const [q, setQ] = useState('');
   const [roleFilter, setRoleFilter] = useState<Role | ''>('');
+  const [accountGroup, setAccountGroup] = useState<'all' | 'staff' | 'customer'>('all');
 
   const sorted = useMemo(
     () => users.slice().sort((a, b) => roleRank(a.role) - roleRank(b.role) || a.name.localeCompare(b.name)),
@@ -76,6 +80,122 @@ export function AccountTable({
         (!needle || u.name.toLowerCase().includes(needle) || u.email.toLowerCase().includes(needle)),
     );
   }, [sorted, q, roleFilter]);
+
+  const staffAccounts = useMemo(() => visible.filter((u) => u.role !== 'customer'), [visible]);
+  const customerAccounts = useMemo(() => visible.filter((u) => u.role === 'customer'), [visible]);
+
+  const showStaff = accountGroup !== 'customer' && staffAccounts.length > 0;
+  const showCustomer = accountGroup !== 'staff' && customerAccounts.length > 0;
+
+  function renderUserRow(u: User) {
+    const isSelf = u.id === me?.id;
+    const busy = busyId === u.id;
+    const selfHint = isSelf ? 'Manage your own account from My account' : undefined;
+    // Admin controls show (disabled) on your own row, and not at all on another admin.
+    const showAdminControls = isSelf || canAdministerAccount(me, u);
+    const manageable = canManageAccount(me, u);
+    return (
+      <li
+        key={u.id}
+        className={`flex flex-col gap-2 px-3.5 py-2.5 sm:flex-row sm:items-center sm:gap-4 sm:px-4 sm:py-3 ${u.active ? '' : 'bg-stone-50'}`}
+      >
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <span
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold sm:h-9 sm:w-9 ${
+              u.active ? 'bg-brand-50 text-brand-700' : 'bg-stone-200 text-stone-500'
+            }`}
+            aria-hidden="true"
+          >
+            {initials(u.name)}
+          </span>
+          <div className="min-w-0">
+            <Link
+              href={`/staff/workforce?staff=${u.id}`}
+              className="transition underline hover:text-brand-600"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {u.name}
+              {isSelf ? <span className="ml-1.5 text-xs font-normal text-stone-500">(you)</span> : null}
+            </Link>
+            <p className="truncate text-xs text-stone-500">{u.email}</p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1.5 pl-11 sm:justify-end sm:gap-2 sm:pl-0">
+          {canAssign && showAdminControls && ASSIGNABLE_ROLES.includes(u.role) ? (
+            <select
+              className="input w-auto"
+              aria-label={`Role for ${u.name}`}
+              value={u.role}
+              disabled={isSelf || busy}
+              title={selfHint}
+              onChange={(e) => {
+                const role = e.target.value as Role;
+                if (role !== u.role) setRoleChange({ user: u, role });
+              }}
+            >
+              {ROLE_ORDER.filter((r) => ASSIGNABLE_ROLES.includes(r)).map((r) => (
+                <option key={r} value={r}>
+                  {ROLE_META[r].label}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <Badge tone={ROLE_META[u.role].tone}>{ROLE_META[u.role].label}</Badge>
+          )}
+
+          <Badge tone={u.active ? 'emerald' : 'red'}>{u.active ? 'Active' : 'Suspended'}</Badge>
+
+          {manageable ? (
+            <button
+              type="button"
+              className="btn-sm btn-secondary"
+              onClick={() => setEditing(u)}
+              disabled={busy}
+              aria-label={`Edit details for ${u.name}`}
+            >
+              Edit
+            </button>
+          ) : null}
+
+          {(() => {
+            const actions: RowAction[] = [];
+            if (manageable) {
+              actions.push({
+                label: 'Reset password',
+                ariaLabel: `Reset password for ${u.name}`,
+                onSelect: () => setResetting(u),
+              });
+              if (canSetPasswords) {
+                actions.push({
+                  label: 'Set password',
+                  ariaLabel: `Set password for ${u.name}`,
+                  onSelect: () => setSettingPassword(u),
+                });
+              }
+            }
+            if (canSuspend && showAdminControls && !isSelf) {
+              actions.push({
+                label: u.active ? 'Suspend' : 'Reactivate',
+                onSelect: () => (u.active ? setSuspending(u) : void toggleActive(u)),
+              });
+              actions.push({ label: 'Remove', danger: true, onSelect: () => setRemoving(u) });
+            }
+            // Your own row keeps a disabled trigger so rows line up and the hint explains why.
+            if (actions.length === 0 && !(isSelf && canSuspend)) return null;
+            return (
+              <RowActionsMenu
+                label={`More actions for ${u.name}`}
+                actions={actions}
+                disabled={busy || actions.length === 0}
+                title={actions.length === 0 ? selfHint : undefined}
+              />
+            );
+          })()}
+        </div>
+      </li>
+    );
+  }
 
   async function confirmRoleChange() {
     if (!roleChange) return;
@@ -149,141 +269,100 @@ export function AccountTable({
   return (
     <div>
       {searchable ? (
-        <div className="flex flex-col gap-2 border-b border-stone-200 p-4 sm:flex-row">
-          <input
-            className="input sm:max-w-xs"
-            type="search"
-            placeholder="Search name or email…"
-            aria-label="Search accounts"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
-          <select
-            className="input sm:w-48"
-            aria-label="Filter by role"
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value as Role | '')}
-          >
-            <option value="">All roles ({users.length})</option>
-            {ROLE_ORDER.map((r) => (
-              <option key={r} value={r}>
-                {ROLE_META[r].plural} ({users.filter((u) => u.role === r).length})
-              </option>
-            ))}
-          </select>
+        <div className="flex flex-col gap-3 border-b border-stone-200 p-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setAccountGroup('all')}
+              className={`rounded-lg px-3 py-1 text-xs font-medium transition ${
+                accountGroup === 'all'
+                  ? 'bg-stone-900 text-white shadow-sm'
+                  : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+              }`}
+            >
+              All accounts ({users.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setAccountGroup('staff')}
+              className={`rounded-lg px-3 py-1 text-xs font-medium transition ${
+                accountGroup === 'staff'
+                  ? 'bg-stone-900 text-white shadow-sm'
+                  : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+              }`}
+            >
+              Staff ({users.filter((u) => u.role !== 'customer').length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setAccountGroup('customer')}
+              className={`rounded-lg px-3 py-1 text-xs font-medium transition ${
+                accountGroup === 'customer'
+                  ? 'bg-stone-900 text-white shadow-sm'
+                  : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+              }`}
+            >
+              Customers ({users.filter((u) => u.role === 'customer').length})
+            </button>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input
+              className="input sm:max-w-xs"
+              type="search"
+              placeholder="Search name or email…"
+              aria-label="Search accounts"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+            <select
+              className="input sm:w-48"
+              aria-label="Filter by role"
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value as Role | '')}
+            >
+              <option value="">All roles ({users.length})</option>
+              {ROLE_ORDER.map((r) => (
+                <option key={r} value={r}>
+                  {ROLE_META[r].plural} ({users.filter((u) => u.role === r).length})
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       ) : null}
 
-      {visible.length === 0 ? (
+      {visible.length === 0 || (!showStaff && !showCustomer) ? (
         <EmptyState title={users.length === 0 ? emptyTitle : 'No accounts match'} hint={users.length ? 'Try a different search or role.' : undefined} />
       ) : (
-        <ul className="divide-y divide-stone-100">
-          {visible.map((u) => {
-            const isSelf = u.id === me?.id;
-            const busy = busyId === u.id;
-            const selfHint = isSelf ? 'Manage your own account from My account' : undefined;
-            // Admin controls show (disabled) on your own row, and not at all on another admin.
-            const showAdminControls = isSelf || canAdministerAccount(me, u);
-            const manageable = canManageAccount(me, u);
-            return (
-              <li
-                key={u.id}
-                className={`flex flex-col gap-2 px-3.5 py-2.5 sm:flex-row sm:items-center sm:gap-4 sm:px-4 sm:py-3 ${u.active ? '' : 'bg-stone-50'}`}
-              >
-                <div className="flex min-w-0 flex-1 items-center gap-3">
-                  <span
-                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold sm:h-9 sm:w-9 ${
-                      u.active ? 'bg-brand-50 text-brand-700' : 'bg-stone-200 text-stone-500'
-                    }`}
-                    aria-hidden="true"
-                  >
-                    {initials(u.name)}
-                  </span>
-                  <div className="min-w-0">
-                    <p className={`truncate text-sm font-medium sm:text-base ${u.active ? 'text-stone-800' : 'text-stone-500'}`}>
-                      {u.name}
-                      {isSelf ? <span className="ml-1.5 text-xs font-normal text-stone-500">(you)</span> : null}
-                    </p>
-                    <p className="truncate text-xs text-stone-500">{u.email}</p>
-                  </div>
+        <div className="divide-y divide-stone-200">
+          {showStaff ? (
+            <div>
+              {searchable ? (
+                <div className="flex items-center justify-between border-b border-stone-200 bg-stone-50/80 px-4 py-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-600">
+                    Staff accounts ({staffAccounts.length})
+                  </h3>
+                  <span className="text-xs text-stone-500">Admins, Managers, Chefs &amp; Waiters</span>
                 </div>
+              ) : null}
+              <ul className="divide-y divide-stone-100">{staffAccounts.map(renderUserRow)}</ul>
+            </div>
+          ) : null}
 
-                <div className="flex flex-wrap items-center gap-1.5 pl-11 sm:justify-end sm:gap-2 sm:pl-0">
-                  {canAssign && showAdminControls ? (
-                    <select
-                      className="input w-auto"
-                      aria-label={`Role for ${u.name}`}
-                      value={u.role}
-                      disabled={isSelf || busy}
-                      title={selfHint}
-                      onChange={(e) => {
-                        const role = e.target.value as Role;
-                        if (role !== u.role) setRoleChange({ user: u, role });
-                      }}
-                    >
-                      {ROLE_ORDER.map((r) => (
-                        <option key={r} value={r}>
-                          {ROLE_META[r].label}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <Badge tone={ROLE_META[u.role].tone}>{ROLE_META[u.role].label}</Badge>
-                  )}
-
-                  <Badge tone={u.active ? 'emerald' : 'red'}>{u.active ? 'Active' : 'Suspended'}</Badge>
-
-                  {manageable ? (
-                    <button
-                      type="button"
-                      className="btn-sm btn-secondary"
-                      onClick={() => setEditing(u)}
-                      disabled={busy}
-                      aria-label={`Edit details for ${u.name}`}
-                    >
-                      Edit
-                    </button>
-                  ) : null}
-
-                  {(() => {
-                    const actions: RowAction[] = [];
-                    if (manageable) {
-                      actions.push({
-                        label: 'Reset password',
-                        ariaLabel: `Reset password for ${u.name}`,
-                        onSelect: () => setResetting(u),
-                      });
-                      if (canSetPasswords) {
-                        actions.push({
-                          label: 'Set password',
-                          ariaLabel: `Set password for ${u.name}`,
-                          onSelect: () => setSettingPassword(u),
-                        });
-                      }
-                    }
-                    if (canSuspend && showAdminControls && !isSelf) {
-                      actions.push({
-                        label: u.active ? 'Suspend' : 'Reactivate',
-                        onSelect: () => (u.active ? setSuspending(u) : void toggleActive(u)),
-                      });
-                      actions.push({ label: 'Remove', danger: true, onSelect: () => setRemoving(u) });
-                    }
-                    // Your own row keeps a disabled trigger so rows line up and the hint explains why.
-                    if (actions.length === 0 && !(isSelf && canSuspend)) return null;
-                    return (
-                      <RowActionsMenu
-                        label={`More actions for ${u.name}`}
-                        actions={actions}
-                        disabled={busy || actions.length === 0}
-                        title={actions.length === 0 ? selfHint : undefined}
-                      />
-                    );
-                  })()}
+          {showCustomer ? (
+            <div>
+              {searchable ? (
+                <div className="flex items-center justify-between border-b border-stone-200 bg-stone-50/80 px-4 py-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-600">
+                    Customer accounts ({customerAccounts.length})
+                  </h3>
+                  <span className="text-xs text-stone-500">Registered Customers</span>
                 </div>
-              </li>
-            );
-          })}
-        </ul>
+              ) : null}
+              <ul className="divide-y divide-stone-100">{customerAccounts.map(renderUserRow)}</ul>
+            </div>
+          ) : null}
+        </div>
       )}
 
       {roleChange ? (
