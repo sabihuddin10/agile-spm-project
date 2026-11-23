@@ -117,7 +117,6 @@ export function AccountTable({
             <Link
               href={`/staff/workforce?staff=${u.id}`}
               className="transition underline hover:text-brand-600"
-              onClick={(e) => e.stopPropagation()}
             >
               {u.name}
               {isSelf ? <span className="ml-1.5 text-xs font-normal text-stone-500">(you)</span> : null}
