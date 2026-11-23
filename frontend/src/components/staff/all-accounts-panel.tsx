@@ -41,7 +41,7 @@ export function AllAccountsPanel({ onChanged }: { onChanged?: () => unknown }) {
   return (
     <div className="space-y-4">
       <p className="text-sm text-stone-600">
-        Includes customer accounts. Promote a customer to a staff role, or demote staff to customer to remove console
+        Customer accounts are shown separately from staff accounts below. Promote a customer to a staff role, or demote staff to customer to remove console
         access. Changes apply on the user&apos;s next request; suspended or removed users are signed out on their next
         request.
       </p>

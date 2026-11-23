@@ -30,6 +30,17 @@ function makeUser(overrides: Partial<User> = {}): User {
 afterEach(() => vi.resetAllMocks());
 
 describe('AccountProfileForm', () => {
+  it("keeps the super admin's email read-only, because it is bound to the role", () => {
+    // Arrange / Act
+    render(<AccountProfileForm user={makeUser({ role: 'superadmin', email: 'sabih@rest.test' })} />);
+
+    // Assert
+    const email = screen.getByLabelText('Email');
+    expect(email).toBeDisabled();
+    expect(email).toHaveAccessibleDescription(/bound to the super admin role/i);
+    expect(screen.getByLabelText('Name')).toBeEnabled();
+  });
+
   it('saves name and phone without asking for a password', async () => {
     // Arrange
     const updated = makeUser({ name: 'William Waiter', phone: '+92 321 1110199' });

@@ -1,7 +1,7 @@
 /** Password policy — lib/password-policy.js: the rules, the error sentence and generated temporary passwords. */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { checkPassword, passwordError, generateTempPassword, PASSWORD_RULES, PASSWORD_MAX } from '../../src/lib/password-policy.js';
+import { checkPassword, passwordError, generateTempPassword, PASSWORD_RULES, PASSWORD_MAX, PASSWORD_MAX_BYTES } from '../../src/lib/password-policy.js';
 
 test('a password meeting every rule passes', () => {
   // Act
@@ -80,4 +80,46 @@ test('generated temporary passwords always satisfy the policy and differ', () =>
     assert.deepEqual(checkPassword(pw), [], pw);
   }
   assert.equal(new Set(samples).size, samples.length);
+});
+
+test('a new password over 72 bytes is rejected, because bcrypt would silently ignore the rest', () => {
+  // Arrange: still short enough in characters, but longer than bcrypt reads
+  const fine = `Aa1!${'x'.repeat(PASSWORD_MAX_BYTES - 4)}`;
+  const tooLong = `${fine}y`;
+
+  // Act
+  const ok = checkPassword(fine);
+  const rejected = checkPassword(tooLong);
+
+  // Assert
+  assert.deepEqual(ok, []);
+  assert.equal(Buffer.byteLength(tooLong), PASSWORD_MAX_BYTES + 1);
+  assert.ok(rejected.some((p) => new RegExp(`at most ${PASSWORD_MAX_BYTES} bytes`).test(p)), rejected.join('; '));
+});
+
+test('the limit counts bytes, not characters: 40 accented letters are 80 bytes', () => {
+  // Arrange
+  const accented = `Aa1!${'é'.repeat(40)}`;
+
+  // Act
+  const problems = checkPassword(accented);
+
+  // Assert
+  assert.ok(accented.length < PASSWORD_MAX_BYTES);
+  assert.ok(problems.some((p) => /bytes/.test(p)));
+});
+
+test('the 72-byte rule is what makes two long passwords distinct: the hash cannot tell the tail apart', async () => {
+  // Arrange
+  const { default: bcrypt } = await import('bcryptjs');
+  const head = 'A'.repeat(PASSWORD_MAX_BYTES);
+  const hash = bcrypt.hashSync(`${head}-first-ending-1!`, 4);
+
+  // Act
+  const differentPasswordMatches = bcrypt.compareSync(`${head}-another-ending-2@`, hash);
+
+  // Assert: this is the bug the limit prevents, so both of those must be refused at the door
+  assert.equal(differentPasswordMatches, true);
+  assert.ok(checkPassword(`${head}-first-ending-1!`).some((p) => /bytes/.test(p)));
+  assert.ok(checkPassword(`${head}-another-ending-2@`).some((p) => /bytes/.test(p)));
 });

@@ -1,7 +1,7 @@
 /** Account hierarchy — lib/hierarchy.js: who may manage whose staff account. */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { canManage, rankOf } from '../../src/lib/hierarchy.js';
+import { ASSIGNABLE_ROLES, canManage, hasRole, rankOf } from '../../src/lib/hierarchy.js';
 
 const user = (id, role) => ({ id, role });
 
@@ -28,6 +28,42 @@ test('every actor × target pair follows the strictly-lower rule', () => {
 
   // Assert
   assert.deepEqual(actual, expected);
+});
+
+test('the super admin ranks above admin', () => {
+  // Act / Assert
+  assert.ok(rankOf('superadmin') > rankOf('admin'));
+});
+
+test('the super admin manages admins and everyone below them; nobody manages the super admin', () => {
+  // Arrange
+  const manages = (actor, target) => canManage(user('a', actor), user('t', target));
+
+  // Act
+  const managedBySuperadmin = ['admin', 'manager', 'chef', 'waiter'].map((target) => manages('superadmin', target));
+  const managingSuperadmin = ['superadmin', 'admin', 'manager', 'chef', 'waiter'].map((actor) => manages(actor, 'superadmin'));
+
+  // Assert
+  assert.deepEqual(managedBySuperadmin, [true, true, true, true]);
+  assert.deepEqual(managingSuperadmin, [false, false, false, false, false]);
+});
+
+test('hasRole: the super admin holds every admin permission and nobody else inherits one', () => {
+  // Arrange
+  const superadmin = user('s', 'superadmin');
+
+  // Act / Assert
+  assert.equal(hasRole(superadmin, 'admin'), true);
+  assert.equal(hasRole(superadmin, 'manager', 'admin'), true);
+  assert.equal(hasRole(superadmin, 'waiter', 'chef'), false);
+  assert.equal(hasRole(user('a', 'admin'), 'superadmin'), false);
+  assert.equal(hasRole(user('m', 'manager'), 'manager', 'admin'), true);
+  assert.equal(hasRole(null, 'admin'), false);
+});
+
+test('the super admin role is never assignable through the API', () => {
+  // Act / Assert
+  assert.deepEqual(ASSIGNABLE_ROLES, ['customer', 'waiter', 'chef', 'manager', 'admin']);
 });
 
 test('nobody manages their own account, a customer account, or a missing one through the hierarchy', () => {

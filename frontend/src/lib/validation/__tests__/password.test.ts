@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkPassword, confirmError, passwordError, passwordStrength, PASSWORD_RULES } from '@/lib/validation/password';
+import { checkPassword, confirmError, passwordError, passwordStrength, PASSWORD_MAX_BYTES, PASSWORD_RULES } from '@/lib/validation/password';
 
 describe('checkPassword', () => {
   it('reports each rule separately', () => {
@@ -58,5 +58,42 @@ describe('passwordError and confirmError', () => {
     expect(confirmError('Grill-master7', '')).toMatch(/again/);
     expect(confirmError('Grill-master7', 'Grill-master8')).toBe("Passwords don't match.");
     expect(confirmError('Grill-master7', 'Grill-master7')).toBeUndefined();
+  });
+});
+
+describe('the 72-byte limit (bcrypt ignores anything after it)', () => {
+  it('accepts a password of exactly 72 bytes and rejects one of 73', () => {
+    // Arrange
+    const exact = `Aa1!${'x'.repeat(PASSWORD_MAX_BYTES - 4)}`;
+
+    // Act
+    const ok = checkPassword(exact);
+    const tooLong = checkPassword(`${exact}y`);
+
+    // Assert
+    expect(ok.valid).toBe(true);
+    expect(tooLong.valid).toBe(false);
+    expect(tooLong.extra.join(' ')).toMatch(/at most 72 bytes/);
+  });
+
+  it('counts bytes, not characters: 40 accented letters are 80 bytes', () => {
+    // Arrange
+    const accented = `Aa1!${'é'.repeat(40)}`;
+
+    // Act
+    const result = checkPassword(accented);
+
+    // Assert
+    expect(accented.length).toBeLessThan(PASSWORD_MAX_BYTES);
+    expect(result.valid).toBe(false);
+    expect(result.extra.join(' ')).toMatch(/bytes/);
+  });
+
+  it('says the same thing as the server, in sentence form', () => {
+    // Arrange / Act
+    const message = passwordError(`Aa1!${'x'.repeat(PASSWORD_MAX_BYTES)}`);
+
+    // Assert
+    expect(message).toMatch(/72 bytes/);
   });
 });

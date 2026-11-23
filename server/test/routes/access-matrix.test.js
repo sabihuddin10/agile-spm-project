@@ -7,12 +7,18 @@
  * 404/400 inside the handler and nothing in the store changes. Rules a handler
  * checks itself (an order's owner, chefs editing only availability, cancelling
  * a paid order) are covered in that module's own test file.
+ *
+ * The super admin holds every admin permission, so its expected access is
+ * derived from admin's, never listed by hand. Each module's own test file checks
+ * the same inheritance for the admin rules its handlers check themselves.
  */
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { startServer } from '../helpers.js';
 
-const ROLES = ['customer', 'waiter', 'chef', 'manager', 'admin'];
+const ROLES = ['customer', 'waiter', 'chef', 'manager', 'admin', 'superadmin'];
+/** The seeded account bound to the super admin role (store.js SUPERADMIN_EMAIL). */
+const SUPERADMIN_LOGIN = ['sabihuddin106@gmail.com', 'Admin@123456'];
 const SIGNED_IN = ROLES;
 const STAFF = ['waiter', 'chef', 'manager', 'admin'];
 const FLOOR = ['waiter', 'manager', 'admin'];
@@ -136,9 +142,23 @@ let api;
 const tokens = {};
 before(async () => {
   api = await startServer();
-  await Promise.all(ROLES.map(async (role) => { tokens[role] = await api.login(role); }));
+  await Promise.all(ROLES.map(async (role) => {
+    tokens[role] = role === 'superadmin' ? await api.login(...SUPERADMIN_LOGIN) : await api.login(role);
+  }));
 });
 after(() => api.close());
+
+/** Whether `who` may call a route open to `allowed`: the super admin wherever an admin may. */
+const mayCall = (who, allowed) => allowed.includes(who) || (who === 'superadmin' && allowed.includes('admin'));
+
+test('the super admin caller is the account bound to the superadmin role', async () => {
+  // Act
+  const me = await api.call('GET', '/auth/me', { token: tokens.superadmin });
+
+  // Assert
+  assert.equal(me.body.user.email, SUPERADMIN_LOGIN[0]);
+  assert.equal(me.body.user.role, 'superadmin');
+});
 
 for (const [method, path, allowed, body] of MATRIX) {
   const label = allowed ? allowed.join('/') : 'everyone';
@@ -155,7 +175,7 @@ for (const [method, path, allowed, body] of MATRIX) {
 
     // Assert
     for (const [who, status] of results) {
-      const ok = allowed === null || (who !== 'guest' && allowed.includes(who));
+      const ok = allowed === null || (who !== 'guest' && mayCall(who, allowed));
       if (ok) {
         assert.ok(status !== 401 && status !== 403, `${who} should reach ${method} ${path}, got ${status}`);
       } else {

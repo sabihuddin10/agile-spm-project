@@ -2,6 +2,9 @@
  * Money and order arithmetic. All rounding happens in integer cents so that
  * totals and split bills always add up exactly.
  */
+import { Order } from '../domain/order.js';
+import { OrderItem } from '../domain/order-item.js';
+import { Bill } from '../domain/bill.js';
 
 export const toCents = (amount) => Math.round(Number(amount || 0) * 100);
 export const fromCents = (cents) => Math.round(cents) / 100;
@@ -46,7 +49,7 @@ export function priceSelection(menuItem, selections = []) {
 
 /** Line total for one order item (unit price incl. modifiers × qty). */
 export function lineTotal(item) {
-  return fromCents(toCents(item.unitPrice) * item.qty);
+  return fromCents(new OrderItem(item).totalCents);
 }
 
 /**
@@ -55,28 +58,21 @@ export function lineTotal(item) {
  * discount. Rates are snapshotted on the order (order.rates) when it is created.
  */
 export function computeTotals(order) {
-  const subtotalC = order.items.reduce((sum, i) => sum + toCents(i.unitPrice) * i.qty, 0);
-  const discountC = Math.min(Math.max(0, toCents(order.discount)), subtotalC);
-  const rates = order.rates || {};
-  const serviceC = order.type === 'dine-in' ? Math.round(subtotalC * (rates.serviceChargeRate || 0)) : 0;
-  const taxC = Math.round((subtotalC - discountC) * (rates.taxRate || 0));
-  const tipC = Math.max(0, toCents(order.tip));
-
-  order.subtotal = fromCents(subtotalC);
-  order.discount = fromCents(discountC);
-  order.serviceCharge = fromCents(serviceC);
-  order.tax = fromCents(taxC);
-  order.tip = fromCents(tipC);
-  order.total = fromCents(Math.max(0, subtotalC - discountC + serviceC + taxC + tipC));
+  const totals = Order.fromRecord(order).recalculateTotals().toTotals();
+  Object.assign(order, {
+    subtotal: totals.subtotal,
+    discount: totals.discount,
+    serviceCharge: totals.serviceCharge,
+    tax: totals.tax,
+    tip: totals.tip,
+    total: totals.total,
+  });
   return order;
 }
 
 /** Split `totalCents` into `ways` parts that differ by at most one cent. */
 export function splitEvenCents(totalCents, ways) {
-  const n = Math.max(1, Math.floor(ways));
-  const base = Math.floor(totalCents / n);
-  const remainder = totalCents - base * n;
-  return Array.from({ length: n }, (_, i) => base + (i < remainder ? 1 : 0));
+  return Bill.splitEvenCents(totalCents, ways);
 }
 
 /**
@@ -87,38 +83,5 @@ export function splitEvenCents(totalCents, ways) {
  * so the parts always sum to the original total.
  */
 export function splitByItems(order, groups) {
-  if (!Array.isArray(groups) || groups.length < 2) {
-    return { error: 'Choose at least two groups of items to split.' };
-  }
-  const itemIds = order.items.map((i) => i.id);
-  const flat = groups.flat();
-  if (flat.length !== itemIds.length || !itemIds.every((id) => flat.includes(id))) {
-    return { error: 'Every item must be assigned to exactly one payer.' };
-  }
-  if (groups.some((g) => !Array.isArray(g) || g.length === 0)) {
-    return { error: 'Each payer needs at least one item.' };
-  }
-
-  const totalC = toCents(order.total);
-  const subtotalC = order.items.reduce((sum, i) => sum + toCents(i.unitPrice) * i.qty, 0);
-  const groupSubs = groups.map((ids) =>
-    ids.reduce((sum, id) => {
-      const item = order.items.find((i) => i.id === id);
-      return sum + toCents(item.unitPrice) * item.qty;
-    }, 0),
-  );
-
-  const amounts = [];
-  let allocated = 0;
-  groupSubs.forEach((sub, idx) => {
-    if (idx === groupSubs.length - 1) {
-      amounts.push(totalC - allocated);
-    } else {
-      const share = subtotalC > 0 ? Math.round((totalC * sub) / subtotalC) : 0;
-      amounts.push(share);
-      allocated += share;
-    }
-  });
-
-  return { amounts: amounts.map(fromCents) };
+  return new Bill(order).splitByItems(groups);
 }

@@ -94,7 +94,7 @@ test('helpers: month range, default wages by role, month format', () => {
   // Act / Assert
   assert.deepEqual(monthRange('2026-02'), { from: '2026-02-01', to: '2026-02-28' });
   assert.deepEqual(monthRange('2028-02'), { from: '2028-02-01', to: '2028-02-29' });
-  assert.deepEqual(DEFAULT_WAGES, { waiter: 12, chef: 15, manager: 20, admin: 25 });
+  assert.deepEqual(DEFAULT_WAGES, { waiter: 12, chef: 15, manager: 20, admin: 25, superadmin: 25 });
   assert.equal(wageOf({ role: 'chef' }), 15);
   assert.equal(wageOf({ role: 'chef', hourlyWage: 17.5 }), 17.5);
   assert.ok(MONTH_RE.test('2026-10'));

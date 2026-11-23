@@ -1,32 +1,32 @@
 /**
  * Persistence against a real Postgres database (Neon or local) (needs DATABASE_URL, see
  * `npm run test:db`). Each API server runs in its own process — like separate
- * serverless instances — and the whole run uses a unique app_state row that is
- * deleted afterwards.
+ * serverless instances — and the run starts from an empty public schema.
  */
 import 'dotenv/config';
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { gunzipSync } from 'node:zlib';
 import { createPool } from '../src/data/db.js';
+import { requireTestDatabase } from './guard.js';
+import { issuedToken } from '../test/helpers.js';
+import { users as seedUsers } from '../src/data/store.js';
 
-const STATE_KEY = `test_${process.pid}_${Date.now()}`;
 const SERVER_DIR = fileURLToPath(new URL('..', import.meta.url));
 
-if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required for the database tests.');
+requireTestDatabase();
 
 let pool;
 const servers = [];
 
-before(() => {
+before(async () => {
   pool = createPool(process.env.DATABASE_URL);
+  await pool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
 });
 
 after(async () => {
   await Promise.all(servers.map((s) => s.close()));
-  await pool.query('DELETE FROM app_state WHERE key = $1', [STATE_KEY]).catch(() => {});
   await pool.end();
 });
 
@@ -35,7 +35,7 @@ async function spawnServer() {
   const child = spawn(process.execPath, ['--input-type=module', '-e', `
     import { createApp } from './src/app.js';
     const server = createApp({ logging: false }).listen(0, () => console.log('PORT=' + server.address().port));
-  `], { cwd: SERVER_DIR, env: { ...process.env, STATE_KEY }, stdio: ['ignore', 'pipe', 'inherit'] });
+  `], { cwd: SERVER_DIR, env: process.env, stdio: ['ignore', 'pipe', 'inherit'] });
 
   const port = await new Promise((resolve, reject) => {
     child.once('exit', (code) => reject(new Error(`server exited early (${code})`)));
@@ -54,13 +54,13 @@ async function spawnServer() {
       signal: AbortSignal.timeout(180_000),
     });
     const text = await res.text();
-    return { status: res.status, body: text ? JSON.parse(text) : null };
+    return { status: res.status, body: text ? JSON.parse(text) : null, headers: res.headers };
   }
 
   async function login(who) {
     const res = await call('POST', '/auth/login', { body: { email: `${who}@rest.test`, password: 'password' } });
     assert.equal(res.status, 200, `login ${who}`);
-    return res.body.token;
+    return issuedToken(res);
   }
 
   const close = () => new Promise((resolve) => {
@@ -77,7 +77,7 @@ async function spawnServer() {
 const customerNames = async (api, token) =>
   (await api.call('GET', '/customers', { token })).body.customers.map((c) => c.name);
 
-test('the first request seeds a missing state row with the gzip-compressed demo data', async () => {
+test('the first request seeds the relational tables with the demo data', async () => {
   // Arrange
   const api = await spawnServer();
 
@@ -86,11 +86,32 @@ test('the first request seeds a missing state row with the gzip-compressed demo 
 
   // Assert
   assert.equal(menu.status, 200);
-  const { rows } = await pool.query('SELECT version, data FROM app_state WHERE key = $1', [STATE_KEY]);
-  assert.equal(rows.length, 1);
-  assert.equal(rows[0].version, 1);
-  const data = JSON.parse(gunzipSync(rows[0].data));
-  assert.equal(data.users.length, 7);
+  const users = await pool.query('SELECT count(*)::int AS n FROM users');
+  assert.equal(users.rows[0].n, seedUsers.length, 'every seeded account is a row');
+  const version = await pool.query("SELECT last_value::int AS v FROM sequences WHERE name = 'state_version'");
+  assert.equal(version.rows[0].v, 1);
+  await api.close();
+});
+
+test('an order placed through the API is stored as order and order_items rows', async () => {
+  // Arrange
+  const api = await spawnServer();
+  const token = await api.login('waiter');
+  const { body } = await api.call('GET', '/menu');
+  const [first, second] = body.menu.flatMap((c) => c.items);
+
+  // Act
+  const placed = await api.call('POST', '/orders', {
+    token, body: { type: 'dine-in', items: [{ menuItemId: first.id, qty: 2 }, { menuItemId: second.id, qty: 1 }] },
+  });
+
+  // Assert
+  assert.equal(placed.status, 201);
+  const { rows } = await pool.query(
+    'SELECT oi.qty FROM order_items oi JOIN orders o ON o.id = oi.order_id WHERE o.ext_id = $1 ORDER BY oi.id',
+    [placed.body.order.id],
+  );
+  assert.deepEqual(rows.map((r) => r.qty), [2, 1]);
   await api.close();
 });
 
@@ -100,7 +121,7 @@ test('a write survives a cold start on another instance', async () => {
   const token = await first.login('manager');
 
   // Act
-  const created = await first.call('POST', '/customers', { token, body: { name: 'Persisted Pat' } });
+  const created = await first.call('POST', '/customers', { token, body: { name: 'Persisted Pat', phone: '+92 300 5550199' } });
   await first.close();
   const second = await spawnServer();
   const token2 = await second.login('manager');
@@ -108,6 +129,25 @@ test('a write survives a cold start on another instance', async () => {
   // Assert
   assert.equal(created.status, 201);
   assert.ok((await customerNames(second, token2)).includes('Persisted Pat'));
+  await second.close();
+});
+
+test('logout persists revocation across independent API instances', async () => {
+  // Arrange
+  const first = await spawnServer();
+  const second = await spawnServer();
+  const token = await first.login('customer');
+  const beforeLogout = await second.call('GET', '/auth/me', { token });
+
+  // Act
+  const logout = await first.call('POST', '/auth/logout', { token });
+  const afterLogout = await second.call('GET', '/auth/me', { token });
+
+  // Assert
+  assert.equal(beforeLogout.status, 200);
+  assert.equal(logout.status, 204);
+  assert.equal(afterLogout.status, 401);
+  await first.close();
   await second.close();
 });
 
@@ -119,7 +159,7 @@ test('concurrent writes on two instances are all kept', async () => {
 
   // Act
   const results = await Promise.all(names.map((name, i) =>
-    (i % 2 ? b : a).call('POST', '/customers', { token: i % 2 ? tokenB : tokenA, body: { name } })));
+    (i % 2 ? b : a).call('POST', '/customers', { token: i % 2 ? tokenB : tokenA, body: { name, phone: '+92 300 55502' + String(i).padStart(2, '0') } })));
 
   // Assert
   assert.deepEqual(results.map((r) => r.status), names.map(() => 201));

@@ -7,15 +7,22 @@
  * orders, tonight's bookings), 60 days of closed history for analytics, 90
  * days of shifts and attendance, and upcoming shifts.
  */
-import bcrypt from 'bcryptjs';
+import { hashPassword } from '../lib/passwords.js';
+import { UserDirectory } from '../domain/user-directory.js';
 import { priceSelection, computeTotals } from '../lib/order-math.js';
 import { MINUTE, localDate, localTime, addDays, iso } from '../lib/time.js';
 import { seedHistory } from './seed-history.js';
 import { seedAttendance } from './seed-attendance.js';
 import { DEFAULT_WAGES } from '../lib/payroll.js';
 
-export const ROLES = ['customer', 'waiter', 'chef', 'manager', 'admin'];
-export const STAFF_ROLES = ['waiter', 'chef', 'manager', 'admin'];
+export const ROLES = ['customer', 'waiter', 'chef', 'manager', 'admin', 'superadmin'];
+export const STAFF_ROLES = ['waiter', 'chef', 'manager', 'admin', 'superadmin'];
+
+/**
+ * The one account bound to the super admin role (lib/hierarchy.js). The API
+ * never assigns the role; scripts/superadmin.js binds it on a database.
+ */
+export const SUPERADMIN_EMAIL = 'sabihuddin106@gmail.com';
 
 export const counters = {};
 
@@ -52,10 +59,13 @@ export const TIME_SLOTS = [
 
 /* ------------------------------------------------------------------ users */
 
-const DEMO_PASSWORD_HASH = bcrypt.hashSync('password', 10);
+const DEMO_PASSWORD_HASH = hashPassword('password');
+const SUPERUSER_PASSWORD_HASH = hashPassword('Admin@123456');
 
 const seedUsers = [
   { id: 'usr_admin', name: 'Alex Admin', email: 'admin@rest.test', role: 'admin' },
+  { id: 'usr_super_sabih', name: 'Sabih Uddin', email: SUPERADMIN_EMAIL, role: 'superadmin', passwordHash: SUPERUSER_PASSWORD_HASH },
+  { id: 'usr_super_shahan', name: 'Shahan Arain', email: 'shahanarain33@gmail.com', role: 'admin', passwordHash: SUPERUSER_PASSWORD_HASH },
   { id: 'usr_manager', name: 'Maya Manager', email: 'manager@rest.test', role: 'manager' },
   { id: 'usr_chef', name: 'Carlos Chef', email: 'chef@rest.test', role: 'chef' },
   { id: 'usr_chef2', name: 'Cara Cook', email: 'chef2@rest.test', role: 'chef' },
@@ -70,17 +80,20 @@ export const users = seedUsers.map((u) => ({
   active: true,
   mustChangePassword: false,
   tokenVersion: 0,
-  passwordHash: DEMO_PASSWORD_HASH,
+  passwordHash: u.passwordHash ?? DEMO_PASSWORD_HASH,
   ...(STAFF_ROLES.includes(u.role) ? { hourlyWage: DEFAULT_WAGES[u.role] } : {}),
   createdAt: iso(addDays(new Date(), -120)),
 }));
 
+/** The users array behind one object: O(1) verified lookups and encapsulated add/remove (domain/user-directory.js). */
+export const userDirectory = new UserDirectory(users);
+
 export function findUserByEmail(email) {
-  return users.find((u) => u.email.toLowerCase() === String(email || '').toLowerCase().trim());
+  return userDirectory.byEmail(email);
 }
 
 export function findUserById(id) {
-  return users.find((u) => u.id === id);
+  return userDirectory.byId(id);
 }
 
 export function sanitizeUser(user) {
@@ -96,7 +109,7 @@ export function createUser({ name, email, password, role = 'customer', mustChang
     name: String(name).trim(),
     email: String(email).toLowerCase().trim(),
     phone: '',
-    passwordHash: bcrypt.hashSync(password, 10),
+    passwordHash: hashPassword(password),
     role,
     active: true,
     mustChangePassword,
@@ -104,7 +117,7 @@ export function createUser({ name, email, password, role = 'customer', mustChang
     ...(STAFF_ROLES.includes(role) ? { hourlyWage: DEFAULT_WAGES[role] } : {}),
     createdAt: iso(),
   };
-  users.push(user);
+  userDirectory.add(user);
   return user;
 }
 

@@ -138,7 +138,7 @@ test('unknown people and customers are 404; customers cannot use workforce at al
   assert.deepEqual([unknown.status, customer.status, asCustomer.status], [404, 404, 403]);
 });
 
-test('the admin sees everyone with pay', async () => {
+test('the admin sees everyone up to their own rank with pay', async () => {
   // Act
   const manager = await get('/workforce/users/usr_manager', tokens.admin);
   const overview = await get('/workforce/overview', tokens.admin);
@@ -148,7 +148,7 @@ test('the admin sees everyone with pay', async () => {
   assert.equal(manager.body.pay.hourlyWage, 20);
   assert.equal(overview.status, 200);
   assert.equal(overview.body.month, thisMonth);
-  assert.deepEqual(overview.body.rows.map((r) => r.user.id).sort(), ['usr_admin', 'usr_chef', 'usr_chef2', 'usr_manager', 'usr_waiter', 'usr_waiter2']);
+  assert.deepEqual(overview.body.rows.map((r) => r.user.id).sort(), ['usr_admin', 'usr_chef', 'usr_chef2', 'usr_manager', 'usr_super_shahan', 'usr_waiter', 'usr_waiter2']);
   assert.ok(overview.body.rows.every((r) => r.pay && ['off', 'working', 'on_break'].includes(r.state)));
   const sum = overview.body.rows.reduce((s, r) => s + r.pay.net, 0);
   assert.equal(overview.body.totals.payroll, Math.round(sum * 100) / 100);
@@ -334,4 +334,39 @@ test('a newly approved hire gets the default wage for their role', async () => {
   assert.ok(!('hourlyWage' in approved.body.user));
   assert.equal(pay.hourlyWage, 15);
   assert.equal(pay.net, 0);
+});
+
+test('DELETE /workforce/users/:id/adjustments/:adjId on unknown staff returns 404', async () => {
+  // Act
+  const notFound = await api.call('DELETE', '/workforce/users/usr_unknown_staff/adjustments/adj_999', { token: tokens.admin });
+
+  // Assert
+  assert.equal(notFound.status, 404);
+  assert.equal(notFound.body.error, 'Staff member not found.');
+});
+
+test("the super admin sees everyone's pay, its own included; an admin can neither see nor change the super admin's", async () => {
+  // Arrange
+  const superadmin = await api.login('sabihuddin106@gmail.com', 'Admin@123456');
+
+  // Act
+  const overview = await get('/workforce/overview', superadmin);
+  const adminRecord = await get('/workforce/users/usr_admin', superadmin);
+  const asAdmin = await get('/workforce/users/usr_super_sabih', tokens.admin);
+  const wageAsAdmin = await api.call('PUT', '/workforce/users/usr_super_sabih/wage', { token: tokens.admin, body: { hourlyWage: 1 } });
+  const bonusAsAdmin = await api.call('POST', '/workforce/users/usr_super_sabih/adjustments', { token: tokens.admin, body: { amount: -500, reason: 'Takeover' } });
+  const removeAsAdmin = await api.call('DELETE', '/workforce/users/usr_super_sabih/adjustments/adj_nope', { token: tokens.admin });
+  const wageForAdmin = await api.call('PUT', '/workforce/users/usr_admin/wage', { token: superadmin, body: { hourlyWage: 26 } });
+
+  // Assert
+  assert.equal(overview.status, 200);
+  assert.ok(overview.body.rows.some((r) => r.user.id === 'usr_super_sabih'), 'the super admin is on their own overview');
+  assert.ok(overview.body.rows.every((r) => r.pay), 'with pay for everyone');
+  assert.equal(adminRecord.status, 200);
+  assert.ok(adminRecord.body.pay, "the super admin sees an admin's pay");
+  assert.equal(asAdmin.status, 403);
+  assert.equal(wageAsAdmin.status, 403);
+  assert.equal(bonusAsAdmin.status, 403);
+  assert.equal(removeAsAdmin.status, 403);
+  assert.equal(wageForAdmin.status, 200);
 });

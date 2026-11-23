@@ -109,6 +109,30 @@ describe('ProfileEditor', () => {
     expect(onSaved).toHaveBeenCalledWith(updated);
   });
 
+  it('asks for the current password before submitting an email change', async () => {
+    // Arrange
+    const customer = makeCustomer();
+    const email = 'new@example.com';
+    const user = userEvent.setup({ delay: null });
+    vi.mocked(customerApi.updateMe).mockResolvedValue({ customer: { ...customer, email } });
+    renderEditor(customer);
+
+    // Act
+    await user.clear(screen.getByLabelText('Email'));
+    await user.type(screen.getByLabelText('Email'), email);
+    const save = screen.getByRole('button', { name: /save changes/i });
+
+    // Assert
+    expect(save).toBeDisabled();
+
+    // Act
+    await user.type(screen.getByLabelText('Current password'), 'current-secret');
+    await user.click(save);
+
+    // Assert
+    expect(customerApi.updateMe).toHaveBeenCalledWith(expect.objectContaining({ email, currentPassword: 'current-secret' }));
+  });
+
   it('toggles an allergy preference chip', async () => {
     // Arrange
     const customer = makeCustomer();

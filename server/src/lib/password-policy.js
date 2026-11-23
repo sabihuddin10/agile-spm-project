@@ -10,6 +10,13 @@ import crypto from 'node:crypto';
 
 export const PASSWORD_MIN = 8;
 export const PASSWORD_MAX = 128;
+/**
+ * bcrypt only ever reads the first 72 BYTES of a password. A longer one is accepted but silently cut off,
+ * so two different long passwords that start the same would unlock the same account. New passwords are
+ * therefore limited to 72 bytes (UTF-8: accented letters count 2, emoji 4). Sign-in still accepts up to
+ * PASSWORD_MAX characters, so an existing account with a longer password keeps working.
+ */
+export const PASSWORD_MAX_BYTES = 72;
 
 /** Printable ASCII that is not a letter or digit, plus any non-ASCII symbol. */
 const SPECIAL_RE = /[^A-Za-z0-9\s]/;
@@ -46,6 +53,9 @@ export function checkPassword(password, { email, name } = {}) {
   if (typeof password !== 'string') return ['a password (text)'];
   const problems = PASSWORD_RULES.filter((r) => !r.test(password)).map((r) => r.message);
   if (password.length > PASSWORD_MAX) problems.push(`at most ${PASSWORD_MAX} characters`);
+  else if (Buffer.byteLength(password, 'utf8') > PASSWORD_MAX_BYTES) {
+    problems.push(`at most ${PASSWORD_MAX_BYTES} bytes (about ${PASSWORD_MAX_BYTES} characters; accented letters and emoji count as 2 to 4)`);
+  }
   const lower = password.toLowerCase();
   const mail = norm(email);
   const personal = [mail, mail.split('@')[0], norm(name), norm(name).replace(/\s+/g, '')].filter((v) => v.length >= 3);

@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import type { Shift, ShiftStatus, User } from '@/types';
 import { staffApi } from '@/lib/api';
-import { SHIFT_STATUS, errorMessage, formatDate, localDateISO } from '@/lib/format';
+import { SHIFT_STATUS, errorMessage, formatDate, formatClock, localDateISO } from '@/lib/format';
 import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toast';
 import { ROLE_META, formatHours, hoursBetween, roleRank } from '@/components/staff/role-meta';
@@ -114,8 +114,8 @@ export function ShiftForm({
         {shift ? (
           <p className="text-sm text-stone-600">
             {shift.userName}
-            {shift.role ? ` · ${ROLE_META[shift.role].label}` : ''} — originally {formatDate(shift.date)}, {shift.start}–
-            {shift.end}
+            {shift.role ? ` · ${ROLE_META[shift.role].label}` : ''} — originally {formatDate(shift.date)}, {formatClock(shift.start)}–
+            {formatClock(shift.end)}
           </p>
         ) : (
           <div>

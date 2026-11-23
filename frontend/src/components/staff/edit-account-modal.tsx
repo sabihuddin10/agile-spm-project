@@ -45,7 +45,7 @@ export function EditAccountModal({
   const [serverErrors, setServerErrors] = useState<Partial<Record<Field, string>>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const v = useFormValidation(draft, RULES, { labels: LABELS });
+  const v = useFormValidation(draft, { ...RULES, phone: (p) => validatePhone(p, { original: user.phone ?? '' }) }, { labels: LABELS });
   const errors = {
     name: serverErrors.name ?? v.errors.name,
     email: serverErrors.email ?? v.errors.email,

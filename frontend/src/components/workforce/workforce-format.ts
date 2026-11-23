@@ -1,6 +1,6 @@
 import type { AttendanceState, StaffAnalytics, WorkShift } from '@/types';
 import type { Tone } from '@/lib/format';
-import { localDateISO } from '@/lib/format';
+import { formatClock, localDateISO } from '@/lib/format';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -11,11 +11,11 @@ export const STATE_META: Record<AttendanceState, { label: string; tone: Tone; do
   off: { label: 'Off', tone: 'stone', dot: 'bg-stone-300' },
 };
 
-/** 24-hour clock time of an ISO timestamp: '14:05'. */
+/** 12-hour clock time of an ISO timestamp: '2:05 PM'. */
 export function clockTime(iso: string | null | undefined): string {
   if (!iso) return '—';
   const d = new Date(iso);
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return formatClock(`${pad(d.getHours())}:${pad(d.getMinutes())}`);
 }
 
 /** Minutes → hours with one decimal: 450 → '7.5 h'. */

@@ -76,6 +76,17 @@ describe('DevShell', () => {
     expect(screen.getByRole('link', { name: 'Staff console' })).toBeInTheDocument();
   });
 
+  it('links the super admin to the staff console', () => {
+    // Arrange
+    vi.mocked(useAuth).mockReturnValue({ user: makeUser({ role: 'superadmin' }), logout: vi.fn() } as unknown as ReturnType<typeof useAuth>);
+
+    // Act
+    render(<DevShell>content</DevShell>);
+
+    // Assert
+    expect(screen.getByRole('link', { name: 'Staff console' })).toBeInTheDocument();
+  });
+
   it('hides the staff console link for a customer', () => {
     // Arrange
     vi.mocked(useAuth).mockReturnValue({ user: makeUser({ role: 'customer' }), logout: vi.fn() } as unknown as ReturnType<typeof useAuth>);
@@ -89,7 +100,7 @@ describe('DevShell', () => {
 
   it('signs out and redirects to login', async () => {
     // Arrange
-    const logout = vi.fn();
+    const logout = vi.fn().mockResolvedValue(true);
     vi.mocked(useAuth).mockReturnValue({ user: makeUser(), logout } as unknown as ReturnType<typeof useAuth>);
     const user = userEvent.setup({ delay: null });
     render(<DevShell>content</DevShell>);
@@ -150,7 +161,7 @@ describe('MenuDrawer', () => {
 
   it('signs out and closes when "Sign out" is clicked', async () => {
     // Arrange
-    const logout = vi.fn();
+    const logout = vi.fn().mockResolvedValue(true);
     const onClose = vi.fn();
     vi.mocked(useAuth).mockReturnValue({ user: makeUser({ role: 'customer' }), logout } as unknown as ReturnType<typeof useAuth>);
     const user = userEvent.setup({ delay: null });
@@ -382,6 +393,36 @@ describe('StaffShell', () => {
     expect(screen.queryByRole('link', { name: 'Staff management' })).not.toBeInTheDocument();
   });
 
+  it("labels the signed-in role in the sidebar with the role's display name", () => {
+    // Arrange
+    vi.mocked(useAuth).mockReturnValue({ user: makeUser({ role: 'superadmin' }), logout: vi.fn() } as unknown as ReturnType<typeof useAuth>);
+
+    // Act
+    render(<StaffShell>content</StaffShell>);
+
+    // Assert
+    expect(screen.getByText('Super admin')).toBeInTheDocument();
+  });
+
+  it('gives the super admin every section an admin gets', () => {
+    // Arrange
+    const linksFor = (role: User['role']) => {
+      vi.mocked(useAuth).mockReturnValue({ user: makeUser({ role }), logout: vi.fn() } as unknown as ReturnType<typeof useAuth>);
+      const { unmount } = render(<StaffShell>content</StaffShell>);
+      const names = screen.getAllByRole('link').map((a) => a.textContent ?? '').sort();
+      unmount();
+      return names;
+    };
+
+    // Act
+    const asAdmin = linksFor('admin');
+    const asSuperadmin = linksFor('superadmin');
+
+    // Assert
+    expect(asAdmin).toContain('Staff management');
+    expect(asSuperadmin).toEqual(asAdmin);
+  });
+
   it('shows a "My account" link for every staff role', () => {
     for (const role of ['waiter', 'chef', 'manager', 'admin'] as const) {
       // Arrange
@@ -457,7 +498,7 @@ describe('StaffShell', () => {
 
   it('signs out and routes to login', async () => {
     // Arrange
-    const logout = vi.fn();
+    const logout = vi.fn().mockResolvedValue(true);
     vi.mocked(useAuth).mockReturnValue({ user: makeUser({ role: 'manager' }), logout } as unknown as ReturnType<typeof useAuth>);
     const user = userEvent.setup({ delay: null });
     render(<StaffShell>content</StaffShell>);
@@ -571,7 +612,7 @@ describe('StorefrontShell', () => {
 
   it('shows a staff link and the account menu for a signed-in staff member', async () => {
     // Arrange
-    const logout = vi.fn();
+    const logout = vi.fn().mockResolvedValue(true);
     vi.mocked(useAuth).mockReturnValue({ user: makeUser({ role: 'manager' }), logout } as unknown as ReturnType<typeof useAuth>);
     vi.mocked(useCart).mockReturnValue({ count: 0, setOpen: vi.fn() } as unknown as ReturnType<typeof useCart>);
     const user = userEvent.setup({ delay: null });

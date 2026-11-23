@@ -15,10 +15,25 @@
     "build": "npm --prefix frontend run build",
     "start": "concurrently -n server,web -c blue,green \"npm --prefix server run start\" \"npm --prefix frontend run start\"",
     "lint": "npm --prefix frontend run lint && npm --prefix server run lint",
-    "test": "npm --prefix server test"
+    "test": "npm --prefix server test",
+    "e2e": "playwright test -c e2e/playwright.config.ts",
+    "e2e:install": "playwright install chromium firefox webkit",
+    "check:lockfiles": "node scripts/check-lockfiles.mjs",
+    "audit:prod": "node scripts/audit-gate.mjs",
+    "test:scripts": "node --test scripts/audit-policy.test.mjs",
+    "verify": "pnpm run check:lockfiles && pnpm run test:scripts && pnpm --dir server run lint && pnpm --dir server test && pnpm --dir frontend run lint && pnpm --dir frontend run test && pnpm --dir frontend exec tsc --noEmit && pnpm run audit:prod"
   },
   "devDependencies": {
+    "@playwright/test": "1.64.1",
     "concurrently": "^8.2.2"
+  },
+  "pnpm": {
+    "overrides": {
+      "next>postcss": "^8.5.18",
+      "source-map-js": "^1.2.2",
+      "body-parser": "~1.20.9",
+      "proxy-addr": "~2.0.8"
+    }
   },
   "engines": {
     "node": ">=18.0.0"

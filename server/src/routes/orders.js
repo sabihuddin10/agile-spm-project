@@ -30,6 +30,7 @@ import {
 import { notify } from '../lib/notify.js';
 import { localDate, iso } from '../lib/time.js';
 import { text, number } from '../lib/validate.js';
+import { hasRole } from '../lib/hierarchy.js';
 
 const router = Router();
 
@@ -114,7 +115,7 @@ function provisionCustomer(user) {
 router.post('/', (req, res) => {
   const user = req.user;
   const isCustomer = user.role === 'customer';
-  if (!isCustomer && !FLOOR.includes(user.role)) {
+  if (!isCustomer && !hasRole(user, ...FLOOR)) {
     return res.status(403).json({ error: 'Your role cannot place orders.' });
   }
 
@@ -315,12 +316,12 @@ router.post('/:id/status', (req, res) => {
   const cancelReason = text(reason, 'Reason', { max: 300 });
 
   const customerCancel = status === 'cancelled' && order.status === 'placed' && isOwner(order, req.user);
-  if (!customerCancel && !rule.roles.includes(req.user.role)) {
+  if (!customerCancel && !hasRole(req.user, ...rule.roles)) {
     return res.status(403).json({ error: 'You do not have permission to perform this action.' });
   }
   // Cancelling a paid order refunds it, so outside the customer's own pre-kitchen
   // cancel it needs the same authority as a refund (POST /billing/:id/refund).
-  if (status === 'cancelled' && order.paymentStatus === 'paid' && !customerCancel && !MANAGEMENT.includes(req.user.role)) {
+  if (status === 'cancelled' && order.paymentStatus === 'paid' && !customerCancel && !hasRole(req.user, ...MANAGEMENT)) {
     return res.status(403).json({ error: 'Only a manager can cancel a paid order, because it refunds the payment.' });
   }
   if (!rule.from.includes(order.status)) {
@@ -371,7 +372,7 @@ router.patch('/:id/items/:itemId', staffRoles, (req, res) => {
   const { status } = req.body || {};
   const rule = typeof status === 'string' && Object.hasOwn(ITEM_TRANSITIONS, status) ? ITEM_TRANSITIONS[status] : null;
   if (!rule) return res.status(400).json({ error: 'Invalid item status.' });
-  if (!rule.roles.includes(req.user.role)) {
+  if (!hasRole(req.user, ...rule.roles)) {
     return res.status(403).json({ error: 'You do not have permission to perform this action.' });
   }
   if (!['confirmed', 'preparing', 'ready', 'served'].includes(order.status)) {
@@ -412,7 +413,7 @@ router.patch('/:id/table', floorRoles, (req, res) => {
 
   const previous = order.tableId;
   order.tableId = table.id;
-  if (!order.waiterId && FLOOR.includes(req.user.role)) order.waiterId = req.user.id;
+  if (!order.waiterId && hasRole(req.user, ...FLOOR)) order.waiterId = req.user.id;
   occupyTable(table.id, order.waiterId);
   if (previous && previous !== table.id) releaseTable({ ...order, tableId: previous });
 

@@ -38,18 +38,14 @@ import type {
   WorkShiftStatus,
   WorkSummary,
 } from '@/types';
+import { DEFAULT_ATTENDANCE_SETTINGS } from '@/lib/attendance-defaults';
 
 /* ------------------------------------------------------------- constants */
 
-export const DEFAULT_ATTENDANCE_SETTINGS: AttendanceSettings = {
-  lateGraceMinutes: 5,
-  latePenalty: 5,
-  autoBreakMinutes: 60,
-  autoBreakAfterHours: 6,
-};
+export { DEFAULT_ATTENDANCE_SETTINGS };
 
 /** Seed hourly wage per role. */
-export const DEFAULT_WAGES: Record<StaffRole, number> = { waiter: 12, chef: 15, manager: 20, admin: 25 };
+export const DEFAULT_WAGES: Record<StaffRole, number> = { waiter: 12, chef: 15, manager: 20, admin: 25, superadmin: 25 };
 
 /** [field, min, max] — validation for the attendance settings (same message format as the server). */
 export const ATTENDANCE_SETTING_LIMITS: [keyof AttendanceSettings, number, number][] = [
@@ -467,6 +463,10 @@ const TEMPLATES: Record<StaffRole, [string, string][]> = {
     ['09:00', '15:00'],
     ['10:00', '18:00'],
   ],
+  superadmin: [
+    ['09:00', '15:00'],
+    ['10:00', '18:00'],
+  ],
 };
 
 const HISTORY_DAYS = 90;
@@ -654,6 +654,7 @@ const PRESENCE_SCOPE: Record<StaffRole, StaffRole[]> = {
   chef: ['chef'],
   manager: ['manager', 'waiter', 'chef'],
   admin: ['admin', 'manager', 'chef', 'waiter'],
+  superadmin: ['superadmin', 'admin', 'manager', 'chef', 'waiter'],
 };
 
 export function createWorkforceMock(options: WorkforceMockOptions = {}) {

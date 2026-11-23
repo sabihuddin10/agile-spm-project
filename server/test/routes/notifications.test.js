@@ -139,3 +139,15 @@ test('every notifications endpoint needs a token', async () => {
   // Assert
   for (const res of results) assert.equal(res.status, 401);
 });
+
+test('the super admin gets the notifications broadcast to admins', async () => {
+  // Arrange
+  const superadmin = await api.login('sabihuddin106@gmail.com', 'Admin@123456');
+  await api.call('POST', '/staff/applications', { body: { name: 'Nina Notice', email: 'nina.notice@example.com', desiredRole: 'waiter' } });
+
+  // Act
+  const { notifications } = (await api.call('GET', '/notifications', { token: superadmin })).body;
+
+  // Assert
+  assert.ok(notifications.some((n) => n.type === 'application' && n.message.includes('Nina Notice')), 'admin broadcasts reach the super admin');
+});

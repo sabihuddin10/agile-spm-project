@@ -1,0 +1,4 @@
+{
+  "$comment": "Approved exceptions to the production advisory gate (scripts/audit-gate.mjs). Keep it empty unless a high or critical finding truly cannot be fixed yet. Each entry needs: advisory (GHSA id), package, owner, reason (at least 20 characters), and expires (YYYY-MM-DD, at most 90 days ahead). Expired entries fail the gate. See docs/dependency-policy.md.",
+  "exceptions": []
+}

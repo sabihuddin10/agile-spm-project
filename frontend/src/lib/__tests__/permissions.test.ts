@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ASSIGNABLE_ROLES,
   can,
   canAccess,
   canAdministerAccount,
   canManageAccount,
+  holdsRole,
   isStaff,
   ROLE_RANK,
   SECTION_ROLES,
@@ -63,6 +65,7 @@ describe('can.*', () => {
     ['deleteCustomers', ['manager', 'admin']],
     ['viewRecipes', ['chef', 'manager', 'admin']],
     ['approveStaff', ['manager', 'admin']],
+    ['approveManagers', ['admin']],
     ['scheduleShifts', ['manager', 'admin']],
     ['assignRoles', ['admin']],
     ['suspendStaff', ['admin']],
@@ -107,9 +110,9 @@ describe('workforce sections', () => {
 });
 
 describe('ROLE_RANK', () => {
-  it('ranks admin over manager over chef and waiter, which are equal', () => {
+  it('ranks the super admin over admin over manager over chef and waiter, which are equal', () => {
     // Arrange / Act / Assert
-    expect(ROLE_RANK).toEqual({ admin: 3, manager: 2, chef: 1, waiter: 1 });
+    expect(ROLE_RANK).toEqual({ superadmin: 4, admin: 3, manager: 2, chef: 1, waiter: 1 });
   });
 });
 
@@ -119,15 +122,17 @@ const acct = (role: Role, id = `usr_${role}`) => ({ id, role });
 describe('canManageAccount', () => {
   // Expected result for every actor (row) x target (column) pair of distinct accounts.
   const matrix: Record<Role, Record<Role, boolean>> = {
-    admin: { admin: false, manager: true, chef: true, waiter: true, customer: false },
-    manager: { admin: false, manager: false, chef: true, waiter: true, customer: false },
-    chef: { admin: false, manager: false, chef: false, waiter: false, customer: false },
-    waiter: { admin: false, manager: false, chef: false, waiter: false, customer: false },
-    customer: { admin: false, manager: false, chef: false, waiter: false, customer: false },
+    superadmin: { superadmin: false, admin: true, manager: true, chef: true, waiter: true, customer: false },
+    admin: { superadmin: false, admin: false, manager: true, chef: true, waiter: true, customer: false },
+    manager: { superadmin: false, admin: false, manager: false, chef: true, waiter: true, customer: false },
+    chef: { superadmin: false, admin: false, manager: false, chef: false, waiter: false, customer: false },
+    waiter: { superadmin: false, admin: false, manager: false, chef: false, waiter: false, customer: false },
+    customer: { superadmin: false, admin: false, manager: false, chef: false, waiter: false, customer: false },
   };
+  const roles = Object.keys(matrix) as Role[];
 
-  for (const actorRole of ALL_ROLES) {
-    for (const targetRole of ALL_ROLES) {
+  for (const actorRole of roles) {
+    for (const targetRole of roles) {
       const expected = matrix[actorRole][targetRole];
       it(`${actorRole} ${expected ? 'can' : 'cannot'} manage another ${targetRole}`, () => {
         // Arrange
@@ -176,5 +181,57 @@ describe('canAdministerAccount', () => {
       }
     }
     expect(canAdministerAccount(null, acct('waiter'))).toBe(false);
+  });
+});
+
+describe('the super admin', () => {
+  it('opens every section an admin opens', () => {
+    // Arrange
+    const sections = Object.keys(SECTION_ROLES) as Section[];
+
+    // Act / Assert
+    for (const section of sections) expect(canAccess('superadmin', section)).toBe(canAccess('admin', section));
+  });
+
+  it('may take every action an admin may', () => {
+    // Arrange
+    const actions = Object.keys(can) as (keyof typeof can)[];
+
+    // Act / Assert
+    for (const action of actions) expect(can[action]('superadmin')).toBe(can[action]('admin'));
+  });
+
+  it('is staff and ranks above admin', () => {
+    // Act / Assert
+    expect(isStaff('superadmin')).toBe(true);
+    expect(ROLE_RANK.superadmin).toBeGreaterThan(ROLE_RANK.admin);
+  });
+
+  it('manages and administers admins, and no admin manages or administers the super admin', () => {
+    // Arrange
+    const superadmin = { id: 'usr_super', role: 'superadmin' as Role };
+    const adminAccount = { id: 'usr_admin', role: 'admin' as Role };
+
+    // Act / Assert
+    expect(canManageAccount(superadmin, adminAccount)).toBe(true);
+    expect(canAdministerAccount(superadmin, adminAccount)).toBe(true);
+    expect(canManageAccount(adminAccount, superadmin)).toBe(false);
+    expect(canAdministerAccount(adminAccount, superadmin)).toBe(false);
+    expect(canManageAccount(superadmin, superadmin)).toBe(false);
+  });
+
+  it('holdsRole mirrors the server: the super admin holds admin and its own role, nobody else inherits', () => {
+    // Act / Assert
+    expect(holdsRole('superadmin', ['admin'])).toBe(true);
+    expect(holdsRole('superadmin', ['superadmin'])).toBe(true);
+    expect(holdsRole('superadmin', ['manager'])).toBe(false);
+    expect(holdsRole('admin', ['superadmin'])).toBe(false);
+    expect(holdsRole('manager', ['manager', 'admin'])).toBe(true);
+    expect(holdsRole(null, ['admin'])).toBe(false);
+  });
+
+  it('is never offered as a role to assign', () => {
+    // Act / Assert
+    expect(ASSIGNABLE_ROLES).toEqual(['customer', 'waiter', 'chef', 'manager', 'admin']);
   });
 });

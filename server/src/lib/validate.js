@@ -72,11 +72,13 @@ export function email(value, { required = true, label = 'Email' } = {}) {
  * Accepts 0300…, 92300…, +92 300…, 0092… or 300…, with any spaces, dashes or brackets.
  * Empty is allowed.
  */
-export function phone(value, label = 'Phone') {
+export function phone(value, label = 'Phone', { current } = {}) {
   if (missing(value)) return undefined;
   if (typeof value !== 'string') badRequest('Please enter a valid phone number.');
   const clean = value.trim();
   if (!clean) return '';
+  // A record saved before the +92 format keeps its phone while it is not edited.
+  if (typeof current === 'string' && current && clean === current.trim()) return current;
   let digits = clean.length > PHONE_MAX || !PHONE_RE.test(clean) ? '' : clean.replace(/\D/g, '');
   if (digits.startsWith('0092')) digits = digits.slice(4);
   else if (digits.startsWith('92') && digits.length === 12) digits = digits.slice(2);

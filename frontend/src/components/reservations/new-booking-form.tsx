@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { Reservation } from '@/types';
 import { ApiError, reservationApi, type BookingConflict } from '@/lib/api';
-import { addDaysISO, errorMessage, formatDate, localDateISO } from '@/lib/format';
+import { addDaysISO, errorMessage, formatDate, localDateISO, formatClock } from '@/lib/format';
 import { useToast } from '@/components/ui/toast';
 import { FieldError, SubmitHint, describedBy } from '@/components/forms/field-error';
 import { TONES } from '@/components/forms/tone';
@@ -259,7 +259,7 @@ export function NewBookingForm({
                     setForm((f) => ({ ...f, date: alt.date, time: alt.time }));
                   }}
                 >
-                  {dayLabel(alt.date)} · {alt.time}
+                  {dayLabel(alt.date)} · {formatClock(alt.time)}
                 </button>
               ))}
             </div>

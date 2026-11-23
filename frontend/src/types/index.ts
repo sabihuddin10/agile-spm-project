@@ -1,4 +1,4 @@
-export type Role = 'customer' | 'waiter' | 'chef' | 'manager' | 'admin';
+export type Role = 'customer' | 'waiter' | 'chef' | 'manager' | 'admin' | 'superadmin';
 export type StaffRole = Exclude<Role, 'customer'>;
 
 export interface User {

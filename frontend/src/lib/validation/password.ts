@@ -6,6 +6,8 @@
 
 export const PASSWORD_MIN = 8;
 export const PASSWORD_MAX = 128;
+/** bcrypt ignores everything after 72 bytes; the server rejects new passwords longer than that (UTF-8). */
+export const PASSWORD_MAX_BYTES = 72;
 
 export type PasswordRuleId = 'length' | 'lower' | 'upper' | 'number' | 'special';
 
@@ -58,6 +60,9 @@ export function checkPassword(password: string, { email, name }: PasswordContext
   const metCount = rules.filter((r) => r.met).length;
   const extra: string[] = [];
   if (password.length > PASSWORD_MAX) extra.push(`Use at most ${PASSWORD_MAX} characters.`);
+  else if (new TextEncoder().encode(password).length > PASSWORD_MAX_BYTES) {
+    extra.push(`Use at most ${PASSWORD_MAX_BYTES} bytes (about ${PASSWORD_MAX_BYTES} characters; accented letters and emoji count as 2 to 4).`);
+  }
   const lower = password.toLowerCase();
   const mail = norm(email);
   const personal = [mail, mail.split('@')[0], norm(name), norm(name).replace(/\s+/g, '')].filter((v) => v.length >= 3);

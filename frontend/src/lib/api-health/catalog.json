@@ -178,8 +178,7 @@
             "active": true,
             "mustChangePassword": false,
             "createdAt": "2026-01-04T10:00:00.000Z"
-          },
-          "token": "<jwt>"
+          }
         }
       },
       "errors": [
@@ -198,7 +197,7 @@
       "path": "/api/auth/login",
       "params": [],
       "documented": true,
-      "summary": "Sign in with email and password (any role) and receive a JWT.",
+      "summary": "Sign in with email and password (any role) and receive an HttpOnly session cookie.",
       "auth": "none",
       "roles": [],
       "rolesSource": null,
@@ -228,15 +227,39 @@
             "active": true,
             "mustChangePassword": false,
             "createdAt": "2026-01-04T10:00:00.000Z"
-          },
-          "token": "<jwt>"
+          }
         }
       },
       "errors": [
         "400 email or password missing / not text",
         "401 wrong email or password",
-        "403 account suspended"
+        "403 account suspended",
+        "429 too many attempts"
       ],
+      "probe": {
+        "enabled": false,
+        "reason": "Not probed (mutating)"
+      }
+    },
+    {
+      "id": "POST /api/auth/logout",
+      "module": "auth",
+      "method": "POST",
+      "path": "/api/auth/logout",
+      "params": [],
+      "documented": true,
+      "summary": "Revoke every session for the signed-in account and clear the browser cookie.",
+      "auth": "none",
+      "roles": [],
+      "rolesSource": null,
+      "access": null,
+      "query": null,
+      "body": null,
+      "response": {
+        "status": 204,
+        "example": null
+      },
+      "errors": [],
       "probe": {
         "enabled": false,
         "reason": "Not probed (mutating)"
@@ -333,6 +356,7 @@
       },
       "errors": [
         "400 blank name / invalid email or phone / wrong or missing current password",
+        "403 the super admin's email is bound to the role",
         "409 email already in use"
       ],
       "probe": {
@@ -347,7 +371,7 @@
       "path": "/api/auth/me/password",
       "params": [],
       "documented": true,
-      "summary": "Change your own password. Your other sessions are signed out; use the returned token for this one. Admins do not need their current password.",
+      "summary": "Confirm your current password and set a new one. The browser receives a new session cookie and other sessions are revoked.",
       "auth": "required",
       "roles": [],
       "rolesSource": null,
@@ -356,8 +380,8 @@
       "body": {
         "currentPassword": {
           "type": "string",
-          "required": false,
-          "note": "Required for everyone except admins"
+          "required": true,
+          "note": ""
         },
         "newPassword": {
           "type": "string",
@@ -377,8 +401,7 @@
             "active": true,
             "mustChangePassword": false,
             "createdAt": "2026-01-04T10:00:00.000Z"
-          },
-          "token": "<jwt>"
+          }
         }
       },
       "errors": [
@@ -405,7 +428,7 @@
         "admin"
       ],
       "rolesSource": "guard",
-      "access": "Handler checks rank: admin > manager > chef = waiter, strictly lower only, never yourself.",
+      "access": "Handler checks rank: superadmin > admin > manager > chef = waiter, strictly lower only, never yourself.",
       "query": null,
       "body": {
         "name": {
@@ -466,7 +489,7 @@
         "admin"
       ],
       "rolesSource": "guard",
-      "access": "Handler checks rank: admin > manager > chef = waiter, strictly lower only, never yourself.",
+      "access": "Handler checks rank: superadmin > admin > manager > chef = waiter, strictly lower only, never yourself.",
       "query": null,
       "body": null,
       "response": {
@@ -509,7 +532,7 @@
         "admin"
       ],
       "rolesSource": "guard",
-      "access": "Admin only, and only for accounts below admin rank (not other admins).",
+      "access": "An admin, for accounts below admin rank; the super admin, also for admins. Never yourself.",
       "query": null,
       "body": {
         "newPassword": {
@@ -535,7 +558,7 @@
       },
       "errors": [
         "400 \"Password needs: …\" listing the unmet rules",
-        "403 another admin",
+        "403 account is not below your rank",
         "404 user not found"
       ],
       "probe": {
@@ -550,7 +573,7 @@
       "path": "/api/auth/roles",
       "params": [],
       "documented": true,
-      "summary": "The five stakeholder roles.",
+      "summary": "The five stakeholder roles plus the super admin (bound to one account).",
       "auth": "none",
       "roles": [],
       "rolesSource": null,
@@ -565,7 +588,8 @@
             "waiter",
             "chef",
             "manager",
-            "admin"
+            "admin",
+            "superadmin"
           ]
         }
       },
@@ -622,7 +646,7 @@
         "id"
       ],
       "documented": true,
-      "summary": "Change a user's role or suspend/reactivate them. Admins cannot change their own role or suspend themselves.",
+      "summary": "Change a user's role or suspend/reactivate them. Nobody changes their own role or suspends themselves; only the super admin manages admins.",
       "auth": "required",
       "roles": [
         "admin"
@@ -634,7 +658,7 @@
         "role": {
           "type": "string",
           "required": false,
-          "note": "customer|waiter|chef|manager|admin"
+          "note": "customer|waiter|chef|manager|admin (the super admin role is bound by scripts/superadmin.js, never assigned)"
         },
         "active": {
           "type": "boolean",
@@ -659,7 +683,7 @@
       },
       "errors": [
         "400 invalid role / self-change",
-        "403 another admin (admins manage accounts below them)",
+        "403 the super admin role is bound to one account / account is not below your rank",
         "404 user not found"
       ],
       "probe": {
@@ -694,7 +718,7 @@
       },
       "errors": [
         "400 cannot remove yourself",
-        "403 another admin",
+        "403 account is not below your rank",
         "404 user not found"
       ],
       "probe": {
@@ -785,6 +809,11 @@
           "type": "string",
           "required": false,
           "note": "Valid, not used by another account"
+        },
+        "currentPassword": {
+          "type": "string",
+          "required": false,
+          "note": "Required when changing the sign-in email"
         },
         "phone": {
           "type": "string",
@@ -1316,7 +1345,7 @@
       "path": "/api/menu/items",
       "params": [],
       "documented": true,
-      "summary": "Flat list of every menu item. Chefs, managers and admins also get each recipe.",
+      "summary": "Flat list of items in public categories. Staff see all items. Chefs, managers and admins also get recipes.",
       "auth": "optional",
       "roles": [],
       "rolesSource": null,
@@ -4689,7 +4718,8 @@
         "waiter",
         "chef",
         "manager",
-        "admin"
+        "admin",
+        "superadmin"
       ],
       "rolesSource": "guard",
       "access": null,
@@ -5032,7 +5062,8 @@
         "waiter",
         "chef",
         "manager",
-        "admin"
+        "admin",
+        "superadmin"
       ],
       "rolesSource": "guard",
       "access": null,
@@ -5085,7 +5116,8 @@
         "waiter",
         "chef",
         "manager",
-        "admin"
+        "admin",
+        "superadmin"
       ],
       "rolesSource": "guard",
       "access": null,
@@ -5136,7 +5168,8 @@
         "waiter",
         "chef",
         "manager",
-        "admin"
+        "admin",
+        "superadmin"
       ],
       "rolesSource": "guard",
       "access": null,
@@ -5192,7 +5225,8 @@
         "waiter",
         "chef",
         "manager",
-        "admin"
+        "admin",
+        "superadmin"
       ],
       "rolesSource": "guard",
       "access": null,
@@ -5248,7 +5282,8 @@
         "waiter",
         "chef",
         "manager",
-        "admin"
+        "admin",
+        "superadmin"
       ],
       "rolesSource": "guard",
       "access": null,
@@ -5304,10 +5339,11 @@
         "waiter",
         "chef",
         "manager",
-        "admin"
+        "admin",
+        "superadmin"
       ],
       "rolesSource": "guard",
-      "access": "Waiters see waiters, chefs see chefs, managers see managers, waiters and chefs, the admin sees all staff.",
+      "access": "Waiters see waiters, chefs see chefs, managers see managers, waiters and chefs, admins see all staff up to admin, the super admin everyone.",
       "query": null,
       "body": null,
       "response": {
@@ -5346,7 +5382,8 @@
         "waiter",
         "chef",
         "manager",
-        "admin"
+        "admin",
+        "superadmin"
       ],
       "rolesSource": "guard",
       "access": null,
@@ -5509,10 +5546,11 @@
         "waiter",
         "chef",
         "manager",
-        "admin"
+        "admin",
+        "superadmin"
       ],
       "rolesSource": "guard",
-      "access": "Yourself or the admin: everything including pay. Managers: waiters and chefs only, with pay null. Others get 403.",
+      "access": "Yourself, an admin (staff up to admin) or the super admin (everyone): everything including pay. Managers: waiters and chefs only, with pay null. Others get 403.",
       "query": {
         "from": {
           "type": "YYYY-MM-DD",
@@ -5648,7 +5686,7 @@
         "admin"
       ],
       "rolesSource": "guard",
-      "access": "Admin: all staff with pay and payroll. Managers: waiters and chefs, pay and payroll null.",
+      "access": "Admins: all staff up to admin, with pay and payroll; the super admin: everyone. Managers: waiters and chefs, pay and payroll null.",
       "query": {
         "month": {
           "type": "YYYY-MM",
@@ -5789,6 +5827,7 @@
       },
       "errors": [
         "400 invalid wage",
+        "403 someone above your rank",
         "404 staff member not found"
       ],
       "probe": {
@@ -5846,6 +5885,7 @@
       },
       "errors": [
         "400 invalid amount / missing reason / invalid date",
+        "403 someone above your rank",
         "404 staff member not found"
       ],
       "probe": {
@@ -5880,6 +5920,7 @@
         }
       },
       "errors": [
+        "403 someone above your rank",
         "404 staff member or adjustment not found"
       ],
       "probe": {
@@ -6119,7 +6160,7 @@
       "path": "/api/settings",
       "params": [],
       "documented": true,
-      "summary": "Restaurant policy (tax, service charge, points value, hours) and booking time slots.",
+      "summary": "Public restaurant policy and booking time slots. Managers and admins also receive internal settings.",
       "auth": "optional",
       "roles": [],
       "rolesSource": null,

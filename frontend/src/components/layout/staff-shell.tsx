@@ -7,6 +7,7 @@ import { useAuth } from '@/context/auth-context';
 import { Badge } from '@/components/ui/badge';
 import { NotificationBell } from '@/components/layout/notification-bell';
 import { canAccess, type Section } from '@/lib/permissions';
+import { ROLE_META } from '@/components/staff/role-meta';
 import { FlameMark } from '@/components/storefront/flame-mark';
 import { XMarkIcon } from '@/components/ui/icons';
 
@@ -79,7 +80,7 @@ function NavIcon({ name, className = 'h-[18px] w-[18px]' }: { name: string; clas
 }
 
 export function StaffShell({ children }: { children: React.ReactNode }) {
-  const { user, logout } = useAuth();
+  const { user, logout, signingOut } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -185,12 +186,12 @@ export function StaffShell({ children }: { children: React.ReactNode }) {
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium">{user.name}</p>
-            <Badge tone={user.role === 'admin' ? 'brand' : user.role === 'manager' ? 'blue' : 'stone'}>{user.role}</Badge>
+            <Badge tone={ROLE_META[user.role].tone}>{ROLE_META[user.role].label}</Badge>
           </div>
           <button
-            onClick={() => {
-              logout();
-              router.push('/login');
+            disabled={signingOut}
+            onClick={async () => {
+              if (await logout()) router.push('/login');
             }}
             className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-stone-500 transition hover:bg-stone-100 hover:text-stone-800"
             title="Sign out"

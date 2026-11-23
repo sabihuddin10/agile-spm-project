@@ -10,6 +10,8 @@ import {
 } from '../data/store.js';
 import { requireRole } from '../middleware/auth.js';
 import { text, number, bool, stringList, list } from '../lib/validate.js';
+import { hasRole } from '../lib/hierarchy.js';
+import { countBy } from '../lib/collections.js';
 
 const router = Router();
 
@@ -26,7 +28,7 @@ const TAG_LIMITS = { maxItems: 20, maxLength: 40 };
 
 const isStaff = (req) => Boolean(req.user && STAFF_ROLES.includes(req.user.role));
 // Recipes (ingredients and quantities) are kitchen and management information.
-const canSeeRecipes = (req) => Boolean(req.user && ['chef', 'manager', 'admin'].includes(req.user.role));
+const canSeeRecipes = (req) => hasRole(req.user, 'chef', 'manager', 'admin');
 
 function serializeItem(item, withRecipe) {
   const out = { ...item, category: categories.find((c) => c.id === item.categoryId)?.name || '' };
@@ -109,7 +111,9 @@ router.get('/', (req, res) => {
 /** GET /api/menu/items — flat item list. */
 router.get('/items', (req, res) => {
   const withRecipe = canSeeRecipes(req);
-  res.json({ items: menuItems.map((m) => serializeItem(m, withRecipe)) });
+  const activeCategories = new Set(categories.filter((c) => c.active).map((c) => c.id));
+  const items = isStaff(req) ? menuItems : menuItems.filter((m) => activeCategories.has(m.categoryId));
+  res.json({ items: items.map((m) => serializeItem(m, withRecipe)) });
 });
 
 /** POST /api/menu/items — create a menu item. */
@@ -229,11 +233,12 @@ router.delete('/items/:id', manageMenu, (req, res) => {
 
 /** GET /api/menu/categories */
 router.get('/categories', (req, res) => {
+  const itemCounts = countBy(menuItems, (m) => m.categoryId);
   res.json({
     categories: categories
       .slice()
       .sort((a, b) => a.sort - b.sort)
-      .map((c) => ({ ...c, itemCount: menuItems.filter((m) => m.categoryId === c.id).length })),
+      .map((c) => ({ ...c, itemCount: itemCounts.get(c.id) ?? 0 })),
   });
 });
 
@@ -247,7 +252,7 @@ router.post('/categories', manageMenu, (req, res) => {
   if (categories.some((c) => c.name.toLowerCase() === clean.toLowerCase())) {
     return res.status(409).json({ error: 'A category with that name already exists.' });
   }
-  const category = { id: nextId('cat'), name: clean, sort: sortValue || categories.length + 1, active: true };
+  const category = { id: nextId('cat'), name: clean, sort: sortValue !== undefined ? sortValue : categories.length + 1, active: true };
   categories.push(category);
   return res.status(201).json({ category: { ...category, itemCount: 0 } });
 });

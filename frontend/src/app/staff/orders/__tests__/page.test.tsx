@@ -55,9 +55,10 @@ describe('OrdersPage', () => {
     render(<OrdersPage />);
     await screen.findByTestId('order-card-o1');
 
-    // Act
+    // Act: the async variant lets each poll's request settle before the next tick, as it does in real use
+    // (the poller allows one request in flight, so two ticks fired back to back would run only one)
     await act(async () => {
-      vi.advanceTimersByTime(10000);
+      await vi.advanceTimersByTimeAsync(10000);
     });
 
     // Assert
@@ -66,7 +67,7 @@ describe('OrdersPage', () => {
 
     // Act
     await act(async () => {
-      vi.advanceTimersByTime(20000);
+      await vi.advanceTimersByTimeAsync(20000);
     });
 
     // Assert

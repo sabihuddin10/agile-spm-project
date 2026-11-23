@@ -74,8 +74,8 @@ describe('BookingForm', () => {
     // Act
     await fillBasics(user);
     await user.type(screen.getByLabelText('Date'), FUTURE);
-    await waitFor(() => expect(screen.getByRole('button', { name: '19:00' })).toBeEnabled());
-    await user.click(screen.getByRole('button', { name: '19:00' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: '7:00 PM' })).toBeEnabled());
+    await user.click(screen.getByRole('button', { name: '7:00 PM' }));
     await user.click(screen.getByRole('button', { name: /request booking/i }));
 
     // Assert
@@ -94,13 +94,13 @@ describe('BookingForm', () => {
     // Act
     await fillBasics(user);
     await user.type(screen.getByLabelText('Date'), FUTURE);
-    await waitFor(() => expect(screen.getByRole('button', { name: '19:00' })).toBeEnabled());
-    await user.click(screen.getByRole('button', { name: '19:00' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: '7:00 PM' })).toBeEnabled());
+    await user.click(screen.getByRole('button', { name: '7:00 PM' }));
     await user.click(screen.getByRole('button', { name: /request booking/i }));
 
     // Assert
     expect(await screen.findByText(/fully booked/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /19:30/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /7:30 PM/i })).toBeInTheDocument();
   });
 });
 

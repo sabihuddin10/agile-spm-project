@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { reservationApi } from '@/lib/api';
 import type { Reservation } from '@/types';
-import { RESERVATION_STATUS, errorMessage, formatDate } from '@/lib/format';
+import { RESERVATION_STATUS, errorMessage, formatDate, formatClock } from '@/lib/format';
 import { Card } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import { useToast } from '@/components/ui/toast';
@@ -37,7 +37,7 @@ export function MyReservations() {
   }, [load]);
 
   async function cancel(r: Reservation) {
-    if (!window.confirm(`Cancel your booking for ${r.partySize} on ${formatDate(r.date)} at ${r.time}?`)) return;
+    if (!window.confirm(`Cancel your booking for ${r.partySize} on ${formatDate(r.date)} at ${formatClock(r.time)}?`)) return;
     setCancellingId(r.id);
     try {
       const { reservation } = await reservationApi.cancel(r.id);
@@ -90,7 +90,7 @@ export function MyReservations() {
               >
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-bone">
-                    {formatDate(r.date)} at {r.time}
+                    {formatDate(r.date)} at {formatClock(r.time)}
                   </p>
                   <p className="mt-0.5 text-xs text-bone-dim">
                     {r.partySize} {r.partySize === 1 ? 'guest' : 'guests'}

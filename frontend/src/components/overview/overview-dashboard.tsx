@@ -15,6 +15,7 @@ const ROLE_INTRO: Record<Exclude<Role, 'customer'>, { tone: 'emerald' | 'amber' 
   chef: { tone: 'amber', desc: 'Kitchen — work the cooking queue, call dishes ready for pickup and keep stock accurate.' },
   manager: { tone: 'blue', desc: 'Operations oversight — service, sales, stock and the team across the restaurant.' },
   admin: { tone: 'brand', desc: 'System administration — every module, staff accounts, roles and settings.' },
+  superadmin: { tone: 'brand', desc: 'Platform owner — everything an admin does, plus the admins’ own accounts.' },
 };
 
 function greeting(hour: number): string {

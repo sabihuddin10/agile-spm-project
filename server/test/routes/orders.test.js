@@ -319,3 +319,27 @@ test('a customer cannot set the price, payment status or owner of their order', 
   assert.equal(res.body.order.status, 'placed');
   assert.notEqual(res.body.order.customerId, 'cus_someone_else');
 });
+
+test('the super admin takes orders, confirms them as their waiter and cancels paid orders, like an admin', async () => {
+  // Arrange
+  const superadmin = await api.login('sabihuddin106@gmail.com', 'Admin@123456');
+  const customer = await api.login('customer');
+  const pizza = await menuItem(api.call, 'Margherita Pizza');
+  const { id: superadminId } = (await api.call('GET', '/auth/me', { token: superadmin })).body.user;
+  const prepaid = (await api.call('POST', '/orders', {
+    token: customer,
+    body: { type: 'online', fulfillment: 'pickup', paymentMethod: 'card', items: [{ menuItemId: pizza.id, qty: 1 }] },
+  })).body.order;
+
+  // Act
+  const staffOrder = await api.call('POST', '/orders', { token: superadmin, body: { type: 'dine-in', items: [{ menuItemId: pizza.id, qty: 1 }] } });
+  const confirmed = await api.call('POST', `/orders/${prepaid.id}/status`, { token: superadmin, body: { status: 'confirmed' } });
+  const cancelled = await api.call('POST', `/orders/${prepaid.id}/status`, { token: superadmin, body: { status: 'cancelled', reason: 'Owner check' } });
+
+  // Assert
+  assert.equal(staffOrder.status, 201);
+  assert.equal(confirmed.status, 200);
+  assert.equal(confirmed.body.order.waiterId, superadminId, 'the super admin becomes the waiter, like an admin');
+  assert.equal(cancelled.status, 200);
+  assert.equal(cancelled.body.order.paymentStatus, 'refunded');
+});

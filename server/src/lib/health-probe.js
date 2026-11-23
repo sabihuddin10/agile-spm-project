@@ -3,13 +3,13 @@
  *
  * Every probe-able catalogue entry (a GET without side effects for a guest) is
  * requested through the app itself on a short-lived loopback listener
- * (127.0.0.1, random port), with no credentials and a short timeout. The
- * target host is never taken from the incoming request, so the check cannot be
- * pointed elsewhere. POST/PUT/PATCH/DELETE routes are never called.
+ * (127.0.0.1, random port). A test admin token is obtained first and sent
+ * with each request so protected routes return 200 instead of 401/403.
+ * POST/PUT/PATCH/DELETE routes are never called.
  *
  *   2xx           → up
- *   401 / 403     → auth  (up; the route needs a token, which probes never send)
- *   other 4xx     → warn  (responded, but not as a guest GET is expected to)
+ *   401 / 403     → auth  (route needs a different role than admin has)
+ *   other 4xx     → warn  (responded, but not as expected)
  *   5xx / timeout → down
  *
  * Results are cached briefly so several open status pages share one run.
@@ -32,17 +32,104 @@ function classify(httpStatus) {
   return 'down';
 }
 
-async function probeOne(origin, entry, timeoutMs) {
-  // Defence in depth: the catalogue never enables mutating probes.
+/** Obtain an admin JWT token from the test instance. */
+async function getAdminToken(origin, timeoutMs) {
+  const started = performance.now();
+  try {
+    const res = await fetch(origin + '/api/auth/login', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify({ email: 'admin@rest.test', password: 'password' }),
+      signal: AbortSignal.timeout(2000),
+    });
+    if (!res.ok) return null;
+    const cookie = res.headers.get('set-cookie');
+    const match = /restaurant_ops_session=([^;]+)/.exec(cookie ?? '');
+    if (match?.[1]) return match[1];
+    const data = await res.json().catch(() => ({}));
+    return data.token || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Fetch real IDs from list endpoints for detail probes. */
+async function fetchProbeIds(origin, authToken, timeoutMs) {
+  const ids = {};
+  try {
+    // Get customer ID
+    const custRes = await fetch(origin + '/api/customers', {
+      headers: { accept: 'application/json', authorization: `Bearer ${authToken}` },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (custRes.ok) {
+      const data = await custRes.json();
+      if (data.customers?.length) ids.customer = data.customers[0].id;
+    }
+  } catch {}
+
+  try {
+    // Get order ID
+    const ordRes = await fetch(origin + '/api/orders', {
+      headers: { accept: 'application/json', authorization: `Bearer ${authToken}` },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (ordRes.ok) {
+      const data = await ordRes.json();
+      if (data.orders?.length) ids.order = data.orders[0].id;
+    }
+  } catch {}
+
+  try {
+    // Get workforce user ID (admin)
+    const workRes = await fetch(origin + '/api/workforce/overview', {
+      headers: { accept: 'application/json', authorization: `Bearer ${authToken}` },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (workRes.ok) {
+      const data = await workRes.json();
+      // workforce/overview returns { month, rows: [{ user: { id, name, role, active }, ... }] }
+      if (data.rows?.length) ids.workforceUser = data.rows[0].user.id;
+    }
+  } catch {}
+
+  return ids;
+}
+
+async function probeOne(origin, entry, timeoutMs, authToken, probeIds = {}) {
   if (MUTATING_METHODS.includes(entry.method) || entry.method !== 'GET') {
     return { id: entry.id, status: 'skipped', reason: 'Not probed (mutating)' };
   }
-  const url = probeUrl(entry);
+  // Use dynamic IDs for routes that need real IDs
+  let url = entry.path;
+  if (authToken) {
+    if (entry.path.startsWith('/api/customers/') && probeIds.customer) {
+      url = entry.path.replace(':id', probeIds.customer);
+    } else if (entry.path.startsWith('/api/orders/') && probeIds.order) {
+      url = entry.path.replace(':id', probeIds.order);
+    } else if (entry.path.startsWith('/api/billing/') && probeIds.order) {
+      url = entry.path.replace(':id', probeIds.order);
+    } else if (entry.path.startsWith('/api/workforce/users/') && probeIds.workforceUser) {
+      url = entry.path.replace(':id', probeIds.workforceUser);
+    }
+  } else {
+    // Fallback to placeholder for unauthenticated probes
+    url = url.replace(/:(\w+)/g, '__probe__');
+  }
+  // Handle query params from docs
+  const queryFn = (await import('./api-catalog.js')).ROUTE_DOCS?.[entry.id]?.probe?.query;
+  const query = typeof queryFn === 'function' ? queryFn() : null;
+  if (query) url += `?${new URLSearchParams(query)}`;
+
   const started = performance.now();
+  const headers = { accept: 'application/json', [PROBE_HEADER]: '1' };
+  if (authToken && entry.auth === 'required') {
+    headers.authorization = `Bearer ${authToken}`;
+  }
   try {
     const res = await fetch(origin + url, {
       method: 'GET',
-      headers: { accept: 'application/json', [PROBE_HEADER]: '1' },
+      headers,
       redirect: 'manual',
       signal: AbortSignal.timeout(timeoutMs),
     });
@@ -87,13 +174,21 @@ async function runChecks(app, { timeoutMs = TIMEOUT_MS } = {}) {
   const database = pingDatabase(Boolean(app.locals.persistence), timeoutMs);
 
   let server;
+  let authToken = null;
+  let probeIds = {};
   try {
     server = await listen(app);
     const origin = `http://127.0.0.1:${server.address().port}`;
+    // Get admin token for protected routes
+    authToken = await getAdminToken(origin, timeoutMs);
+    // Fetch real IDs for detail endpoints
+    if (authToken) {
+      probeIds = await fetchProbeIds(origin, authToken, timeoutMs);
+    }
     const queue = [...targets];
     const worker = async () => {
       for (let entry = queue.shift(); entry; entry = queue.shift()) {
-        results.set(entry.id, await probeOne(origin, entry, timeoutMs));
+        results.set(entry.id, await probeOne(origin, entry, timeoutMs, authToken, probeIds));
       }
     };
     await Promise.all(Array.from({ length: CONCURRENCY }, worker));

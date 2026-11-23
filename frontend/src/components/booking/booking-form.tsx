@@ -9,7 +9,7 @@ import { useToast } from '@/components/ui/toast';
 import { Card } from '@/components/ui/card';
 import { SlotGrid } from '@/components/reservations/slot-grid';
 import { useAvailability } from '@/components/reservations/use-availability';
-import { addDaysISO, errorMessage, formatDate, localDateISO } from '@/lib/format';
+import { addDaysISO, errorMessage, formatDate, localDateISO, formatClock } from '@/lib/format';
 import {
   normalizeName, validateEmail, validateFutureDate, validateIntegerInRange, validateMaxLength, validateName, formatPhoneInput, validatePhone,
   EMAIL_MAX, NAME_MAX, PHONE_MAX,
@@ -202,7 +202,7 @@ export function BookingForm() {
           <dd className="truncate text-right text-bone">{done.customerName}</dd>
           <dt className="text-bone-faint">When</dt>
           <dd className="text-right text-bone">
-            {dayLabel(done.date)} · {done.time}
+            {dayLabel(done.date)} · {formatClock(done.time)}
           </dd>
           <dt className="text-bone-faint">Party</dt>
           <dd className="text-right text-bone">
@@ -226,7 +226,7 @@ export function BookingForm() {
 
   const summary =
     form.date && form.time
-      ? `Table for ${form.partySize} · ${dayLabel(form.date)} · ${form.time}`
+      ? `Table for ${form.partySize} · ${dayLabel(form.date)} · ${formatClock(form.time)}`
       : null;
 
   return (
@@ -366,7 +366,7 @@ export function BookingForm() {
                       className="chip chip-diet !px-3 !py-1 transition hover:border-ember hover:bg-ember/20"
                       onClick={() => pickAlternative(alt)}
                     >
-                      {dayLabel(alt.date)} · {alt.time}
+                      {dayLabel(alt.date)} · {formatClock(alt.time)}
                     </button>
                   ))}
                 </div>

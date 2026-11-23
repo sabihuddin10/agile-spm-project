@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { settings, TIME_SLOTS } from '../data/store.js';
 import { requireRole } from '../middleware/auth.js';
 import { text } from '../lib/validate.js';
+import { hasRole } from '../lib/hierarchy.js';
 
 const router = Router();
 
@@ -23,7 +24,14 @@ const NUMERIC = [
 
 /** GET /api/settings — restaurant policy (public: the storefront needs tax & points). */
 router.get('/', (req, res) => {
-  res.json({ settings, timeSlots: TIME_SLOTS });
+  if (hasRole(req.user, 'manager', 'admin')) {
+    return res.json({ settings, timeSlots: TIME_SLOTS });
+  }
+  const { restaurantName, address, taxRate, serviceChargeRate, pointValue, openingHour, closingHour } = settings;
+  return res.json({
+    settings: { restaurantName, address, taxRate, serviceChargeRate, pointValue, openingHour, closingHour },
+    timeSlots: TIME_SLOTS,
+  });
 });
 
 /** PATCH /api/settings — update tax, service charge, kitchen threshold, etc. (manager/admin). */

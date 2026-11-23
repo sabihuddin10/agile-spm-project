@@ -2,11 +2,12 @@ import type { Role, StaffRole } from '@/types';
 import type { Tone } from '@/lib/format';
 
 /** Display order for roles across the staff-management screens. */
-export const ROLE_ORDER: Role[] = ['admin', 'manager', 'chef', 'waiter', 'customer'];
+export const ROLE_ORDER: Role[] = ['superadmin', 'admin', 'manager', 'chef', 'waiter', 'customer'];
 
-export const STAFF_ROLE_ORDER: StaffRole[] = ['admin', 'manager', 'chef', 'waiter'];
+export const STAFF_ROLE_ORDER: StaffRole[] = ['superadmin', 'admin', 'manager', 'chef', 'waiter'];
 
 export const ROLE_META: Record<Role, { label: string; plural: string; tone: Tone }> = {
+  superadmin: { label: 'Super admin', plural: 'Super admins', tone: 'red' },
   admin: { label: 'Admin', plural: 'Admins', tone: 'brand' },
   manager: { label: 'Manager', plural: 'Managers', tone: 'blue' },
   chef: { label: 'Chef', plural: 'Chefs', tone: 'amber' },
@@ -66,7 +67,14 @@ export const ROLE_CAPABILITIES: Record<StaffRole, { can: string[]; cannot: strin
       'Change roles, suspend and remove accounts below admin',
       'Edit details and reset passwords for managers, waiters and chefs',
     ],
-    cannot: ["Manage another admin's account"],
+    cannot: ["Manage another admin's account (the super admin does)", 'Manage the super admin'],
+  },
+  superadmin: {
+    can: [
+      'Everything an admin can',
+      "Manage admins' accounts: details, passwords, roles, suspension and removal",
+    ],
+    cannot: ['Be assigned, suspended or removed: the role is bound to one email', 'Change that email from My account'],
   },
 };
 

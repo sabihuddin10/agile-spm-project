@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import type { StaffApplication, StaffRole, User } from '@/types';
 import { staffApi } from '@/lib/api';
+import { can } from '@/lib/permissions';
 import { errorMessage, formatDateTime, timeAgo } from '@/lib/format';
 import { useAuth } from '@/context/auth-context';
 import { Badge } from '@/components/ui/badge';
@@ -33,7 +34,7 @@ export function ApplicationsPanel({
 }) {
   const { user } = useAuth();
   const toast = useToast();
-  const approvable: StaffRole[] = user?.role === 'admin' ? ['waiter', 'chef', 'manager'] : ['waiter', 'chef'];
+  const approvable: StaffRole[] = can.approveManagers(user?.role) ? ['waiter', 'chef', 'manager'] : ['waiter', 'chef'];
 
   const [roles, setRoles] = useState<Record<string, StaffRole>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -91,7 +92,7 @@ export function ApplicationsPanel({
           </Link>
           . Approving creates their staff account.
         </p>
-        {user?.role !== 'admin' ? (
+        {!can.approveManagers(user?.role) ? (
           <p className="text-xs text-stone-500">Managers can approve waiters and chefs.</p>
         ) : null}
       </div>

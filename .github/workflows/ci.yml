@@ -11,6 +11,14 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
 
@@ -30,14 +38,92 @@ jobs:
       - name: API — acceptance tests (US1.1–US10.6)
         run: pnpm --dir server test
 
+      - name: API — database tests (relational tables on Postgres 16)
+        run: pnpm --dir server test:db
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+
       - name: Web — lint
         run: pnpm --dir frontend run lint
 
       - name: Web — unit tests
         run: pnpm --dir frontend run test
 
+      - name: Web — test files cannot leak into each other (vmThreads isolation)
+        run: pnpm --dir frontend run check:isolation && pnpm --dir frontend run test:scripts
+
       - name: Web — type check
         run: pnpm --dir frontend exec tsc --noEmit
 
       - name: Web — production build
         run: pnpm --dir frontend run build
+        env:
+          # CI has no real API to point at; a production build otherwise requires an https API_URL
+          # (frontend/src/lib/api-origin.mjs).
+          ALLOW_LOCAL_API: '1'
+
+      - name: Web — the workforce demo mock is not in the production bundle
+        run: pnpm --dir frontend run check:bundle
+
+  # Critical-path browser suite (bolt 001): customer order -> waiter confirm -> chef kitchen,
+  # against production builds, on disposable in-memory data. Kept in its own job so the
+  # unit/acceptance gate above stays fast; failure artifacts are uploaded for diagnosis.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install browsers (Chromium, Firefox, WebKit)
+        run: pnpm exec playwright install --with-deps chromium firefox webkit
+
+      - name: E2E - critical-path journeys
+        run: pnpm run e2e
+
+      - name: Upload failure artifacts (report, traces, screenshots, server logs)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-artifacts
+          path: |
+            e2e/playwright-report/
+            e2e/test-results/
+            e2e/logs/
+          retention-days: 14
+
+  # Dependency policy (bolt 009): lockfiles stay consistent and no unapproved high/critical
+  # production advisory ships. An advisory-service outage fails this job (exit 2); it never passes.
+  dependency-policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lockfile policy (allowed lockfiles, npm lockfiles match their package.json)
+        run: pnpm run check:lockfiles
+
+      - name: Policy script tests
+        run: pnpm run test:scripts
+
+      - name: Production advisory gate (pnpm + both npm lockfiles)
+        run: pnpm run audit:prod

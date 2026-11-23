@@ -11,7 +11,7 @@ import { toCents, fromCents } from './order-math.js';
 import { localDate } from './time.js';
 
 /** Default hourly wage by role, for staff created without one. */
-export const DEFAULT_WAGES = Object.freeze({ waiter: 12, chef: 15, manager: 20, admin: 25 });
+export const DEFAULT_WAGES = Object.freeze({ waiter: 12, chef: 15, manager: 20, admin: 25, superadmin: 25 });
 
 export const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
 

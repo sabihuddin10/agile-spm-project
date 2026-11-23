@@ -1,10 +1,12 @@
 import { Router } from 'express';
-import { tables, tableStatuses, orders, reservations, users, ZONES, nextId } from '../data/store.js';
+import { tables, tableStatuses, orders, reservations, findUserById, ZONES, nextId } from '../data/store.js';
 import { requireRole } from '../middleware/auth.js';
 import { isActive, userName } from '../lib/orders.js';
 import { syncTableHolds, isLate } from '../lib/reservations.js';
 import { localDate } from '../lib/time.js';
 import { text, number, bool } from '../lib/validate.js';
+import { hasRole } from '../lib/hierarchy.js';
+import { buildFloorIndex } from '../lib/floor-index.js';
 
 const router = Router();
 const FLOOR_STAFF = ['waiter', 'manager', 'admin'];
@@ -15,7 +17,8 @@ const ZONE_MAX = 40;
 
 const readTableNumber = (value) =>
   number(value, 'Table number', { min: 1, max: 9999, integer: true, message: 'Table number must be a positive whole number.' });
-const readSeats = (value) => number(value, 'Seats', { min: 1, max: 20, message: 'Seats must be between 1 and 20.' });
+const readSeats = (value) =>
+  number(value, 'Seats', { min: 1, max: 20, integer: true, message: 'Seats must be between 1 and 20.' });
 const readZone = (value) => {
   if (value === undefined) return undefined;
   if (typeof value !== 'string' || !value.trim()) return text('', 'Zone', { required: true });
@@ -23,14 +26,13 @@ const readZone = (value) => {
 };
 
 /** Floor-plan view of a table: live orders and today's next booking. */
-function serialize(table) {
-  const today = localDate();
-  const activeOrders = orders
-    .filter((o) => o.tableId === table.id && isActive(o))
+const floorIndex = () => buildFloorIndex({ orders, reservations, today: localDate(), isActive });
+
+/** `floor` groups orders and bookings by table once; the list view builds it once for every table. */
+function serialize(table, floor = floorIndex()) {
+  const activeOrders = floor.activeOrders(table.id)
     .map((o) => ({ id: o.id, number: o.number, status: o.status, total: o.total, paymentStatus: o.paymentStatus }));
-  const nextBooking = reservations
-    .filter((r) => r.tableId === table.id && r.date === today && ['requested', 'confirmed'].includes(r.status))
-    .sort((a, b) => a.time.localeCompare(b.time))[0];
+  const nextBooking = floor.nextBooking(table.id);
   return {
     ...table,
     waiterName: userName(table.waiterId),
@@ -52,7 +54,8 @@ router.get('/public', (req, res) => {
 router.get('/', floorRoles, (req, res) => {
   syncTableHolds();
   const zones = [...new Set([...ZONES, ...tables.map((t) => t.zone)])];
-  res.json({ tables: sorted().map(serialize), zones, statuses: tableStatuses });
+  const floor = floorIndex();
+  res.json({ tables: sorted().map((table) => serialize(table, floor)), zones, statuses: tableStatuses });
 });
 
 /** POST /api/tables — add a table to the floor plan (US6.1). */
@@ -77,7 +80,7 @@ router.patch('/:id', floorRoles, (req, res) => {
   if (!table) return res.status(404).json({ error: 'Table not found.' });
   const body = req.body || {};
 
-  if (LAYOUT_FIELDS.some((k) => body[k] !== undefined) && !['manager', 'admin'].includes(req.user.role)) {
+  if (LAYOUT_FIELDS.some((k) => body[k] !== undefined) && !hasRole(req.user, 'manager', 'admin')) {
     return res.status(403).json({ error: 'Only managers can change the floor layout.' });
   }
 
@@ -88,7 +91,16 @@ router.patch('/:id', floorRoles, (req, res) => {
   const zone = readZone(body.zone);
   const held = bool(body.held, 'held');
   if (status !== undefined && !tableStatuses.includes(status)) return res.status(400).json({ error: 'Invalid status.' });
-  if (waiterId !== undefined && waiterId !== null && typeof waiterId !== 'string') return res.status(400).json({ error: 'Unknown staff member.' });
+  if (waiterId !== undefined && waiterId !== null) {
+    if (typeof waiterId !== 'string') return res.status(400).json({ error: 'Unknown staff member.' });
+    const waiter = waiterId ? findUserById(waiterId) : undefined;
+    if (waiterId && (!waiter || waiter.role === 'customer')) {
+      return res.status(400).json({ error: 'Unknown staff member.' });
+    }
+    if (waiterId && !(hasRole(waiter, ...FLOOR_STAFF) && waiter.active)) {
+      return res.status(400).json({ error: 'Only active floor staff (waiters and managers) can look after a table.' });
+    }
+  }
   if (n !== undefined && tables.some((t) => t.id !== table.id && t.number === n)) {
     return res.status(409).json({ error: 'A table with that number already exists.' });
   }
@@ -102,12 +114,6 @@ router.patch('/:id', floorRoles, (req, res) => {
     if (status === 'free') table.waiterId = null;
   }
   if (waiterId !== undefined) {
-    if (waiterId && !users.some((u) => u.id === waiterId && u.role !== 'customer')) {
-      return res.status(400).json({ error: 'Unknown staff member.' });
-    }
-    if (waiterId && !users.some((u) => u.id === waiterId && FLOOR_STAFF.includes(u.role) && u.active)) {
-      return res.status(400).json({ error: 'Only active floor staff (waiters and managers) can look after a table.' });
-    }
     table.waiterId = waiterId || null;
   }
   if (held !== undefined) table.held = held;
@@ -121,6 +127,9 @@ router.delete('/:id', managerRoles, (req, res) => {
   if (idx === -1) return res.status(404).json({ error: 'Table not found.' });
   if (orders.some((o) => o.tableId === tables[idx].id && isActive(o))) {
     return res.status(409).json({ error: 'This table has active orders.' });
+  }
+  if (reservations.some((r) => r.tableId === tables[idx].id && ['requested', 'confirmed'].includes(r.status))) {
+    return res.status(409).json({ error: 'This table has active reservations.' });
   }
   const [removed] = tables.splice(idx, 1);
   return res.json({ deleted: true, id: removed.id });

@@ -3,8 +3,23 @@ import type { Role, StaffRole, User } from '@/types';
 /**
  * Single source of truth for which roles may open each staff section. Mirrors
  * the server's requireRole guards so the UI never offers what the API refuses.
+ * The super admin holds every admin permission, so it passes wherever an admin does.
  */
-export const STAFF_ROLES: Role[] = ['waiter', 'chef', 'manager', 'admin'];
+export const STAFF_ROLES: Role[] = ['waiter', 'chef', 'manager', 'admin', 'superadmin'];
+
+/** The super admin's email is bound to the role: PATCH /auth/me refuses to change it. */
+export const emailIsBound = (role: Role | null | undefined): boolean => role === 'superadmin';
+
+/** Roles the API can give an account. The super admin is bound to one account, never assigned. */
+export const ASSIGNABLE_ROLES: Role[] = ['customer', 'waiter', 'chef', 'manager', 'admin'];
+
+/**
+ * Whether `role` is one of `roles`. The super admin holds every admin
+ * permission, like the server's hasRole (server/src/lib/hierarchy.js).
+ */
+export function holdsRole(role: Role | null | undefined, roles: readonly Role[]): boolean {
+  return Boolean(role && (roles.includes(role) || (role === 'superadmin' && roles.includes('admin'))));
+}
 
 export const SECTION_ROLES = {
   overview: STAFF_ROLES,
@@ -28,14 +43,14 @@ export const SECTION_ROLES = {
 export type Section = keyof typeof SECTION_ROLES;
 
 export function canAccess(role: Role | null | undefined, section: Section): boolean {
-  return Boolean(role && (SECTION_ROLES[section] as Role[]).includes(role));
+  return holdsRole(role, SECTION_ROLES[section] as Role[]);
 }
 
 export function isStaff(role: Role | null | undefined): boolean {
   return Boolean(role && STAFF_ROLES.includes(role));
 }
 
-const anyOf = (...roles: Role[]) => (role: Role | null | undefined) => Boolean(role && roles.includes(role));
+const anyOf = (...roles: Role[]) => (role: Role | null | undefined) => holdsRole(role, roles);
 
 /** Fine-grained actions within a section. */
 export const can = {
@@ -56,6 +71,8 @@ export const can = {
   deleteCustomers: anyOf('manager', 'admin'),
   viewRecipes: anyOf('chef', 'manager', 'admin'),
   approveStaff: anyOf('manager', 'admin'),
+  /** Approve an applicant into the manager role. */
+  approveManagers: anyOf('admin'),
   scheduleShifts: anyOf('manager', 'admin'),
   assignRoles: anyOf('admin'),
   suspendStaff: anyOf('admin'),
@@ -68,10 +85,10 @@ export const can = {
 };
 
 /**
- * Staff hierarchy for account management: admin > manager > chef = waiter.
+ * Staff hierarchy for account management: superadmin > admin > manager > chef = waiter.
  * Customers sit outside it and manage their own account.
  */
-export const ROLE_RANK: Record<StaffRole, number> = { admin: 3, manager: 2, chef: 1, waiter: 1 };
+export const ROLE_RANK: Record<StaffRole, number> = { superadmin: 4, admin: 3, manager: 2, chef: 1, waiter: 1 };
 
 type Account = Pick<User, 'id' | 'role'>;
 
@@ -81,19 +98,20 @@ function rankOf(role: Role | null | undefined): number {
 
 /**
  * Whether `actor` may edit `target`'s details or reset their password: the actor
- * is a manager or admin, the target is another staff account, and the target's
- * rank is strictly lower. Your own account is self-service (My account).
+ * is a manager, admin or the super admin, the target is another staff account,
+ * and the target's rank is strictly lower. Your own account is self-service (My account).
  */
 export function canManageAccount(actor: Account | null | undefined, target: Account | null | undefined): boolean {
   if (!actor || !target || actor.id === target.id) return false;
-  if (actor.role !== 'manager' && actor.role !== 'admin') return false;
+  if (rankOf(actor.role) < ROLE_RANK.manager) return false;
   if (!isStaff(target.role)) return false;
   return rankOf(target.role) < rankOf(actor.role);
 }
 
 /**
- * Whether `actor` may change `target`'s role, suspend or remove them: admin only,
- * never themselves and never another admin. Customer accounts rank below every
+ * Whether `actor` may change `target`'s role, suspend or remove them: an admin
+ * or the super admin, never themselves and only accounts ranked strictly lower
+ * (so only the super admin acts on admins). Customer accounts rank below every
  * staff role, so an admin can still promote a customer.
  */
 export function canAdministerAccount(actor: Account | null | undefined, target: Account | null | undefined): boolean {

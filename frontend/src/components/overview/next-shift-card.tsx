@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { Shift } from '@/types';
-import { formatDate, formatMinutes, localDateISO } from '@/lib/format';
+import { formatDate, formatClock, formatMinutes, localDateISO } from '@/lib/format';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 
@@ -66,7 +66,7 @@ export function NextShiftCard({ shifts, loading, now }: { shifts: Shift[] | null
           </div>
           <p className="mt-1 text-sm text-stone-700">
             <span className="font-medium tabular-nums">
-              {next.start}–{next.end}
+              {formatClock(next.start)}–{formatClock(next.end)}
             </span>
             <span className="text-stone-400"> · </span>
             {next.hours} h{when !== formatDate(next.date) ? <span className="text-stone-500"> · {formatDate(next.date)}</span> : null}

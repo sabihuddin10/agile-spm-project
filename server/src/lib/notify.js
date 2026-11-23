@@ -1,5 +1,6 @@
 import { notifications, nextId } from '../data/store.js';
 import { iso } from './time.js';
+import { hasRole } from './hierarchy.js';
 
 const MAX_NOTIFICATIONS = 1000;
 
@@ -18,7 +19,7 @@ export function notify({ userId = null, role = null, channel = 'in-app', to = nu
 /** In-app notifications visible to `user`, newest first. */
 export function notificationsFor(user) {
   return notifications
-    .filter((n) => n.channel === 'in-app' && (n.userId === user.id || (!n.userId && n.role === user.role)))
+    .filter((n) => n.channel === 'in-app' && (n.userId === user.id || (!n.userId && hasRole(user, n.role))))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 

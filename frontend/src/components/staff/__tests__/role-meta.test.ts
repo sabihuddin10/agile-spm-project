@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   ROLE_CAPABILITIES,
+  ROLE_META,
+  STAFF_ROLE_ORDER,
   formatHours,
   hoursBetween,
   initials,
@@ -16,7 +18,7 @@ describe('ROLE_CAPABILITIES', () => {
     const roles = Object.keys(ROLE_CAPABILITIES).sort();
 
     // Assert
-    expect(roles).toEqual(['admin', 'chef', 'manager', 'waiter']);
+    expect(roles).toEqual(['admin', 'chef', 'manager', 'superadmin', 'waiter']);
     for (const { can, cannot } of Object.values(ROLE_CAPABILITIES)) {
       expect(can.length).toBeGreaterThan(0);
       expect(cannot.length).toBeGreaterThan(0);
@@ -91,5 +93,20 @@ describe('formatHours', () => {
   it('rounds to one decimal and appends h', () => {
     expect(formatHours(4.449)).toBe('4.4 h');
     expect(formatHours(1)).toBe('1 h');
+  });
+});
+
+describe('the super admin role', () => {
+  it('is labelled "Super admin" with its own colour and listed above admin', () => {
+    // Act / Assert
+    expect(ROLE_META.superadmin).toEqual({ label: 'Super admin', plural: 'Super admins', tone: 'red' });
+    expect(STAFF_ROLE_ORDER[0]).toBe('superadmin');
+    expect(roleRank('superadmin')).toBeLessThan(roleRank('admin'));
+  });
+
+  it('states that only the super admin manages admins', () => {
+    // Act / Assert
+    expect(ROLE_CAPABILITIES.superadmin.can).toContain("Manage admins' accounts: details, passwords, roles, suspension and removal");
+    expect(ROLE_CAPABILITIES.admin.cannot).toContain("Manage another admin's account (the super admin does)");
   });
 });

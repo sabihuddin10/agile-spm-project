@@ -3,7 +3,7 @@
 import type { Reservation, Table } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { CheckIcon } from '@/components/ui/icons';
-import { RESERVATION_STATUS, formatDateTime } from '@/lib/format';
+import { RESERVATION_STATUS, formatDateTime, formatClock } from '@/lib/format';
 
 /**
  * One booking in the reservation book with its staff actions: confirm, assign
@@ -38,7 +38,7 @@ export function ReservationCard({
   return (
     <li className={`card flex flex-col gap-3 p-3.5 sm:gap-4 sm:p-4 md:flex-row md:items-start ${r.late ? 'border-red-200' : ''}`}>
       <div className="flex shrink-0 items-baseline gap-2.5 sm:gap-3 md:w-20 md:flex-col md:gap-0.5">
-        <p className="text-lg font-bold tabular-nums text-stone-900 sm:text-xl">{r.time}</p>
+        <p className="text-lg font-bold tabular-nums text-stone-900 sm:text-xl">{formatClock(r.time)}</p>
         <p className="text-sm text-stone-500">
           {r.partySize} {r.partySize === 1 ? 'guest' : 'guests'}
         </p>

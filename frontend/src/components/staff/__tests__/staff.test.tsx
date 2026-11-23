@@ -54,6 +54,7 @@ vi.mock('@/lib/api', async () => ({
 vi.mock('@/components/ui/toast', () => ({ useToast: () => toastMock }));
 vi.mock('@/context/auth-context', () => ({ useAuth: () => ({ user: auth.user }) }));
 
+const superadmin: User = { id: 'usr_super', name: 'Sabih Super', email: 'sabih@rest.test', role: 'superadmin', active: true };
 const admin: User = { id: 'usr_admin', name: 'Ada Admin', email: 'ada@rest.test', role: 'admin', active: true };
 const manager: User = { id: 'usr_manager', name: 'Mia Manager', email: 'mia@rest.test', role: 'manager', active: true };
 const chef: User = { id: 'usr_chef', name: 'Carlos Chef', email: 'carlos@rest.test', role: 'chef', active: true };
@@ -290,6 +291,52 @@ describe('AccountTable', () => {
     }
   });
 
+  it('gives the super admin every control on an admin, but never offers the super admin role', async () => {
+    // Arrange
+    auth.user = superadmin;
+    const user = userEvent.setup({ delay: null });
+    render(<AccountTable users={[superadmin, admin]} onChanged={vi.fn()} />);
+
+    // Act
+    await openMore(user, 'Ada Admin');
+
+    // Assert
+    const adaRow = screen.getByText('Ada Admin').closest('li')!;
+    const picker = within(adaRow).getByRole('combobox', { name: 'Role for Ada Admin' });
+    expect(picker).toBeEnabled();
+    expect(within(picker).getByRole('option', { name: 'Admin' })).toBeInTheDocument();
+    expect(within(picker).queryByRole('option', { name: 'Super admin' })).not.toBeInTheDocument();
+    expect(within(adaRow).getByRole('menuitem', { name: 'Reset password for Ada Admin' })).toBeInTheDocument();
+    expect(within(adaRow).getByRole('menuitem', { name: 'Suspend' })).toBeEnabled();
+  });
+
+  it("shows the super admin's own row with its badge, never a picker", () => {
+    // Arrange
+    auth.user = superadmin;
+
+    // Act
+    render(<AccountTable users={[superadmin, admin]} onChanged={vi.fn()} />);
+
+    // Assert
+    const row = screen.getByText('Sabih Super').closest('li')!;
+    expect(within(row).queryByRole('combobox')).not.toBeInTheDocument();
+    expect(within(row).getByText('Super admin')).toBeInTheDocument();
+  });
+
+  it('shows the super admin read-only to an admin', () => {
+    // Arrange
+    auth.user = admin;
+
+    // Act
+    render(<AccountTable users={[superadmin, admin]} onChanged={vi.fn()} />);
+
+    // Assert
+    const row = screen.getByText('Sabih Super').closest('li')!;
+    expect(within(row).queryByRole('button')).not.toBeInTheDocument();
+    expect(within(row).queryByRole('combobox')).not.toBeInTheDocument();
+    expect(within(row).getByText('Super admin')).toBeInTheDocument();
+  });
+
   it('gives an admin every control on a manager but none on another admin', async () => {
     // Arrange
     auth.user = admin;
@@ -408,6 +455,8 @@ describe('AllAccountsPanel', () => {
     }
     expect(screen.getByRole('option', { name: 'All roles (5)' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Customers (1)' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Staff accounts/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Customer accounts/i })).toBeInTheDocument();
   });
 
   it('filters by role and by search text', async () => {
@@ -428,6 +477,31 @@ describe('AllAccountsPanel', () => {
     await user.type(screen.getByRole('searchbox', { name: 'Search accounts' }), 'nobody');
     // Assert
     expect(screen.getByText('No accounts match')).toBeInTheDocument();
+  });
+
+  it('switches between all, staff-only, and customer-only account groups', async () => {
+    // Arrange
+    auth.user = admin;
+    vi.mocked(authApi.users).mockResolvedValue({ users: [admin, waiter, customer] } as never);
+    const user = userEvent.setup({ delay: null });
+    render(<AllAccountsPanel />);
+    await screen.findByText('Cora Customer');
+
+    // Both sections visible by default
+    expect(screen.getByRole('heading', { name: /Staff accounts/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Customer accounts/i })).toBeInTheDocument();
+
+    // Act — click Staff
+    await user.click(screen.getByRole('button', { name: /^Staff \(/i }));
+    // Assert
+    expect(screen.getByRole('heading', { name: /Staff accounts/i })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /Customer accounts/i })).not.toBeInTheDocument();
+
+    // Act — click Customers
+    await user.click(screen.getByRole('button', { name: /^Customers \(/i }));
+    // Assert
+    expect(screen.queryByRole('heading', { name: /Staff accounts/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Customer accounts/i })).toBeInTheDocument();
   });
 
   it('reloads the list and notifies the parent after a change', async () => {
@@ -502,6 +576,18 @@ describe('ApplicationsPanel', () => {
 
     // Assert
     expect(staffApi.approve).toHaveBeenCalledWith('app_1', 'chef');
+  });
+
+  it('lets the super admin approve someone as a manager, like an admin', () => {
+    // Arrange
+    auth.user = superadmin;
+
+    // Act
+    render(<ApplicationsPanel applications={[makeApplication()]} loading={false} onChanged={vi.fn()} />);
+
+    // Assert
+    expect(screen.getByRole('option', { name: 'Manager' })).toBeInTheDocument();
+    expect(screen.queryByText('Managers can approve waiters and chefs.')).not.toBeInTheDocument();
   });
 
   it('only lets an admin approve someone as a manager', () => {
@@ -692,12 +778,12 @@ describe('MySchedule', () => {
     expect(within(upcoming).getByText(formatDate('2026-10-07'))).toBeInTheDocument();
     expect(within(upcoming).getByText('Today')).toBeInTheDocument();
     expect(within(upcoming).getByText('Tomorrow')).toBeInTheDocument();
-    expect(within(upcoming).getByText('17:00–23:00')).toBeInTheDocument();
+    expect(within(upcoming).getByText('5:00 PM–11:00 PM')).toBeInTheDocument();
     expect(within(upcoming).getByText('Private party')).toBeInTheDocument();
     const recent = screen.getByRole('region', { name: 'Recent shifts' });
-    expect(within(recent).getByText('09:00–15:00')).toBeInTheDocument();
+    expect(within(recent).getByText('9:00 AM–3:00 PM')).toBeInTheDocument();
     expect(within(recent).getByText('Completed')).toBeInTheDocument();
-    expect(within(upcoming).queryByText('09:00–15:00')).not.toBeInTheDocument();
+    expect(within(upcoming).queryByText('9:00 AM–3:00 PM')).not.toBeInTheDocument();
     expect(screen.getByText('3 shifts scheduled, Mon–Sun')).toBeInTheDocument();
     expect(screen.getByText('18 h')).toBeInTheDocument();
   });
@@ -893,7 +979,7 @@ describe('ShiftPlanner', () => {
     const willRow = within(table).getByText('Will Waiter').closest('tr')!;
     const cells = within(willRow).getAllByRole('cell');
     // cells: [name, Mon 5, Tue 6, Wed 7, Thu 8, ...]
-    expect(within(cells[4]).getByRole('button', { name: /edit will waiter's shift 12:00 to 18:00/i })).toBeInTheDocument();
+    expect(within(cells[4]).getByRole('button', { name: /edit will waiter's shift 12:00 PM to 6:00 PM/i })).toBeInTheDocument();
     // Suspended staff with no shifts this week get no row
     expect(within(table).queryByText('Gina Gone')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'This week' })).toBeDisabled();

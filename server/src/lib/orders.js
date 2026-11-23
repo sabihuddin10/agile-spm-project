@@ -7,7 +7,7 @@ import {
   orders,
   tables,
   customers,
-  users,
+  userDirectory,
   menuItems,
   inventory,
   stockMovements,
@@ -16,6 +16,7 @@ import {
 } from '../data/store.js';
 import { notify } from './notify.js';
 import { iso } from './time.js';
+import { hasRole } from './hierarchy.js';
 
 export const ACTIVE_STATUSES = ['placed', 'confirmed', 'preparing', 'ready', 'served'];
 export const KITCHEN_STATUSES = ['confirmed', 'preparing', 'ready'];
@@ -27,7 +28,7 @@ export function tableNumber(tableId) {
 }
 
 export function userName(userId) {
-  return userId ? users.find((u) => u.id === userId)?.name ?? null : null;
+  return userId ? userDirectory.nameOf(userId, null) : null;
 }
 
 /** Human label used in notifications, e.g. "Table 4" or "Order #1043 (pickup)". */
@@ -86,7 +87,7 @@ export function confirmOrder(order, actor) {
   order.status = 'confirmed';
   order.confirmedAt = now;
   order.kitchenRank = Date.now();
-  if (!order.waiterId && actor && ['waiter', 'manager', 'admin'].includes(actor.role)) order.waiterId = actor.id;
+  if (!order.waiterId && hasRole(actor, 'waiter', 'manager', 'admin')) order.waiterId = actor.id;
   order.items.forEach((i) => {
     if (i.status === 'pending') i.status = 'queued';
   });

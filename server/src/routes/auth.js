@@ -1,25 +1,24 @@
 import { Router } from 'express';
-import bcrypt from 'bcryptjs';
 import {
-  users,
+  userDirectory,
   findUserByEmail,
   findUserById,
-  createUser,
   sanitizeUser,
-  customers,
-  nextId,
   ROLES,
 } from '../data/store.js';
-import { authenticate, requireRole, requireAdmin } from '../middleware/auth.js';
-import { signToken } from '../lib/jwt.js';
-import { canManage, BELOW_RANK_ERROR } from '../lib/hierarchy.js';
+import { accounts } from '../domain/accounts.js';
+import { AccountError } from '../domain/account-service.js';
+import { authenticate, authenticateForAccountRecovery, revokeSession, requireRole, requireAdmin } from '../middleware/auth.js';
+import { clearSession, protectSessionIssuance, setSession } from '../lib/session-cookie.js';
+import { hashPassword, needsRehash, passwordMatches } from '../lib/passwords.js';
+import { ASSIGNABLE_ROLES, canManage, BELOW_RANK_ERROR } from '../lib/hierarchy.js';
 import { passwordError, generateTempPassword, PASSWORD_MAX } from '../lib/password-policy.js';
 import { personName, email as readEmail, phone as readPhone, bool, oneOf, EMAIL_MAX } from '../lib/validate.js';
 
 const router = Router();
 
 /** POST /api/auth/register — create a Customer account (public). */
-router.post('/register', (req, res) => {
+router.post('/register', protectSessionIssuance, (req, res) => {
   // Only these three fields are read: a "role" (or anything else) in the body is ignored.
   const body = req.body || {};
   if (!body.name || !body.email || !body.password) {
@@ -31,31 +30,22 @@ router.post('/register', (req, res) => {
   if (typeof password !== 'string') return res.status(400).json({ error: 'Password must be text.' });
   const weak = passwordError(password, { email, name });
   if (weak) return res.status(400).json({ error: weak });
-  if (findUserByEmail(email)) {
-    return res.status(409).json({ error: 'An account with that email already exists.' });
+
+  // A new signup gets a linked customer profile immediately (self-service); the account service does both.
+  let user;
+  try {
+    user = accounts.registerCustomer({ name, email, password });
+  } catch (err) {
+    if (err instanceof AccountError && err.code === 'EMAIL_TAKEN') return res.status(409).json({ error: err.message });
+    throw err;
   }
 
-  const user = createUser({ name, email, password, role: 'customer' });
-
-  // A new signup gets a linked customer profile immediately (self-service).
-  customers.push({
-    id: nextId('cus'),
-    userId: user.id,
-    name: user.name,
-    email: user.email,
-    phone: '',
-    type: 'online',
-    loyaltyPoints: 0,
-    preferences: { dietary: [], allergies: [] },
-    notes: '',
-    createdAt: new Date().toISOString(),
-  });
-
-  return res.status(201).json({ user: sanitizeUser(user), token: signToken(user) });
+  setSession(res, user);
+  return res.status(201).json({ user: sanitizeUser(user) });
 });
 
-/** POST /api/auth/login — authenticate any role and return a JWT. */
-router.post('/login', (req, res) => {
+/** POST /api/auth/login — authenticate any role and set a session cookie. */
+router.post('/login', protectSessionIssuance, (req, res) => {
   // No password policy here: existing accounts (and the demo ones) keep signing in.
   const { email, password } = req.body || {};
   if (typeof email !== 'string' || typeof password !== 'string' || email.length > EMAIL_MAX || password.length > PASSWORD_MAX) {
@@ -63,18 +53,27 @@ router.post('/login', (req, res) => {
   }
   const user = findUserByEmail(email);
 
-  if (!user || !bcrypt.compareSync(password, user.passwordHash)) {
+  if (!passwordMatches(user, password) || !user) {
     return res.status(401).json({ error: 'Invalid email or password.' });
   }
   if (!user.active) {
     return res.status(403).json({ error: 'This account has been suspended. Please contact your manager.' });
   }
+  // Upgrade an older hash to the current work factor now that the password is known to be right.
+  if (needsRehash(user.passwordHash)) user.passwordHash = hashPassword(password);
 
-  return res.json({ user: sanitizeUser(user), token: signToken(user) });
+  setSession(res, user);
+  return res.json({ user: sanitizeUser(user) });
+});
+
+/** POST /api/auth/logout — revoke all sessions and expire the browser cookie. */
+router.post('/logout', revokeSession, (req, res) => {
+  clearSession(res);
+  res.status(204).end();
 });
 
 /** GET /api/auth/me — current user (protected). */
-router.get('/me', authenticate, (req, res) => {
+router.get('/me', authenticateForAccountRecovery, (req, res) => {
   res.json({ user: sanitizeUser(req.user) });
 });
 
@@ -96,20 +95,20 @@ function profileChanges(user, body) {
   }
   if (body.phone !== undefined) {
     if (typeof body.phone !== 'string') return { status: 400, error: 'Please enter a valid phone number.' };
-    changes.phone = readPhone(body.phone);
+    changes.phone = readPhone(body.phone, 'Phone', { current: user.phone });
   }
   return { changes };
 }
-
-// Wrong-password answers are 400, not 401: a 401 means "your session ended" to the client.
-const passwordMatches = (user, password) =>
-  typeof password === 'string' && password.length <= PASSWORD_MAX && bcrypt.compareSync(password, user.passwordHash);
 
 /** PATCH /api/auth/me — staff edit their own name, email and phone. Changing the email (the login) needs the current password. */
 router.patch('/me', authenticate, requireRole('waiter', 'chef', 'manager', 'admin'), (req, res) => {
   const body = req.body || {};
   const { changes, status, error } = profileChanges(req.user, body);
   if (error) return res.status(status).json({ error });
+  // The super admin role is bound to this email (store.js SUPERADMIN_EMAIL).
+  if (changes.email && req.user.role === 'superadmin') {
+    return res.status(403).json({ error: "The super admin's email is bound to the role and cannot be changed." });
+  }
   if (changes.email && !passwordMatches(req.user, body.currentPassword)) {
     return res.status(400).json({ error: 'Enter your current password to change your email.' });
   }
@@ -119,12 +118,11 @@ router.patch('/me', authenticate, requireRole('waiter', 'chef', 'manager', 'admi
 
 /**
  * POST /api/auth/me/password — change your own password; other sessions are
- * signed out. Everyone confirms their current password except an admin, who
- * sets a new one directly.
+ * signed out. Everyone confirms their current password.
  */
-router.post('/me/password', authenticate, (req, res) => {
+router.post('/me/password', authenticateForAccountRecovery, (req, res) => {
   const { currentPassword, newPassword } = req.body || {};
-  if (req.user.role !== 'admin' && !passwordMatches(req.user, currentPassword)) {
+  if (!passwordMatches(req.user, currentPassword)) {
     return res.status(400).json({ error: 'Your current password is incorrect.' });
   }
   if (typeof newPassword !== 'string' || !newPassword) {
@@ -135,11 +133,12 @@ router.post('/me/password', authenticate, (req, res) => {
   }
   const weak = passwordError(newPassword, req.user);
   if (weak) return res.status(400).json({ error: weak });
-  req.user.passwordHash = bcrypt.hashSync(newPassword, 10);
+  req.user.passwordHash = hashPassword(newPassword);
   req.user.mustChangePassword = false;
   req.user.tokenVersion = (req.user.tokenVersion ?? 0) + 1;
   // A fresh token keeps this session signed in while older ones stop working.
-  return res.json({ user: sanitizeUser(req.user), token: signToken(req.user) });
+  setSession(res, req.user);
+  return res.json({ user: sanitizeUser(req.user) });
 });
 
 /** Load the target account and check the caller outranks it; responds and returns null otherwise. */
@@ -175,7 +174,7 @@ router.post('/users/:id/reset-password', authenticate, requireRole('manager', 'a
   const target = managedTarget(req, res);
   if (!target) return undefined;
   const tempPassword = generateTempPassword();
-  target.passwordHash = bcrypt.hashSync(tempPassword, 10);
+  target.passwordHash = hashPassword(tempPassword);
   target.mustChangePassword = true;
   target.tokenVersion = (target.tokenVersion ?? 0) + 1;
   return res.json({ user: sanitizeUser(target), tempPassword });
@@ -194,20 +193,20 @@ router.post('/users/:id/password', authenticate, requireRole('admin'), (req, res
   }
   const weak = passwordError(newPassword, target);
   if (weak) return res.status(400).json({ error: weak });
-  target.passwordHash = bcrypt.hashSync(newPassword, 10);
+  target.passwordHash = hashPassword(newPassword);
   target.mustChangePassword = false;
   target.tokenVersion = (target.tokenVersion ?? 0) + 1;
   return res.json({ user: sanitizeUser(target) });
 });
 
-/** GET /api/auth/roles — list the five stakeholder roles. */
+/** GET /api/auth/roles — list the five stakeholder roles and the super admin. */
 router.get('/roles', (req, res) => {
   res.json({ roles: ROLES });
 });
 
 /** GET /api/auth/users — full user list (Admin; Manager read-only). */
 router.get('/users', authenticate, requireRole('manager', 'admin'), (req, res) => {
-  res.json({ users: users.map(sanitizeUser) });
+  res.json({ users: userDirectory.all.map(sanitizeUser) });
 });
 
 /** PATCH /api/auth/users/:id — change role / active status (admin only). */
@@ -216,7 +215,11 @@ router.patch('/users/:id', requireAdmin, (req, res) => {
   if (!user) return res.status(404).json({ error: 'User not found.' });
 
   const body = req.body || {};
-  const role = oneOf(body.role, 'Role', ROLES, { message: 'Invalid role.' });
+  // The super admin role is bound to one account by scripts/superadmin.js, never assigned here.
+  if (body.role === 'superadmin') {
+    return res.status(403).json({ error: 'The super admin role is bound to one account and cannot be assigned.' });
+  }
+  const role = oneOf(body.role, 'Role', ASSIGNABLE_ROLES, { message: 'Invalid role.' });
   const active = bool(body.active, 'active');
   const isSelf = user.id === req.user.id;
   // Admins manage the staff accounts below them (not other admins) and customer accounts.
@@ -228,6 +231,7 @@ router.patch('/users/:id', requireAdmin, (req, res) => {
   }
   if (active !== undefined) {
     if (isSelf && !active) return res.status(400).json({ error: 'You cannot suspend your own account.' });
+    if (user.active !== active) user.tokenVersion = (user.tokenVersion ?? 0) + 1;
     user.active = active;
   }
 
@@ -236,13 +240,12 @@ router.patch('/users/:id', requireAdmin, (req, res) => {
 
 /** DELETE /api/auth/users/:id — remove an account; access is revoked immediately (admin only). */
 router.delete('/users/:id', requireAdmin, (req, res) => {
-  const idx = users.findIndex((u) => u.id === req.params.id);
-  if (idx === -1) return res.status(404).json({ error: 'User not found.' });
-  if (users[idx].id === req.user.id) return res.status(400).json({ error: 'You cannot remove your own account.' });
-  if (users[idx].role !== 'customer' && !canManage(req.user, users[idx])) return res.status(403).json({ error: BELOW_RANK_ERROR });
+  const target = findUserById(req.params.id);
+  if (!target) return res.status(404).json({ error: 'User not found.' });
+  if (target.id === req.user.id) return res.status(400).json({ error: 'You cannot remove your own account.' });
+  if (target.role !== 'customer' && !canManage(req.user, target)) return res.status(403).json({ error: BELOW_RANK_ERROR });
 
-  const [removed] = users.splice(idx, 1);
-  for (const c of customers) if (c.userId === removed.id) c.userId = null;
+  const removed = accounts.removeAccount(target.id);
   return res.json({ deleted: true, id: removed.id });
 });
 

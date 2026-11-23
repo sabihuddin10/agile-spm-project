@@ -1,4 +1,5 @@
 import type { AttendanceState, PresenceEntry } from '@/types';
+import { formatClock } from '@/lib/format';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ROLE_META } from '@/components/staff/role-meta';
@@ -12,14 +13,25 @@ function sinceText(p: PresenceEntry): string {
   return `since ${clockTime(p.since)}`;
 }
 
-function Person({ p, isSelf }: { p: PresenceEntry; isSelf: boolean }) {
+function Person({ p, isSelf, accountHref }: { p: PresenceEntry; isSelf: boolean; accountHref?: (p: PresenceEntry) => string | null }) {
   const meta = STATE_META[p.state];
   return (
     <li className="flex items-start gap-3 py-2.5">
       <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${meta.dot}`} aria-hidden="true" />
       <div className="min-w-0 flex-1">
         <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 sm:gap-x-2">
-          <span className="text-sm font-medium text-stone-900 sm:text-base">{p.name}</span>
+          {accountHref && !isSelf && accountHref(p) ? (
+            <a
+              href={accountHref(p) ?? undefined}
+              className="underline hover:text-brand-600 text-sm"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {p.name}
+            </a>
+          ) : (
+            <span className="text-sm font-medium text-stone-900 sm:text-base">{p.name}</span>
+          )}
           {isSelf ? <span className="text-xs text-stone-500">(you)</span> : null}
           <Badge tone={ROLE_META[p.role].tone}>{ROLE_META[p.role].label}</Badge>
         </p>
@@ -28,7 +40,7 @@ function Person({ p, isSelf }: { p: PresenceEntry; isSelf: boolean }) {
           {sinceText(p) ? <span> · {sinceText(p)}</span> : null}
         </p>
         <p className="text-xs tabular-nums text-stone-500">
-          {p.todayShift ? `Shift today ${p.todayShift.start}–${p.todayShift.end}` : 'No shift today'}
+          {p.todayShift ? `Shift today ${formatClock(p.todayShift.start)}–${formatClock(p.todayShift.end)}` : 'No shift today'}
         </p>
       </div>
     </li>
@@ -45,12 +57,14 @@ export function PresenceList({
   title = 'Colleagues now',
   subtitle,
   variant = 'list',
+  accountHref,
 }: {
   people: PresenceEntry[];
   selfId?: string;
   title?: string;
   subtitle?: string;
   variant?: 'list' | 'board';
+  accountHref?: (p: PresenceEntry) => string | null;
 }) {
   const groups = ORDER.map((state) => ({ state, list: people.filter((p) => p.state === state).sort((a, b) => a.name.localeCompare(b.name)) }));
   const counts = groups.map((g) => `${g.list.length} ${STATE_META[g.state].label.toLowerCase()}`).join(' · ');
@@ -76,7 +90,7 @@ export function PresenceList({
               {g.list.length ? (
                 <ul className="divide-y divide-stone-100" aria-label={STATE_META[g.state].label}>
                   {g.list.map((p) => (
-                    <Person key={p.userId} p={p} isSelf={p.userId === selfId} />
+                    <Person key={p.userId} p={p} isSelf={p.userId === selfId} accountHref={accountHref} />
                   ))}
                 </ul>
               ) : (
@@ -88,7 +102,7 @@ export function PresenceList({
       ) : (
         <ul className="divide-y divide-stone-100">
           {groups.flatMap((g) => g.list).map((p) => (
-            <Person key={p.userId} p={p} isSelf={p.userId === selfId} />
+            <Person key={p.userId} p={p} isSelf={p.userId === selfId} accountHref={accountHref} />
           ))}
         </ul>
       )}

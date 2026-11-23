@@ -5,6 +5,7 @@ import { computeTotals, lineTotal, splitEvenCents, splitByItems, toCents, fromCe
 import { markPaid, markUnpaid, tableNumber, userName } from '../lib/orders.js';
 import { localDate, iso } from '../lib/time.js';
 import { text, number } from '../lib/validate.js';
+import { hasRole } from '../lib/hierarchy.js';
 
 const router = Router();
 
@@ -63,7 +64,7 @@ function invoice(order) {
 }
 
 function canView(order, user) {
-  if (['waiter', 'manager', 'admin'].includes(user.role)) return true;
+  if (hasRole(user, 'waiter', 'manager', 'admin')) return true;
   if (user.role !== 'customer') return false;
   const linked = findCustomerByUserId(user.id);
   return Boolean(linked && linked.id === order.customerId);

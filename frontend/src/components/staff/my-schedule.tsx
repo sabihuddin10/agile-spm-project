@@ -5,7 +5,7 @@ import Link from 'next/link';
 import type { Shift } from '@/types';
 import { staffApi } from '@/lib/api';
 import { can } from '@/lib/permissions';
-import { SHIFT_STATUS, addDaysISO, errorMessage, formatDate, formatMinutes, localDateISO } from '@/lib/format';
+import { SHIFT_STATUS, addDaysISO, errorMessage, formatDate, formatClock, formatMinutes, localDateISO } from '@/lib/format';
 import { useAuth } from '@/context/auth-context';
 import { useNow, usePolling } from '@/hooks/use-polling';
 import { Badge } from '@/components/ui/badge';
@@ -131,7 +131,7 @@ export function MySchedule() {
               </p>
               <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
                 <p className="text-xl font-bold text-stone-900 sm:text-2xl">
-                  {next.start}–{next.end}
+                  {formatClock(next.start)}–{formatClock(next.end)}
                 </p>
                 <p className="text-base font-medium text-stone-700 sm:text-lg">{formatDate(next.date)}</p>
                 <p className="text-sm text-stone-500">{formatHours(next.hours)}</p>
@@ -184,7 +184,7 @@ export function MySchedule() {
                             <div className="min-w-0 flex-1">
                               <p className="flex flex-wrap items-baseline gap-x-2.5">
                                 <span className="text-sm font-medium tabular-nums text-stone-900 sm:text-base">
-                                  {s.start}–{s.end}
+                                  {formatClock(s.start)}–{formatClock(s.end)}
                                 </span>
                                 <span className="text-xs text-stone-500 sm:text-sm">{formatHours(s.hours)}</span>
                               </p>
@@ -219,7 +219,7 @@ export function MySchedule() {
                         <p className="flex flex-wrap items-baseline gap-x-2.5 sm:gap-x-4">
                           <span className="w-full text-sm font-medium text-stone-800 sm:w-28 sm:text-base">{formatDate(s.date)}</span>
                           <span className="text-xs tabular-nums text-stone-700 sm:text-base">
-                            {s.start}–{s.end}
+                            {formatClock(s.start)}–{formatClock(s.end)}
                           </span>
                           <span className="text-xs text-stone-500 sm:text-sm">{formatHours(s.hours)}</span>
                         </p>

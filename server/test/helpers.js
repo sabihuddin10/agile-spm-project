@@ -4,29 +4,30 @@
  */
 import { createApp } from '../src/app.js';
 
-export async function startServer() {
-  const server = createApp({ logging: false, persistence: false, rateLimits: false }).listen(0);
+export async function startServer(options = {}) {
+  const server = createApp({ logging: false, persistence: false, rateLimits: false, ...options }).listen(0);
   await new Promise((resolve) => server.once('listening', resolve));
   const base = `http://127.0.0.1:${server.address().port}/api`;
 
-  async function call(method, path, { token, body } = {}) {
+  async function call(method, path, { token, body, headers } = {}) {
     const res = await fetch(base + path, {
       method,
       headers: {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...headers,
       },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
     const text = await res.text();
-    return { status: res.status, body: text ? JSON.parse(text) : null };
+    return { status: res.status, body: text ? JSON.parse(text) : null, headers: res.headers };
   }
 
   async function login(who, password = 'password') {
     const email = who.includes('@') ? who : `${who}@rest.test`;
     const res = await call('POST', '/auth/login', { body: { email, password } });
     if (res.status !== 200) throw new Error(`login failed for ${email}: ${res.status}`);
-    return res.body.token;
+    return issuedToken(res);
   }
 
   async function close() {
@@ -35,6 +36,11 @@ export async function startServer() {
   }
 
   return { base, call, login, close };
+}
+
+export function issuedToken(res) {
+  const cookie = res.headers.get('set-cookie');
+  return /^restaurant_ops_session=([^;]+)/.exec(cookie ?? '')?.[1];
 }
 
 /** First menu item with the given name, from the public menu. */

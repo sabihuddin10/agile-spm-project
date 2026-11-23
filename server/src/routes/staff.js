@@ -1,23 +1,24 @@
 import { Router } from 'express';
 
-import { users, applications, shifts, orders, STAFF_ROLES, createUser, findUserByEmail, sanitizeUser, nextId } from '../data/store.js';
+import { userDirectory, applications, shifts, orders, STAFF_ROLES, createUser, findUserByEmail, findUserById, sanitizeUser, nextId } from '../data/store.js';
 import { requireRole } from '../middleware/auth.js';
 import { notify } from '../lib/notify.js';
 import { MINUTE, addDays, combine, isValidDate, isValidTime, localDate, iso } from '../lib/time.js';
-import { toCents, fromCents } from '../lib/order-math.js';
 import { generateTempPassword } from '../lib/password-policy.js';
 import { personName, email as readEmail, phone as readPhone, text, oneOf, id } from '../lib/validate.js';
+import { hasRole } from '../lib/hierarchy.js';
+import { staffPerformance } from '../lib/staff-performance.js';
 
 const router = Router();
 const managerRoles = requireRole('manager', 'admin');
 const staffRoles = requireRole(...STAFF_ROLES);
 
 
-const nameOf = (userId) => users.find((u) => u.id === userId)?.name ?? 'Former staff';
+const nameOf = (userId) => userDirectory.nameOf(userId, 'Former staff');
 const shiftHours = (s) => (combine(s.date, s.end) - combine(s.date, s.start)) / (60 * MINUTE);
 
 function serializeShift(s) {
-  const u = users.find((x) => x.id === s.userId);
+  const u = findUserById(s.userId);
   return { ...s, userName: u?.name ?? 'Former staff', role: u?.role ?? null, hours: Math.round(shiftHours(s) * 10) / 10 };
 }
 
@@ -31,7 +32,7 @@ function rangeFromQuery(query, defaultFrom, defaultTo) {
 
 /** GET /api/staff/roster — active and suspended staff accounts (manager/admin). */
 router.get('/roster', managerRoles, (req, res) => {
-  res.json({ staff: users.filter((u) => STAFF_ROLES.includes(u.role)).map(sanitizeUser) });
+  res.json({ staff: userDirectory.all.filter((u) => STAFF_ROLES.includes(u.role)).map(sanitizeUser) });
 });
 
 /* ---------------------------------------------------------- applications */
@@ -90,7 +91,7 @@ router.post('/applications/:id/approve', managerRoles, (req, res) => {
   if (application.status !== 'pending') return res.status(409).json({ error: `Application already ${application.status}.` });
 
   const role = oneOf(req.body?.role, 'Role', ['waiter', 'chef', 'manager', 'admin', 'customer'], { message: 'Invalid role.' }) || application.desiredRole;
-  const allowed = req.user.role === 'admin' ? ['waiter', 'chef', 'manager'] : ['waiter', 'chef'];
+  const allowed = hasRole(req.user, 'admin') ? ['waiter', 'chef', 'manager'] : ['waiter', 'chef'];
   if (!allowed.includes(role)) return res.status(403).json({ error: `You cannot approve staff as ${role}.` });
   if (findUserByEmail(application.email)) return res.status(409).json({ error: 'An account with that email already exists.' });
 
@@ -130,7 +131,7 @@ router.get('/shifts', managerRoles, (req, res) => {
 });
 
 function validateShift({ userId, date, start, end }, excludeId) {
-  const user = users.find((u) => u.id === userId);
+  const user = findUserById(userId);
   if (!user || !STAFF_ROLES.includes(user.role)) return 'Choose a staff member.';
   if (!user.active) return `${user.name} is suspended.`;
   if (!isValidDate(date)) return 'Choose a valid date.';
@@ -194,33 +195,8 @@ router.get('/performance', managerRoles, (req, res) => {
     return d >= from && d <= to && o.status !== 'cancelled';
   });
 
-  const staff = users.filter((u) => STAFF_ROLES.includes(u.role));
-  const rows = staff.map((u) => {
-    const taken = inRange.filter((o) => o.waiterId === u.id);
-    const settled = taken.filter((o) => o.paymentStatus !== 'unpaid');
-    const prepared = inRange.flatMap((o) => o.items.filter((i) => i.preparedBy === u.id).map((i) => ({ i, o })));
-    const prepTimes = prepared
-      .filter(({ i, o }) => i.readyAt && o.confirmedAt)
-      .map(({ i, o }) => (new Date(i.readyAt) - new Date(o.confirmedAt)) / MINUTE);
-    const myShifts = shifts.filter((s) => s.userId === u.id && s.date >= from && s.date <= to);
-    const completed = myShifts.filter((s) => s.status === 'completed');
-
-    return {
-      userId: u.id,
-      name: u.name,
-      role: u.role,
-      active: u.active,
-      ordersTaken: taken.length,
-      ordersServed: inRange.filter((o) => o.servedBy === u.id).length,
-      revenueHandled: fromCents(settled.reduce((s, o) => s + toCents(o.total) - toCents(o.refund?.amount ?? 0), 0)),
-      tips: fromCents(settled.reduce((s, o) => s + toCents(o.tip), 0)),
-      itemsPrepared: prepared.reduce((s, { i }) => s + i.qty, 0),
-      avgPrepMinutes: prepTimes.length ? Math.round(prepTimes.reduce((s, m) => s + m, 0) / prepTimes.length) : null,
-      shiftsCompleted: completed.length,
-      shiftsMissed: myShifts.filter((s) => s.status === 'missed').length,
-      hoursWorked: Math.round(completed.reduce((s, x) => s + shiftHours(x), 0) * 10) / 10,
-    };
-  });
+  const staff = userDirectory.all.filter((u) => STAFF_ROLES.includes(u.role));
+  const rows = staffPerformance({ staff, orders: inRange, shifts, from, to });
 
   res.json({ from, to, staff: rows });
 });

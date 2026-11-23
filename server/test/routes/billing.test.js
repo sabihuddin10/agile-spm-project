@@ -225,3 +225,20 @@ test('a tip must be a finite amount, and a refund reason short text', async () =
   assert.equal(invoice.tip, 0);
   assert.ok(Number.isFinite(invoice.total));
 });
+
+test('the super admin opens any bill, like an admin', async () => {
+  // Arrange
+  const superadmin = await api.login('sabihuddin106@gmail.com', 'Admin@123456');
+  const waiter = await api.login('waiter');
+  const chef = await api.login('chef');
+  const pizza = await menuItem(api.call, 'Margherita Pizza');
+  const order = (await api.call('POST', '/orders', { token: waiter, body: { type: 'dine-in', items: [{ menuItemId: pizza.id, qty: 1 }] } })).body.order;
+
+  // Act
+  const bill = await api.call('GET', `/billing/${order.id}`, { token: superadmin });
+  const asChef = await api.call('GET', `/billing/${order.id}`, { token: chef });
+
+  // Assert
+  assert.equal(bill.status, 200);
+  assert.equal(asChef.status, 403);
+});

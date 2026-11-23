@@ -6,6 +6,7 @@ import { occupyTable } from '../lib/orders.js';
 import { notify } from '../lib/notify.js';
 import { addDays, combine, isValidDate, isValidTime, localDate, iso } from '../lib/time.js';
 import { personName, email as readEmail, phone as readPhone, text, id } from '../lib/validate.js';
+import { hasRole } from '../lib/hierarchy.js';
 
 const router = Router();
 const staffRoles = requireRole('waiter', 'manager', 'admin');
@@ -235,7 +236,7 @@ router.patch('/:id', staffRoles, (req, res) => {
 router.post('/:id/cancel', (req, res) => {
   const r = reservations.find((x) => x.id === req.params.id);
   if (!r) return res.status(404).json({ error: 'Reservation not found.' });
-  const staff = req.user && ['waiter', 'manager', 'admin'].includes(req.user.role);
+  const staff = hasRole(req.user, 'waiter', 'manager', 'admin');
   if (!staff && !ownReservation(r, req.user)) {
     return res.status(req.user ? 403 : 401).json({ error: req.user ? 'Not allowed.' : 'Authentication required.' });
   }

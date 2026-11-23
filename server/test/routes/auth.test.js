@@ -1,13 +1,136 @@
 /** Auth & access-control module — routes/auth.js (US1.1). */
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { startServer } from '../helpers.js';
+import { spawnSync } from 'node:child_process';
+import { issuedToken, startServer } from '../helpers.js';
 
 let api;
 before(async () => {
   api = await startServer();
 });
 after(() => api.close());
+
+test('production app startup requires a configured JWT secret', () => {
+  // Arrange
+  const env = { ...process.env, NODE_ENV: 'production', JWT_SECRET: '' };
+  const boot = "import { createApp } from './src/app.js'; createApp({ persistence: false });";
+
+  // Act
+  const result = spawnSync(process.execPath, ['--input-type=module', '-e', boot], {
+    cwd: new URL('../../', import.meta.url), env, encoding: 'utf8',
+  });
+
+  // Assert
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /JWT_SECRET/);
+});
+
+test('login throttles repeated failures for the normalized email', async (t) => {
+  // Arrange
+  const limited = await startServer({ rateLimits: true });
+  t.after(() => limited.close());
+  const emails = ['missing@example.com', ' Missing@example.com ', 'MISSING@example.com'];
+
+  // Act
+  const responses = [];
+  for (let i = 0; i < 6; i += 1) {
+    responses.push(await limited.call('POST', '/auth/login', {
+      body: { email: emails[i % emails.length], password: 'incorrect' },
+    }));
+  }
+  const different = await limited.call('POST', '/auth/login', {
+    body: { email: 'customer@rest.test', password: 'password' },
+  });
+
+  // Assert
+  assert.deepEqual(responses.map((res) => res.status), [401, 401, 401, 401, 401, 429]);
+  assert.ok(Number(responses.at(-1).headers.get('retry-after')) > 0);
+  assert.equal(different.status, 200);
+});
+
+test('login uses an HttpOnly cookie and logout revokes the account sessions', async () => {
+  // Arrange
+  const body = { name: 'Logout Test', email: 'logout@example.com', password: 'Secret-pass1' };
+  await api.call('POST', '/auth/register', { body });
+  const login = await api.call('POST', '/auth/login', { body });
+  const otherSession = await api.login(body.email, body.password);
+  const setCookie = login.headers.get('set-cookie');
+  const cookie = setCookie?.split(';')[0] ?? '';
+
+  // Act
+  const me = await api.call('GET', '/auth/me', { headers: { Cookie: cookie } });
+  const missingHeader = await api.call('POST', '/auth/logout', { headers: { Cookie: cookie } });
+  const logout = await api.call('POST', '/auth/logout', { headers: { Cookie: cookie, 'X-Requested-With': 'RestaurantOps' } });
+  const afterLogout = await api.call('GET', '/auth/me', { headers: { Cookie: cookie } });
+  const other = await api.call('GET', '/auth/me', { token: otherSession });
+
+  // Assert
+  assert.equal(login.status, 200);
+  assert.equal('token' in login.body, false);
+  assert.match(setCookie, /; HttpOnly/i);
+  assert.match(setCookie, /; SameSite=Lax/i);
+  assert.match(setCookie, /; Path=\/api(?:;|$)/i);
+  assert.equal(me.status, 200);
+  assert.equal(missingHeader.status, 403);
+  assert.equal(logout.status, 204);
+  assert.match(logout.headers.get('set-cookie'), /Expires=/i);
+  assert.equal(afterLogout.status, 401);
+  assert.equal(other.status, 401);
+});
+
+test('reactivation requires a fresh sign-in', async () => {
+  // Arrange
+  const credentials = { name: 'Suspend Test', email: 'suspend@example.com', password: 'Secret-pass1' };
+  const registered = await api.call('POST', '/auth/register', { body: credentials });
+  const token = await api.login(credentials.email, credentials.password);
+  const admin = await api.login('admin');
+  const account = `/auth/users/${registered.body.user.id}`;
+
+  // Act
+  const suspend = await api.call('PATCH', account, { token: admin, body: { active: false } });
+  const inactive = await api.call('GET', '/auth/me', { token });
+  const restore = await api.call('PATCH', account, { token: admin, body: { active: true } });
+  const oldSession = await api.call('GET', '/auth/me', { token });
+  const fresh = await api.login(credentials.email, credentials.password);
+  const newSession = await api.call('GET', '/auth/me', { token: fresh });
+
+  // Assert
+  assert.deepEqual([suspend.status, inactive.status, restore.status, oldSession.status, newSession.status], [200, 401, 200, 401, 200]);
+});
+
+test('a temporary password only opens the account recovery flow', async () => {
+  // Arrange
+  const hired = await hire('chef');
+  const token = await api.login(hired.email, hired.password);
+
+  // Act
+  const me = await api.call('GET', '/auth/me', { token });
+  const inventory = await api.call('GET', '/inventory', { token });
+  const edit = await api.call('PATCH', '/auth/me', { token, body: { name: 'Changed Name' } });
+
+  // Assert
+  assert.equal(me.body.user.mustChangePassword, true);
+  assert.equal(inventory.status, 403);
+  assert.equal(edit.status, 403);
+});
+
+test('a customer must confirm their password before changing their sign-in email', async () => {
+  // Arrange
+  const credentials = { name: 'Email Test', email: 'email@example.com', password: 'Secret-pass1' };
+  await api.call('POST', '/auth/register', { body: credentials });
+  const token = await api.login(credentials.email, credentials.password);
+
+  // Act
+  const rejected = await api.call('PATCH', '/customers/me', { token, body: { email: 'changed@example.com' } });
+  const accepted = await api.call('PATCH', '/customers/me', {
+    token, body: { email: 'changed@example.com', currentPassword: credentials.password },
+  });
+
+  // Assert
+  assert.equal(rejected.status, 400);
+  assert.equal(accepted.status, 200);
+  assert.equal(accepted.body.customer.email, 'changed@example.com');
+});
 
 test('US1.1 each role reaches exactly its permitted endpoints', async () => {
   // Arrange
@@ -60,7 +183,7 @@ test('US1.2 registration validates input and creates a logged-in customer', asyn
   // Assert
   assert.equal(ok.status, 201);
   assert.equal(ok.body.user.role, 'customer');
-  const me = await api.call('GET', '/customers/me', { token: ok.body.token });
+  const me = await api.call('GET', '/customers/me', { token: issuedToken(ok) });
   assert.equal(me.body.customer.name, 'Nina New');
 
   // Act / Assert — a duplicate email (any case) is refused
@@ -92,23 +215,28 @@ test('/auth/me is 401 without a valid token', async () => {
   assert.equal(garbage.status, 401);
 });
 
-test('/auth/roles lists the five stakeholder roles', async () => {
+test('/auth/roles lists the five stakeholder roles and the super admin', async () => {
   // Act
   const res = await api.call('GET', '/auth/roles');
 
   // Assert
   assert.equal(res.status, 200);
-  assert.deepEqual([...res.body.roles].sort(), ['admin', 'chef', 'customer', 'manager', 'waiter']);
+  assert.deepEqual([...res.body.roles].sort(), ['admin', 'chef', 'customer', 'manager', 'superadmin', 'waiter']);
 });
 
 /** Hire a fresh staff member through the real application flow; returns { id, email, password, user }. */
-async function hire(role, by = 'manager') {
+async function hire(role, by = 'manager', { changePassword = false } = {}) {
   const tag = `${role}${Date.now()}${Math.random().toString(36).slice(2, 6)}`;
   const email = `${tag}@example.com`;
   const applied = await api.call('POST', '/staff/applications', { body: { name: `Hire ${tag}`, email, desiredRole: role === 'manager' ? 'waiter' : role } });
   const approver = await api.login(by);
   const approved = await api.call('POST', `/staff/applications/${applied.body.application.id}/approve`, { token: approver, body: role === 'manager' ? { role: 'manager' } : {} });
-  return { id: approved.body.user.id, email, password: approved.body.tempPassword, user: approved.body.user };
+  const { user, tempPassword } = approved.body;
+  if (!changePassword) return { id: user.id, email, password: tempPassword, user };
+  const token = await api.login(email, tempPassword);
+  const password = 'Changed-hire-32!';
+  const changed = await api.call('POST', '/auth/me/password', { token, body: { currentPassword: tempPassword, newPassword: password } });
+  return { id: user.id, email, password, user: changed.body.user };
 }
 
 test('a newly approved hire must change their temporary password', async () => {
@@ -122,7 +250,7 @@ test('a newly approved hire must change their temporary password', async () => {
 
 test('staff edit their own name and phone; changing the email needs the current password', async () => {
   // Arrange
-  const hired = await hire('chef');
+  const hired = await hire('chef', 'manager', { changePassword: true });
   const token = await api.login(hired.email, hired.password);
 
   // Act
@@ -170,7 +298,7 @@ test('changing your own password keeps this session, signs out the others and cl
   assert.deepEqual([wrong.status, short.status, same.status], [400, 400, 400]);
   assert.equal(changed.status, 200);
   assert.equal(changed.body.user.mustChangePassword, false);
-  assert.equal((await api.call('GET', '/auth/me', { token: changed.body.token })).status, 200, 'the returned token works');
+  assert.equal((await api.call('GET', '/auth/me', { token: issuedToken(changed) })).status, 200, 'the rotated session works');
   assert.equal((await api.call('GET', '/auth/me', { token: tokenB })).status, 401, 'other sessions are signed out');
   assert.equal((await api.call('POST', '/auth/login', { body: { email: hired.email, password: 'Secret-123x' } })).status, 200);
 });
@@ -225,7 +353,7 @@ test('an admin manages managers, but not another admin — not their details, ro
   assert.equal(customer.status, 200, 'customer accounts stay manageable by an admin');
 });
 
-test('an admin changes their own password without the current one; other roles still need it', async () => {
+test('admins and other roles must confirm the current password to change their own', async () => {
   // Arrange — a second admin, so the seeded demo admin keeps its "password" for the other tests
   const demoAdmin = await api.login('admin');
   const promoted = await hire('waiter');
@@ -235,11 +363,13 @@ test('an admin changes their own password without the current one; other roles s
   const waiterToken = await api.login(waiter.email, waiter.password);
 
   // Act
-  const adminChange = await api.call('POST', '/auth/me/password', { token: admin, body: { newPassword: 'Admin-new-1!' } });
+  const adminNoCurrent = await api.call('POST', '/auth/me/password', { token: admin, body: { newPassword: 'Admin-new-1!' } });
+  const adminChange = await api.call('POST', '/auth/me/password', { token: admin, body: { currentPassword: promoted.password, newPassword: 'Admin-new-1!' } });
   const waiterNoCurrent = await api.call('POST', '/auth/me/password', { token: waiterToken, body: { newPassword: 'Waiter-new-1!' } });
-  const adminSame = await api.call('POST', '/auth/me/password', { token: adminChange.body.token, body: { newPassword: 'Admin-new-1!' } });
+  const adminSame = await api.call('POST', '/auth/me/password', { token: issuedToken(adminChange), body: { currentPassword: 'Admin-new-1!', newPassword: 'Admin-new-1!' } });
 
   // Assert
+  assert.equal(adminNoCurrent.status, 400);
   assert.equal(adminChange.status, 200);
   assert.equal((await api.call('POST', '/auth/login', { body: { email: promoted.email, password: 'Admin-new-1!' } })).status, 200);
   assert.equal(waiterNoCurrent.status, 400);
@@ -304,7 +434,7 @@ test('registration ignores a role (or any other field) in the body', async () =>
 test('profile and account fields are type-checked and length-limited', async () => {
   // Arrange
   const admin = await api.login('admin');
-  const hired = await hire('waiter');
+  const hired = await hire('waiter', 'manager', { changePassword: true });
   const token = await api.login(hired.email, hired.password);
 
   // Act
@@ -345,4 +475,145 @@ test('an admin types a new password for a staff member below them; nobody else c
   assert.equal((await api.call('POST', '/auth/login', { body: { email: chef.email, password: 'Chef-pass-9!' } })).status, 200);
   assert.equal(byManager.status, 403);
   assert.equal(onAdmin.status, 403);
+});
+
+test('DELETE /auth/users/:id removes a staff account and unassigns them from tables', async () => {
+  // Arrange
+  const admin = await api.login('admin');
+  const waiter = await hire('waiter');
+  const table = (await api.call('GET', '/tables/public')).body.tables[0];
+  await api.call('PATCH', `/tables/${table.id}`, { token: admin, body: { waiterId: waiter.id } });
+  const beforeDelete = (await api.call('GET', '/tables', { token: admin })).body.tables.find((t) => t.id === table.id);
+  assert.equal(beforeDelete.waiterId, waiter.id);
+
+  // Act
+  const res = await api.call('DELETE', `/auth/users/${waiter.id}`, { token: admin });
+
+  // Assert
+  assert.equal(res.status, 200);
+  assert.equal(res.body.deleted, true);
+  const afterDelete = (await api.call('GET', '/tables', { token: admin })).body.tables.find((t) => t.id === table.id);
+  assert.equal(afterDelete.waiterId, null, 'table waiter assignment was cleared');
+});
+
+test('superusers sign in with their own password only (sabihuddin106@gmail.com as the super admin, shahanarain33@gmail.com as an admin) and reach admin endpoints', async () => {
+  // Arrange
+  const superusers = [
+    { email: 'sabihuddin106@gmail.com', name: 'Sabih Uddin', role: 'superadmin' },
+    { email: 'shahanarain33@gmail.com', name: 'Shahan Arain', role: 'admin' },
+  ];
+
+  for (const { email, name, role } of superusers) {
+    // Act — login with configured password
+    const res = await api.call('POST', '/auth/login', { body: { email, password: 'Admin@123456' } });
+
+    // Assert
+    assert.equal(res.status, 200);
+    assert.equal(res.body.user.role, role);
+    assert.equal(res.body.user.name, name);
+    assert.equal(res.body.user.email, email);
+
+    // Act — reach admin-only endpoint
+    const token = issuedToken(res);
+    const usersList = await api.call('GET', '/auth/users', { token });
+
+    // Assert
+    assert.equal(usersList.status, 200);
+    assert.ok(Array.isArray(usersList.body.users));
+
+    // Act — the shared demo password does not open a superuser account
+    const demoPassword = await api.call('POST', '/auth/login', { body: { email, password: 'password' } });
+
+    // Assert
+    assert.equal(demoPassword.status, 401);
+  }
+});
+
+/* ------------------------------------------------ the super admin (bound role) */
+
+/** The seeded account bound to the super admin role (store.js SUPERADMIN_EMAIL) and its dev password. */
+const SUPERADMIN = { id: 'usr_super_sabih', email: 'sabihuddin106@gmail.com', password: 'Admin@123456' };
+
+test('the super admin manages an admin: details, password reset, a typed password, role, suspension and removal', async () => {
+  // Arrange — a fresh admin: hired as a manager, then promoted by the super admin
+  const superadmin = await api.login(SUPERADMIN.email, SUPERADMIN.password);
+  const { id } = await hire('manager', 'admin');
+  const promoted = await api.call('PATCH', `/auth/users/${id}`, { token: superadmin, body: { role: 'admin' } });
+
+  // Act
+  const profile = await api.call('PATCH', `/auth/users/${id}/profile`, { token: superadmin, body: { name: 'Second Admin' } });
+  const reset = await api.call('POST', `/auth/users/${id}/reset-password`, { token: superadmin });
+  const typed = await api.call('POST', `/auth/users/${id}/password`, { token: superadmin, body: { newPassword: 'Ledger-Kite-42!' } });
+  const suspended = await api.call('PATCH', `/auth/users/${id}`, { token: superadmin, body: { active: false } });
+  const reactivated = await api.call('PATCH', `/auth/users/${id}`, { token: superadmin, body: { active: true } });
+  const demoted = await api.call('PATCH', `/auth/users/${id}`, { token: superadmin, body: { role: 'manager' } });
+  const repromoted = await api.call('PATCH', `/auth/users/${id}`, { token: superadmin, body: { role: 'admin' } });
+  const removed = await api.call('DELETE', `/auth/users/${id}`, { token: superadmin });
+
+  // Assert
+  assert.equal(promoted.status, 200);
+  assert.equal(promoted.body.user.role, 'admin');
+  assert.equal(profile.status, 200);
+  assert.equal(profile.body.user.name, 'Second Admin');
+  assert.equal(reset.status, 200);
+  assert.ok(reset.body.tempPassword, 'a one-time password is issued');
+  assert.equal(typed.status, 200);
+  assert.equal(suspended.body.user.active, false);
+  assert.equal(reactivated.body.user.active, true);
+  assert.equal(demoted.body.user.role, 'manager');
+  assert.equal(repromoted.body.user.role, 'admin');
+  assert.equal(removed.status, 200);
+});
+
+test('an admin cannot manage the super admin in any way', async () => {
+  // Arrange
+  const admin = await api.login('admin');
+
+  // Act
+  const attempts = [
+    await api.call('PATCH', `/auth/users/${SUPERADMIN.id}/profile`, { token: admin, body: { name: 'Taken Over' } }),
+    await api.call('POST', `/auth/users/${SUPERADMIN.id}/reset-password`, { token: admin }),
+    await api.call('POST', `/auth/users/${SUPERADMIN.id}/password`, { token: admin, body: { newPassword: 'Ledger-Kite-42!' } }),
+    await api.call('PATCH', `/auth/users/${SUPERADMIN.id}`, { token: admin, body: { role: 'admin' } }),
+    await api.call('PATCH', `/auth/users/${SUPERADMIN.id}`, { token: admin, body: { active: false } }),
+    await api.call('DELETE', `/auth/users/${SUPERADMIN.id}`, { token: admin }),
+  ];
+
+  // Assert
+  assert.deepEqual(attempts.map((r) => r.status), [403, 403, 403, 403, 403, 403]);
+});
+
+test('nobody can assign the super admin role, not even the super admin', async () => {
+  // Arrange
+  const superadmin = await api.login(SUPERADMIN.email, SUPERADMIN.password);
+  const admin = await api.login('admin');
+  const { id } = await hire('waiter');
+
+  // Act
+  const bySuperadmin = await api.call('PATCH', `/auth/users/${id}`, { token: superadmin, body: { role: 'superadmin' } });
+  const byAdmin = await api.call('PATCH', `/auth/users/${id}`, { token: admin, body: { role: 'superadmin' } });
+  const after = (await api.call('GET', '/auth/users', { token: admin })).body.users.find((u) => u.id === id);
+
+  // Assert
+  assert.equal(bySuperadmin.status, 403);
+  assert.match(bySuperadmin.body.error, /bound to one account/);
+  assert.equal(byAdmin.status, 403);
+  assert.equal(after.role, 'waiter');
+});
+
+test("the super admin's email is bound to the role: its name changes, its email does not", async () => {
+  // Arrange
+  const token = await api.login(SUPERADMIN.email, SUPERADMIN.password);
+
+  // Act
+  const renamed = await api.call('PATCH', '/auth/me', { token, body: { name: 'Sabih Uddin Meraj' } });
+  const newEmail = await api.call('PATCH', '/auth/me', { token, body: { email: 'someone.else@example.com', currentPassword: SUPERADMIN.password } });
+  const me = (await api.call('GET', '/auth/me', { token })).body.user;
+
+  // Assert
+  assert.equal(renamed.status, 200);
+  assert.equal(newEmail.status, 403);
+  assert.match(newEmail.body.error, /bound to the role/);
+  assert.equal(me.email, SUPERADMIN.email);
+  assert.equal(me.name, 'Sabih Uddin Meraj');
 });

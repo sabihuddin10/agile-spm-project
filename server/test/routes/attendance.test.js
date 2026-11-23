@@ -174,7 +174,7 @@ test('every staff role may use the clock; customers get 403 and guests 401', asy
   assert.deepEqual(customerGets, [403, 403]);
 });
 
-test('presence is scoped by role: same level, managers also waiters and chefs, admin everyone', async () => {
+test('presence is scoped by role: same level, managers also waiters and chefs, the admin everyone up to admin, the super admin all', async () => {
   // Act
   const seen = {};
   for (const role of STAFF) {
@@ -183,13 +183,17 @@ test('presence is scoped by role: same level, managers also waiters and chefs, a
     seen[role] = body.people;
   }
   const roles = (people) => [...new Set(people.map((p) => p.role))].sort();
+  const superadmin = await api.login('sabihuddin106@gmail.com', 'Admin@123456');
+  const superadminBoard = (await api.call('GET', '/attendance/presence', { token: superadmin })).body.people;
 
   // Assert
   assert.deepEqual(roles(seen.waiter), ['waiter']);
   assert.deepEqual(roles(seen.chef), ['chef']);
   assert.deepEqual(roles(seen.manager), ['chef', 'manager', 'waiter']);
   assert.deepEqual(roles(seen.admin), ['admin', 'chef', 'manager', 'waiter']);
-  assert.equal(seen.admin.length, 6);
+  assert.equal(seen.admin.length, 7, 'every staff account except the super admin, who outranks the admin');
+  assert.deepEqual(roles(superadminBoard), ['admin', 'chef', 'manager', 'superadmin', 'waiter']);
+  assert.equal(superadminBoard.length, 8);
   for (const p of seen.admin) {
     assert.deepEqual(Object.keys(p).sort(), ['name', 'role', 'since', 'state', 'todayShift', 'userId']);
     assert.ok(['off', 'working', 'on_break'].includes(p.state));

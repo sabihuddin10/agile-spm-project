@@ -8,8 +8,8 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import WorkforcePage from '@/app/staff/workforce/page';
 import { useAuth } from '@/context/auth-context';
-import { storeAuth } from '@/lib/api';
-import { workforceApi, workforceMock } from '@/lib/workforce-api';
+import { setWorkforceMockUser } from '@/lib/workforce-api';
+import { getWorkforceMock, workforceApi } from '@/lib/workforce-api';
 import type { User } from '@/types';
 
 /** A tiny stand-in for the App Router: the query string lives in a store the hooks subscribe to. */
@@ -69,7 +69,7 @@ const admin = { id: 'usr_admin', name: 'Alex Admin', email: 'admin@rest.test', r
 const manager = { id: 'usr_manager', name: 'Maya Manager', email: 'manager@rest.test', role: 'manager', active: true } as User;
 
 function signIn(user: User) {
-  storeAuth('token', user);
+  setWorkforceMockUser(user);
   vi.mocked(useAuth).mockReturnValue({ user } as unknown as ReturnType<typeof useAuth>);
 }
 
@@ -82,9 +82,9 @@ beforeAll(async () => {
   await Promise.all([import('@/components/workforce/work-charts'), import('@/components/workforce/team-charts')]);
 }, 30_000);
 
-beforeEach(() => {
+beforeEach(async () => {
   localStorage.clear();
-  workforceMock.reset();
+  (await getWorkforceMock()).reset();
   toast.mockClear();
   nav.reset();
   nav.push.mockClear();

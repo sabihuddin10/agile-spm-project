@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import type { AttendanceSettings, Settings } from '@/types';
 import { settingsApi } from '@/lib/api';
 import { workforceApi } from '@/lib/workforce-api';
-import { DEFAULT_ATTENDANCE_SETTINGS } from '@/lib/workforce-mock';
+import { DEFAULT_ATTENDANCE_SETTINGS } from '@/lib/attendance-defaults';
 import { can } from '@/lib/permissions';
 import { errorMessage, money } from '@/lib/format';
 import { useAuth } from '@/context/auth-context';

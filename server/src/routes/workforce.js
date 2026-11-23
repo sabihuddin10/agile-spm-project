@@ -41,6 +41,20 @@ const staffTarget = (id) => {
   return user && STAFF_ROLES.includes(user.role) ? user : null;
 };
 
+/** The staff member whose pay the caller may change; responds and returns null otherwise. */
+function payTarget(req, res) {
+  const target = staffTarget(req.params.id);
+  if (!target) {
+    res.status(404).json({ error: 'Staff member not found.' });
+    return null;
+  }
+  if (workforceAccess(req.user, target) !== 'full') {
+    res.status(403).json({ error: 'You cannot change the pay of someone above your own rank.' });
+    return null;
+  }
+  return target;
+}
+
 const between = (date, from, to) => date >= from && date <= to;
 
 /** PayBreakdown for one person and month. */
@@ -150,8 +164,8 @@ router.get('/overview', requireRole('manager', 'admin'), (req, res) => {
 
 /** PUT /api/workforce/users/:id/wage — set an hourly wage (admin). */
 router.put('/users/:id/wage', adminOnly, (req, res) => {
-  const target = staffTarget(req.params.id);
-  if (!target) return res.status(404).json({ error: 'Staff member not found.' });
+  const target = payTarget(req, res);
+  if (!target) return undefined;
   const wage = req.body?.hourlyWage;
   if (typeof wage !== 'number' || !Number.isFinite(wage) || wage <= 0 || wage > MAX_WAGE) {
     return res.status(400).json({ error: `hourlyWage must be a number above 0 and at most ${MAX_WAGE}.` });
@@ -162,8 +176,8 @@ router.put('/users/:id/wage', adminOnly, (req, res) => {
 
 /** POST /api/workforce/users/:id/adjustments — add a bonus (or a deduction, negative) (admin). */
 router.post('/users/:id/adjustments', adminOnly, (req, res) => {
-  const target = staffTarget(req.params.id);
-  if (!target) return res.status(404).json({ error: 'Staff member not found.' });
+  const target = payTarget(req, res);
+  if (!target) return undefined;
   const { amount, reason, date } = req.body || {};
   if (typeof amount !== 'number' || !Number.isFinite(amount) || round2(amount) === 0 || Math.abs(amount) > MAX_ADJUSTMENT) {
     return res.status(400).json({ error: `amount must be a non-zero number between -${MAX_ADJUSTMENT} and ${MAX_ADJUSTMENT}.` });
@@ -187,8 +201,8 @@ router.post('/users/:id/adjustments', adminOnly, (req, res) => {
 
 /** DELETE /api/workforce/users/:id/adjustments/:adjId (admin) */
 router.delete('/users/:id/adjustments/:adjId', adminOnly, (req, res) => {
-  const target = staffTarget(req.params.id);
-  if (!target) return res.status(404).json({ error: 'Staff member not found.' });
+  const target = payTarget(req, res);
+  if (!target) return undefined;
   const idx = payAdjustments.findIndex((a) => a.id === req.params.adjId && a.userId === target.id);
   if (idx === -1) return res.status(404).json({ error: 'Adjustment not found.' });
   const [removed] = payAdjustments.splice(idx, 1);

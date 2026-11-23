@@ -111,7 +111,7 @@ function StoryRow({
             </p>
             <p>
               <span className="font-semibold text-stone-500">Verified by: </span>
-              <code className="break-all font-mono text-stone-600">server/test/{story.evidence.test}</code>
+              <code className="break-all font-mono text-stone-600">{/^(routes|lib|data|middleware)\//.test(story.evidence.test) ? `server/test/${story.evidence.test}` : story.evidence.test}</code>
             </p>
           </div>
         </div>

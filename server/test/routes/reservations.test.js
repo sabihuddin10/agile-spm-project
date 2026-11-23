@@ -199,3 +199,20 @@ test('staff booking edits reject a non-string table and over-long requests', asy
   assert.equal(objectTable.status, 400);
   assert.equal(longRequests.status, 400);
 });
+
+test('the super admin cancels a booking, like an admin', async () => {
+  // Arrange
+  const superadmin = await api.login('sabihuddin106@gmail.com', 'Admin@123456');
+  const chef = await api.login('chef');
+  const booked = await api.call('POST', '/reservations', { body: { customerName: 'Owner Check', email: 'owner.check@example.com', partySize: 2, date: inDays(40), time: '13:00' } });
+  const { id } = booked.body.reservation;
+
+  // Act
+  const asChef = await api.call('POST', `/reservations/${id}/cancel`, { token: chef });
+  const cancelled = await api.call('POST', `/reservations/${id}/cancel`, { token: superadmin });
+
+  // Assert
+  assert.equal(booked.status, 201);
+  assert.equal(asChef.status, 403);
+  assert.equal(cancelled.status, 200);
+});

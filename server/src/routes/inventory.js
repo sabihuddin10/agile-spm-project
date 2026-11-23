@@ -4,6 +4,8 @@ import { requireRole } from '../middleware/auth.js';
 import { adjustStock } from '../lib/orders.js';
 import { iso } from '../lib/time.js';
 import { text, number } from '../lib/validate.js';
+import { hasRole } from '../lib/hierarchy.js';
+import { itemsUsing, recipeUsage } from '../lib/recipe-usage.js';
 
 // A cleared field arrives as null; store it as empty, not the text "null".
 const cleanText = (value) => (value == null ? '' : String(value).trim());
@@ -22,12 +24,13 @@ function health(item) {
   return 'ok';
 }
 
-function serialize(item) {
+/** `usage` (ingredient id -> menu item names) is built once per list request, not once per ingredient. */
+function serialize(item, usage = recipeUsage(menuItems)) {
   return {
     ...item,
     lowStock: item.stock <= item.reorderLevel,
     health: health(item),
-    usedBy: menuItems.filter((m) => m.recipe.some((r) => r.inventoryId === item.id)).map((m) => m.name),
+    usedBy: usage.get(item.id) ?? [],
   };
 }
 
@@ -61,7 +64,8 @@ function validateFields(body, partial) {
 /** GET /api/inventory — stock list with low-stock flags (US8.1, US8.4). */
 router.get('/', kitchenRoles, (req, res) => {
   const categories = [...new Set(inventory.map((i) => i.category))].sort();
-  res.json({ inventory: inventory.map(serialize), units: inventoryUnits, categories });
+  const usage = recipeUsage(menuItems);
+  res.json({ inventory: inventory.map((item) => serialize(item, usage)), units: inventoryUnits, categories });
 });
 
 /** POST /api/inventory — add an ingredient (manager/admin). */
@@ -95,7 +99,7 @@ router.patch('/:id', kitchenRoles, (req, res) => {
   if (!item) return res.status(404).json({ error: 'Inventory item not found.' });
   const body = req.body || {};
   const fieldKeys = Object.keys(body).filter((k) => k !== 'delta');
-  if (fieldKeys.length && !['manager', 'admin'].includes(req.user.role)) {
+  if (fieldKeys.length && !hasRole(req.user, 'manager', 'admin')) {
     return res.status(403).json({ error: 'Only managers can edit ingredient details.' });
   }
   const error = validateFields(body, true);
@@ -126,7 +130,7 @@ router.patch('/:id', kitchenRoles, (req, res) => {
 router.delete('/:id', managerRoles, (req, res) => {
   const idx = inventory.findIndex((i) => i.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'Inventory item not found.' });
-  const usedBy = menuItems.filter((m) => m.recipe.some((r) => r.inventoryId === req.params.id));
+  const usedBy = itemsUsing(menuItems, req.params.id);
   if (usedBy.length) {
     return res.status(409).json({ error: `Used in recipes: ${usedBy.map((m) => m.name).join(', ')}. Remove it from those recipes first.` });
   }

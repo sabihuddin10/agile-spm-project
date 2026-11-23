@@ -61,7 +61,7 @@ export default function ScrumBoardPage() {
     <DevShell>
       <PageHeader
         title="Scrum board"
-        subtitle="Product Backlog · 10 modules · 49 stories · 217 story points. Source: Product_Backlog.docx & Sprint_Backlogs.docx"
+        subtitle={`Product Backlog · ${SPRINTS.length} sprints · ${BACKLOG_SUMMARY.totalStories} stories · ${BACKLOG_SUMMARY.totalPoints} story points. Source: Product_Backlog.docx & Sprint_Backlogs.docx`}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -94,7 +94,7 @@ export default function ScrumBoardPage() {
           <div>
             <p className="font-semibold">Project burn-up</p>
             <p className="text-sm text-stone-500">
-              Cumulative planned (217 pts) vs cumulative completed.
+              Cumulative planned ({BACKLOG_SUMMARY.totalPoints} pts) vs cumulative completed.
             </p>
           </div>
           <div className="flex items-center gap-5 text-xs font-medium">
@@ -122,11 +122,11 @@ export default function ScrumBoardPage() {
                 <div className="relative h-6 flex-1 overflow-hidden rounded bg-stone-100">
                   <div
                     className="absolute inset-y-0 left-0 bg-stone-300/70"
-                    style={{ width: `${(cumPlanned / 217) * 100}%` }}
+                    style={{ width: `${(cumPlanned / BACKLOG_SUMMARY.totalPoints) * 100}%` }}
                   />
                   <div
                     className="absolute inset-y-0 left-0 bg-emerald-500"
-                    style={{ width: `${(cumDone / 217) * 100}%` }}
+                    style={{ width: `${(cumDone / BACKLOG_SUMMARY.totalPoints) * 100}%` }}
                   />
                 </div>
                 <span className="w-16 shrink-0 text-right text-xs text-stone-500">

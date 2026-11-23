@@ -89,10 +89,15 @@ export function formatPhoneInput(raw: string): string {
   return `+92 ${digits.length > 3 ? `${digits.slice(0, 3)} ${digits.slice(3)}` : digits}`;
 }
 
-/** A Pakistani mobile number in the stored format. Optional unless `required`. */
-export function validatePhone(value: string, { required = false } = {}): string | undefined {
+/**
+ * A Pakistani mobile number in the stored format. Optional unless `required`.
+ * `original` is the value already saved: a record created before the +92
+ * format still saves while its phone is left unchanged.
+ */
+export function validatePhone(value: string, { required = false, original }: { required?: boolean; original?: string } = {}): string | undefined {
   const clean = value.trim();
   if (!clean) return required ? 'Please enter a phone number.' : undefined;
+  if (original !== undefined && clean === original.trim()) return undefined;
   if (!PHONE_FORMAT_RE.test(clean)) return 'Enter a mobile number like 0300 1234567.';
   return undefined;
 }

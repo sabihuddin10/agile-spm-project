@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   addDaysISO,
   errorMessage,
+  formatClock,
   formatDate,
   formatDateTime,
   formatMinutes,
@@ -68,6 +69,30 @@ describe('formatDate / formatDateTime / formatTime', () => {
   it('formats a real ISO timestamp', () => {
     expect(formatDateTime('2026-10-07T12:00:00.000Z')).not.toBe('—');
     expect(formatTime('2026-10-07T12:00:00.000Z')).not.toBe('—');
+  });
+
+  it('renders the time of an ISO timestamp in 12-hour AM/PM form', () => {
+    expect(formatTime('2026-10-07T12:00:00.000Z')).toMatch(/\d{1,2}:\d{2} [AP]M/);
+    expect(formatDateTime('2026-10-07T12:00:00.000Z')).toMatch(/\d{1,2}:\d{2} [AP]M/);
+  });
+});
+
+describe('formatClock', () => {
+  it('converts a 24-hour HH:MM string to h:MM AM/PM', () => {
+    expect(formatClock('19:00')).toBe('7:00 PM');
+    expect(formatClock('09:30')).toBe('9:30 AM');
+    expect(formatClock('00:00')).toBe('12:00 AM');
+    expect(formatClock('12:00')).toBe('12:00 PM');
+  });
+
+  it('returns an em dash placeholder for a missing time', () => {
+    expect(formatClock(null)).toBe('—');
+    expect(formatClock(undefined)).toBe('—');
+    expect(formatClock('')).toBe('—');
+  });
+
+  it('passes through a value that is not a valid HH:MM time', () => {
+    expect(formatClock('banana')).toBe('banana');
   });
 });
 

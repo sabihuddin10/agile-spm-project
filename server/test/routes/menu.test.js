@@ -139,6 +139,8 @@ test('a manager renames, re-sorts and toggles a category; blank or duplicate nam
   // Arrange
   const token = await api.login('manager');
   const created = (await api.call('POST', '/menu/categories', { token, body: { name: 'Brunch' } })).body.category;
+  const zeroCategory = (await api.call('POST', '/menu/categories', { token, body: { name: 'Breakfast Zero', sort: 0 } })).body.category;
+  assert.equal(zeroCategory.sort, 0, 'POST /menu/categories preserves sort: 0');
 
   // Act
   const edited = await api.call('PATCH', `/menu/categories/${created.id}`, { token, body: { name: '  Weekend Brunch  ', sort: 0, active: false } });
@@ -225,4 +227,15 @@ test('a rejected menu item edit changes nothing, and id / recipe cannot be overw
   assert.equal(sneaky.status, 200);
   assert.equal(sneaky.body.item.id, fries.id);
   assert.equal(sneaky.body.item.createdAt, fries.createdAt);
+});
+
+test('the super admin sees every recipe, like an admin', async () => {
+  // Arrange
+  const superadmin = await api.login('sabihuddin106@gmail.com', 'Admin@123456');
+
+  // Act
+  const { items } = (await api.call('GET', '/menu/items', { token: superadmin })).body;
+
+  // Assert
+  assert.ok(items.length > 0 && items.every((i) => Array.isArray(i.recipe)), 'every item carries its recipe');
 });
