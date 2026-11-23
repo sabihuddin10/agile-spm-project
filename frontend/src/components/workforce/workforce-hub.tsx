@@ -184,7 +184,11 @@ function WorkforceHubContent() {
             <KpiTiles tiles={tiles} />
           </section>
 
+<<<<<<< HEAD
+          <PresenceList people={people} selfId={user?.id} title="Who's in now" variant="board" accountHref={(p) => `/staff/workforce?staff=${p.userId}`} />
+=======
           <PresenceList people={people} selfId={user?.id} title="Who's in now" variant="board" accountHref={(p) => `/staff/account/${p.userId}`} />
+>>>>>>> d270cd5fa6cdbe3d3ca669978c91bdfd35a890dd
 
           <div className="grid grid-cols-1 gap-3 sm:gap-4 xl:grid-cols-3">
             <div className="min-w-0 xl:col-span-2">

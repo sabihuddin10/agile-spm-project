@@ -2,9 +2,12 @@
 
 import Link from 'next/link';
 
+import Link from 'next/link';
+
 import { useMemo, useState } from 'react';
 import type { Role, User } from '@/types';
 import { authApi } from '@/lib/api';
+import { ASSIGNABLE_ROLES, can, canAdministerAccount, canManageAccount } from '@/lib/permissions';
 import { ASSIGNABLE_ROLES, can, canAdministerAccount, canManageAccount } from '@/lib/permissions';
 import { errorMessage } from '@/lib/format';
 import { useAuth } from '@/context/auth-context';
@@ -22,6 +25,7 @@ const article = (word: string) => (/^[aeiou]/i.test(word) ? 'an' : 'a');
 
 /** One line on what a role can reach, shown before a role change is applied. */
 const ROLE_ACCESS: Record<Role, string> = {
+  superadmin: 'The super admin can do everything, including managing admins. The role is bound to one account and never assigned here.',
   superadmin: 'The super admin can do everything, including managing admins. The role is bound to one account and never assigned here.',
   admin: 'Admins can do everything, including changing roles, suspending and removing accounts.',
   manager:
@@ -65,6 +69,7 @@ export function AccountTable({
   const [issued, setIssued] = useState<{ user: User; tempPassword: string } | null>(null);
   const [q, setQ] = useState('');
   const [roleFilter, setRoleFilter] = useState<Role | ''>('');
+  const [accountGroup, setAccountGroup] = useState<'all' | 'staff' | 'customer'>('all');
   const [accountGroup, setAccountGroup] = useState<'all' | 'staff' | 'customer'>('all');
 
   const sorted = useMemo(
@@ -110,7 +115,7 @@ export function AccountTable({
           </span>
           <div className="min-w-0">
             <Link
-              href={`/staff/account/${u.id}`}
+              href={`/staff/workforce?staff=${u.id}`}
               className="transition underline hover:text-brand-600"
               onClick={(e) => e.stopPropagation()}
             >
@@ -328,12 +333,81 @@ export function AccountTable({
               ))}
             </select>
           </div>
+        <div className="flex flex-col gap-3 border-b border-stone-200 p-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setAccountGroup('all')}
+              className={`rounded-lg px-3 py-1 text-xs font-medium transition ${
+                accountGroup === 'all'
+                  ? 'bg-stone-900 text-white shadow-sm'
+                  : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+              }`}
+            >
+              All accounts ({users.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setAccountGroup('staff')}
+              className={`rounded-lg px-3 py-1 text-xs font-medium transition ${
+                accountGroup === 'staff'
+                  ? 'bg-stone-900 text-white shadow-sm'
+                  : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+              }`}
+            >
+              Staff ({users.filter((u) => u.role !== 'customer').length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setAccountGroup('customer')}
+              className={`rounded-lg px-3 py-1 text-xs font-medium transition ${
+                accountGroup === 'customer'
+                  ? 'bg-stone-900 text-white shadow-sm'
+                  : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+              }`}
+            >
+              Customers ({users.filter((u) => u.role === 'customer').length})
+            </button>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input
+              className="input sm:max-w-xs"
+              type="search"
+              placeholder="Search name or email…"
+              aria-label="Search accounts"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+            <select
+              className="input sm:w-48"
+              aria-label="Filter by role"
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value as Role | '')}
+            >
+              <option value="">All roles ({users.length})</option>
+              {ROLE_ORDER.map((r) => (
+                <option key={r} value={r}>
+                  {ROLE_META[r].plural} ({users.filter((u) => u.role === r).length})
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       ) : null}
 
       {visible.length === 0 || (!showStaff && !showCustomer) ? (
+      {visible.length === 0 || (!showStaff && !showCustomer) ? (
         <EmptyState title={users.length === 0 ? emptyTitle : 'No accounts match'} hint={users.length ? 'Try a different search or role.' : undefined} />
       ) : (
+        <div className="divide-y divide-stone-200">
+          {showStaff ? (
+            <div>
+              {searchable ? (
+                <div className="flex items-center justify-between border-b border-stone-200 bg-stone-50/80 px-4 py-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-600">
+                    Staff accounts ({staffAccounts.length})
+                  </h3>
+                  <span className="text-xs text-stone-500">Admins, Managers, Chefs &amp; Waiters</span>
         <div className="divide-y divide-stone-200">
           {showStaff ? (
             <div>
@@ -348,6 +422,10 @@ export function AccountTable({
               <ul className="divide-y divide-stone-100">{staffAccounts.map(renderUserRow)}</ul>
             </div>
           ) : null}
+              ) : null}
+              <ul className="divide-y divide-stone-100">{staffAccounts.map(renderUserRow)}</ul>
+            </div>
+          ) : null}
 
           {showCustomer ? (
             <div>
@@ -357,7 +435,20 @@ export function AccountTable({
                     Customer accounts ({customerAccounts.length})
                   </h3>
                   <span className="text-xs text-stone-500">Registered Customers</span>
+          {showCustomer ? (
+            <div>
+              {searchable ? (
+                <div className="flex items-center justify-between border-b border-stone-200 bg-stone-50/80 px-4 py-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-600">
+                    Customer accounts ({customerAccounts.length})
+                  </h3>
+                  <span className="text-xs text-stone-500">Registered Customers</span>
                 </div>
+              ) : null}
+              <ul className="divide-y divide-stone-100">{customerAccounts.map(renderUserRow)}</ul>
+            </div>
+          ) : null}
+        </div>
               ) : null}
               <ul className="divide-y divide-stone-100">{customerAccounts.map(renderUserRow)}</ul>
             </div>
