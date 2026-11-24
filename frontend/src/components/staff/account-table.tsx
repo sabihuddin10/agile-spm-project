@@ -395,7 +395,6 @@ export function AccountTable({
       ) : null}
 
       {visible.length === 0 || (!showStaff && !showCustomer) ? (
-      {visible.length === 0 || (!showStaff && !showCustomer) ? (
         <EmptyState title={users.length === 0 ? emptyTitle : 'No accounts match'} hint={users.length ? 'Try a different search or role.' : undefined} />
       ) : (
         <div className="divide-y divide-stone-200">
